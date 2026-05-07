@@ -6,56 +6,60 @@
 //
 
 import SwiftUI
-import SwiftData
+import MapboxMaps
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        let backgroundColor = Color.Resolved(red: 0.2, green: 0.2, blue: 0.2)
+        
+        let center = CLLocationCoordinate2D(
+            latitude: 52.0, longitude: 5.0)
+        ZStack {
+            Map(initialViewport: .camera(center: center, zoom: 3, bearing: 0, pitch: 0)) {
+                
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
+                .mapStyle(MapStyle(uri: StyleURI(rawValue: "mapbox://styles/marcelm005/cmovo48xo002201s30ohu1t9r/draft")!))
+                .ornamentOptions(
+                    OrnamentOptions(
+                        scaleBar: ScaleBarViewOptions(visibility: .hidden),
+                        compass: CompassViewOptions(visibility: .hidden),
+                        attributionButton: AttributionButtonOptions(
+                            position: .bottomLeading,
+                            margins: CGPoint(x: 90, y: 7)
+                        )
+                        
+                    )
+                )
+                .ignoresSafeArea()
+            
+            VStack {
+                HStack{
+                    Spacer()
+                    Button{}label: {
+                        Image(systemName: "ellipsis.circle.fill")
+                            .font(.system(size:20))
+                    }.padding()
+                        .background(Color(backgroundColor))
+                        .cornerRadius(10)
                 }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button{}label: {
+                        Text("Test")
+                            .font(.system(size:20))
+                    }.padding()
+                        .background(Color(backgroundColor))
+                        .cornerRadius(10)
                 }
             }
-        } detail: {
-            Text("Select an item")
+            .foregroundColor(.white)
+                .padding(EdgeInsets(top: 10, leading: 20, bottom: 10, trailing: 20))
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
+        
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
