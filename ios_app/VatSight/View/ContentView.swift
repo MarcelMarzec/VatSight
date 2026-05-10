@@ -21,7 +21,7 @@ struct ContentView: View {
                 center: center, zoom: 3, bearing: 0, pitch: 0)) {
                     PointAnnotationGroup(viewModel.pilots, id: \.id) { pilot in
                         PointAnnotation(coordinate: pilot.coordinate)
-                            .image(.init(image: UIImage(named: "aircraft")!, name: "aircraft"))
+                            .image(.init(image: UIImage(named: "pilot")!, name: "pilot"))
                     }
             }.mapStyle(MapStyle(uri: StyleURI(rawValue: "mapbox://styles/marcelm005/cmovo48xo002201s30ohu1t9r/draft")!))
                 .ornamentOptions(
