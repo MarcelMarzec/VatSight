@@ -42,9 +42,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
 
 ## Tech Stack
 * Swift / SwiftUI
-* MapKit
+* Mapbox IOS Native SDK
 * VATSIM data APIs
-* Lightweight, real-time data handling
 
 ## Community
 * Discussions: GitHub Issues / Discussions
@@ -53,7 +52,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
 
 ## Acknowledgements
 * User data sourced from VATSIM API
-* Airspace data sourced from Vaglassses
+* Airspace data sourced from Vatglassses
 * Built for the flight simulation community
 
 ## Disclaimer

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--Generator: Apple Native CoreSVG 341-->
+
+<svg
+   version="1.1"
+   viewBox="0 0 20 20"
+   id="svg33"
+   width="20"
+   height="20"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs33" />
+  <!--glyph: "100453", point size: 100.0, font version: "21.1d1e1", template writer version: "138.0.0"-->
+  <style
+     id="style1">.defaults {-sfsymbols-wiggle-style:linear;-sfsymbols-wiggle-angle:0;-sfsymbols-draw-reverses-motion-groups:true}
+
+.monochrome-0 {-sfsymbols-motion-group:0;-sfsymbols-layer-tags:airplane}
+
+.multicolor-0:systemOrangeColor {-sfsymbols-motion-group:0;-sfsymbols-layer-tags:airplane}
+
+.hierarchical-0:primary {-sfsymbols-motion-group:0;-sfsymbols-layer-tags:airplane}
+
+.SFSymbolsPreviewWireframe {fill:none;opacity:1.0;stroke:black;stroke-width:0.5}
+</style>
+  <path
+     class="monochrome-0 multicolor-0:systemOrangeColor hierarchical-0:primary SFSymbolsPreviewWireframe"
+     d="M 10,1.0045527 C 9.0240344,1.014594 8.2999157,2.295329 8.2999157,3.8262559 v 3.20194 c 0,0.4502799 -0.083949,0.6103871 -0.38828,0.8805386 L 1.7200036,13.312011 c -0.1993841,0.170107 -0.304331,0.380236 -0.304331,0.610366 v 0.940582 c 0,0.210129 0.1993841,0.320194 0.4302545,0.220129 l 6.4539886,-2.771681 0.4932484,3.992414 -2.8019732,1.450884 C 5.781297,17.86477 5.6868383,18.044877 5.6868383,18.305029 v 0.340215 c 0,0.210129 0.1469214,0.350215 0.3673035,0.350215 h 7.8917162 c 0.220382,0 0.367304,-0.140086 0.367304,-0.350215 v -0.340215 c 0,-0.260152 -0.09446,-0.440259 -0.304353,-0.550324 l -2.801973,-1.450884 0.493227,-3.992414 6.45401,2.771681 c 0.23087,0.100065 0.430254,-0.01004 0.430254,-0.220129 v -0.940582 c 0,-0.23013 -0.104947,-0.440259 -0.304331,-0.610366 L 12.088364,7.9087345 C 11.784033,7.638583 11.700063,7.4784758 11.700063,7.0281959 v -3.20194 C 11.700063,2.295329 10.975966,1.014553 10,1.0045527 Z"
+     id="path32"
+     style="fill:#ffffff;fill-opacity:1;stroke:none;-sfsymbols-layer-tags:airplane;-sfsymbols-motion-group:0" />
+</svg>
