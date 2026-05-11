@@ -19,9 +19,11 @@ struct ContentView: View {
         ZStack {
             Map(initialViewport:.camera(
                 center: center, zoom: 3, bearing: 0, pitch: 0)) {
-                    PointAnnotationGroup(viewModel.pilots, id: \.id) { pilot in
+                    PointAnnotationGroup(viewModel.pilots, id: \.cid) { pilot in
                         PointAnnotation(coordinate: pilot.coordinate)
                             .image(.init(image: UIImage(named: "pilot")!, name: "pilot"))
+                            .iconRotate(pilot.heading)
+                            .iconSize(0.8)
                     }
             }.mapStyle(MapStyle(uri: StyleURI(rawValue: "mapbox://styles/marcelm005/cmovo48xo002201s30ohu1t9r/draft")!))
                 .ornamentOptions(
