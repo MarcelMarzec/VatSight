@@ -10,10 +10,10 @@ import SwiftData
 
 @main
 struct VatSightApp: App {
-
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: UserPreferencesModel.self)
     }
 }

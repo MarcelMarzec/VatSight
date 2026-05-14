@@ -20,7 +20,7 @@ class MapViewModel: ObservableObject {
     func startAutoRefresh() {
         loadPilots()
         
-        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
             self?.loadPilots()
         }
     }

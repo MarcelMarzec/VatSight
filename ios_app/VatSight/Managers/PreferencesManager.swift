@@ -1,3 +1,11 @@
+//
+//  PreferencesManager.swift
+//  VatSight
+//
+//  Created by Marcel Marzec on 14/05/2026.
+//
+
+
 import SwiftUI
 import SwiftData
 
@@ -11,7 +19,6 @@ final class PreferencesManager {
     init(context: ModelContext) {
         self.context = context
 
-        // Fetch existing preferences (single-instance pattern)
         let descriptor = FetchDescriptor<UserPreferencesModel>()
 
         if let existing = try? context.fetch(descriptor).first {
@@ -23,14 +30,8 @@ final class PreferencesManager {
         }
     }
 
-    // MARK: - Updates
-
     func updateCID(_ cid: Int) {
         userPrefs.vatsimCID = cid
-    }
-
-    func updateTheme(_ theme: String) {
-        userPrefs.preferredTheme = theme
     }
 
     func updateLocation(lat: Double, lon: Double) {
