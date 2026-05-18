@@ -20,7 +20,7 @@ struct Pilot: Codable, Identifiable {
     let altitude: Int
     let groundspeed: Int
     let transponder: String
-    let heading: Double
+    let heading: Int
     let qnh_i_hg: Double
     let qnh_mb: Double
     let logon_time: String
@@ -32,6 +32,13 @@ struct Pilot: Codable, Identifiable {
     
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+    
+    var isEmergency: Bool {
+        transponder == "7700" ||
+        transponder == "7600" ||
+        transponder == "7500" ||
+        transponder == "7601"
     }
 }
 

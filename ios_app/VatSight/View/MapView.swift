@@ -27,7 +27,7 @@ struct MapView: View {
                 PointAnnotationGroup(viewModel.pilots, id: \.cid) { pilot in
                     PointAnnotation(coordinate: pilot.coordinate)
                         .image(.init(image: UIImage(named: "pilot")!, name: "pilot"))
-                        .iconRotate(pilot.heading)
+                        .iconRotate(Double(pilot.heading))
                         .iconSize(0.8)
                         .onTapGesture {
                             selectedPilot = pilot
@@ -100,7 +100,9 @@ struct MapView: View {
                             )
                         )
                     .presentationDragIndicator(.visible)
-                    .presentationDetents([.fraction(0.30), .medium,.large])
+                    .presentationDetents([.fraction(0.275), .medium,.large])
+                    .presentationBackgroundInteraction(.enabled)
+                
             }
         }.onAppear(
             perform: viewModel.startAutoRefresh

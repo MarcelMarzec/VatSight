@@ -13,38 +13,94 @@ struct PilotDetailsView: View {
     @Binding var isShowingSheet: Bool
     
     var body: some View {
-        VStack {
-            HStack {
+        ScrollView {
+            VStack(spacing: 12) {
                 HStack {
-                    Text("\(selectedPilot.callsign)")
-                        .font(.title)
-                    Text("\(String(selectedPilot.id)) \(selectedPilot.name)")
-                        .padding(3)
-                        .font(.subheadline)
-                        .background(Color.secondary)
-                        .foregroundColor(.white)
-                        .cornerRadius(3)
+                    HStack {
+                        Text("\(selectedPilot.callsign)")
+                            .font(.title)
+                        Text("\(String(selectedPilot.id)) \(selectedPilot.name)")
+                            .padding(3)
+                            .font(.subheadline)
+                            .background(Color.secondary)
+                            .foregroundColor(.white)
+                            .cornerRadius(3)
+                        Spacer()
+                    }
                 }
-                Spacer()
-            }.padding()
-            
-            if selectedPilot.flight_plan != nil {
-                Text("Flight Plan").frame(maxWidth: .infinity, alignment: .leading)
+                Text("Flight Parameters").frame(maxWidth: .infinity, alignment: .leading)
                 HStack {
-                    Text(selectedPilot.flight_plan?.departure ?? "N/A")
-                        .font(.title2)
-                    LabelledDivider(label: selectedPilot.flight_plan?.enroute_time ?? "")
-                    Text(selectedPilot.flight_plan?.arrival ?? "N/A")
-                        .font(.title2)
-                }
-            } else {
-                HStack {
-                    Text("Flight Plan not filed.")
                     Spacer()
+                    VStack {
+                        Text("Altitude").font(.caption)
+                        Text("\(selectedPilot.altitude) ft")
+                    }
+                    Spacer()
+                    VStack {
+                        Text("Speed").font(.caption)
+                        Text("\(selectedPilot.groundspeed) kt")
+                    }
+                    Spacer()
+                    VStack {
+                        Text("Heading").font(.caption)
+                        Text("\(selectedPilot.heading)°")
+                    }
+                    Spacer()
+                    VStack {
+                        Text("Transponder").font(.caption)
+                        Text(selectedPilot.transponder).foregroundColor(selectedPilot.isEmergency ? .red : .white)
+                    }
+                    Spacer()
+                    
                 }
-            }
+                
+                if selectedPilot.flight_plan != nil {
+                    Text("Flight Plan").frame(maxWidth: .infinity, alignment: .leading)
+                    HStack {
+                        Text(selectedPilot.flight_plan?.departure ?? "N/A")
+                            .font(.title2)
+                        LabelledDivider(label: selectedPilot.flight_plan?.enroute_time ?? "N/A")
+                        Text(selectedPilot.flight_plan?.arrival ?? "N/A")
+                            .font(.title2)
+                    }
+                    HStack {
+                        Spacer()
+                        VStack {
+                            Text("Dep  Time").font(.caption)
+                            Text(selectedPilot.flight_plan?.deptime ?? "N/A")
+                        }
+                        Spacer()
+                        VStack {
+                            Text("Fuel Time").font(.caption)
+                            Text(selectedPilot.flight_plan?.fuel_time ?? "N/A")
+                        }
+                        Spacer()
+                        VStack {
+                            Text("Logon Time").font(.caption)
+                            Text(selectedPilot.flight_plan?.fuel_time ?? "N/A")
+                        }
+                        Spacer()
+                    }
+                    VStack {
+                        Text("Route").font(.caption).frame(maxWidth: .infinity, alignment: .leading)
+                        Text(selectedPilot.flight_plan?.route ?? "N/A").frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    VStack {
+                        Text("Remarks").font(.caption).frame(maxWidth: .infinity, alignment: .leading)
+                        Text(selectedPilot.flight_plan?.remarks ?? "N/A").frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                } else {
+                    HStack {
+                        Text("Flight Plan not filed.")
+                    }
+                }
+                VStack {
+                    Text("Last Updated").font(.caption)
+                    Text(selectedPilot.last_updated).font(.caption2)
+                }
+            }.padding()
             Spacer()
-        }.padding()
+        }
     }
 }
 
@@ -54,7 +110,7 @@ struct LabelledDivider: View {
     let horizontalPadding: CGFloat
     let color: Color
 
-    init(label: String, horizontalPadding: CGFloat = 20, color: Color = .gray) {
+    init(label: String, horizontalPadding: CGFloat = 8, color: Color = .gray) {
         self.label = label
         self.horizontalPadding = horizontalPadding
         self.color = color
@@ -76,5 +132,5 @@ struct LabelledDivider: View {
 }
 
 #Preview {
-    PilotDetailsView(selectedPilot: .constant(Pilot(cid: 1234567, name: "Kennedy Steve KJFK", callsign: "DAL1", server: "USA-EAST", pilot_rating: 0, military_rating: 0, latitude: 40.64222, longitude: -73.76981, altitude: 12, groundspeed: 0, transponder: "3456", heading: 44, qnh_i_hg: 29.92, qnh_mb: 1013, logon_time: "1970-01-01T00:00:00.000000Z", last_updated: "1970-01-01T00:00:00.000000Z", flight_plan: fp(flight_rules: "I", aircraft: "B764/H-SDE3FGHIM3RWXY/LB1", aircraft_faa: "B764/L", aircraft_short: "B764", departure: "KJFK", arrival: "EGLL", alternate: "EGBB", deptime: "0000", enroute_time: "0615", fuel_time: "0745", remarks: "/V/", route: "GREKI DCT JUDDS DCT MARTN DCT BAREE DCT NEEKO NATX LIMRI NATX XETBO DCT EVRIN DCT INFEC DCT JETZI DCT OGLUN DCT OCTIZ P2 SIRIC SIRI1H", revision_id: 1, assigned_transponder: "3456")) ), isShowingSheet: .constant(false))
+    PilotDetailsView(selectedPilot: .constant(Pilot(cid: 1234567, name: "Kennedy Steve KJFK", callsign: "DAL1", server: "USA-EAST", pilot_rating: 0, military_rating: 0, latitude: 40.64222, longitude: -73.76981, altitude: 12, groundspeed: 0, transponder: "1000", heading: 44, qnh_i_hg: 29.92, qnh_mb: 1013, logon_time: "1970-01-01T00:00:00.000000Z", last_updated: "1970-01-01T00:00:00.000000Z", flight_plan: fp(flight_rules: "I", aircraft: "B764/H-SDE3FGHIM3RWXY/LB1", aircraft_faa: "B764/L", aircraft_short: "B764", departure: "KJFK", arrival: "EGLL", alternate: "EGBB", deptime: "0000", enroute_time: "0615", fuel_time: "0745", remarks: "/V/", route: "GREKI DCT JUDDS DCT MARTN DCT BAREE DCT NEEKO NATX LIMRI NATX XETBO DCT EVRIN DCT INFEC DCT JETZI DCT OGLUN DCT OCTIZ P2 SIRIC SIRI1H", revision_id: 1, assigned_transponder: "3456")) ), isShowingSheet: .constant(false))
 }
