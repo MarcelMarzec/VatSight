@@ -49,13 +49,11 @@ struct SettingsView: View {
                         }
                         .keyboardType(.numberPad)
                 }
-                Section {
+                Section("Miscellaneous"){
                     Link("Get In Contact", destination: URL(string: "mailto:contact@marcelmarzec.com")!)
                         .foregroundColor(.primary)
                     LabeledContent("IOS Version", value: "26.3")
                     LabeledContent("VatSight Version", value: "0.0")
-                } header: {
-                    Text("Miscellaneous")
                 }
             }.navigationTitle("VatSight")
                 .navigationBarTitleDisplayMode(.inline)

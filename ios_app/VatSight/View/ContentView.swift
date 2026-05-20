@@ -21,7 +21,7 @@ struct ContentView: View {
                     TabView(selection: $selectedTab) {
 
                         Tab("Map", systemImage: "map.fill", value: 0) {
-                            MapView()
+                            RadarView()
                         }
 
                         Tab("Settings", systemImage: "gearshape.fill", value: 1) {
