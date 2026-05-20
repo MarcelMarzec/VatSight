@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--Generator: Apple Native CoreSVG 341-->
+
+<svg
+   version="1.1"
+   viewBox="0 0 20 20"
+   id="svg33"
+   width="20"
+   height="20"
+   sodipodi:docname="selectedPilot.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050"
+     inkscape:zoom="1.2"
+     inkscape:cx="9.5833333"
+     inkscape:cy="9.5833333"
+     inkscape:window-width="1440"
+     inkscape:window-height="842"
+     inkscape:window-x="0"
+     inkscape:window-y="110"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg33" />
+  <defs
+     id="defs33" />
+  <!--glyph: "100453", point size: 100.0, font version: "21.1d1e1", template writer version: "138.0.0"-->
+  <style
+     id="style1">.defaults {-sfsymbols-wiggle-style:linear;-sfsymbols-wiggle-angle:0;-sfsymbols-draw-reverses-motion-groups:true}
+
+.monochrome-0 {-sfsymbols-motion-group:0;-sfsymbols-layer-tags:airplane}
+
+.multicolor-0:systemOrangeColor {-sfsymbols-motion-group:0;-sfsymbols-layer-tags:airplane}
+
+.hierarchical-0:primary {-sfsymbols-motion-group:0;-sfsymbols-layer-tags:airplane}
+
+.SFSymbolsPreviewWireframe {fill:none;opacity:1.0;stroke:black;stroke-width:0.5}
+</style>
+  <path
+     class="monochrome-0 multicolor-0:systemOrangeColor hierarchical-0:primary SFSymbolsPreviewWireframe"
+     d="M 10,0.30522061 C 8.9481601,0.31604255 8.1677463,1.6963456 8.1677463,3.3462911 v 3.450868 c 0,0.4852859 -0.090475,0.6578403 -0.418466,0.9489942 L 1.076293,13.569496 c -0.21488481,0.183332 -0.32799058,0.409797 -0.32799058,0.657818 v 1.013705 c 0,0.226465 0.21488479,0.345087 0.46370368,0.237243 l 6.9557402,-2.98716 0.5315949,4.302796 -3.0198066,1.56368 C 5.453323,18.476199 5.3515208,18.670309 5.3515208,18.950685 v 0.366665 c 0,0.226465 0.1583435,0.377441 0.3958587,0.377441 H 14.25262 c 0.237515,0 0.39586,-0.150976 0.39586,-0.377441 v -0.366665 c 0,-0.280376 -0.101804,-0.474486 -0.328015,-0.593107 l -3.019806,-1.56368 0.531572,-4.302796 6.955763,2.98716 c 0.248818,0.107844 0.463703,-0.01082 0.463703,-0.237243 v -1.013705 c 0,-0.248021 -0.113106,-0.474486 -0.32799,-0.657818 L 12.250719,7.7461533 C 11.922729,7.4549994 11.832231,7.282445 11.832231,6.7971591 V 3.3462911 C 11.832231,1.6963456 11.05184,0.31599837 10,0.30522061 Z"
+     id="path32"
+     style="fill:#009eff;fill-opacity:1;stroke:none;stroke-width:0.215549;stroke-dasharray:none;stroke-opacity:1;-sfsymbols-layer-tags:airplane;-sfsymbols-motion-group:0" />
+</svg>

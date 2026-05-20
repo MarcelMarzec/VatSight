@@ -37,8 +37,6 @@ struct PilotDetailsView: View {
                         Spacer()
                     }
 
-                    sectionTitle("Flight Parameters")
-
                     HStack {
                         metric("Altitude", "\(pilot.altitude) ft")
                         Spacer()

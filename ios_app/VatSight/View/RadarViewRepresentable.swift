@@ -27,8 +27,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
         context: Context
     ) -> MapView {
 
-        // RESTORE SAVED CAMERA POSITION
-
         let cameraOptions = CameraOptions(
             center: CLLocationCoordinate2D(
                 latitude: prefsManager.userPrefs.lastLatitude,
@@ -48,6 +46,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
             frame: .zero,
             mapInitOptions: initOptions
         )
+        
+        mapView.gestures.options.pitchEnabled = false
 
         context.coordinator.mapView = mapView
         context.coordinator.configureOrnaments(for: mapView)
@@ -55,16 +55,13 @@ struct RadarViewRepresentable: UIViewRepresentable {
         // STYLE LOADED
 
         mapView.mapboxMap.onMapLoaded.observeNext { [weak coordinator = context.coordinator] _ in
-
             coordinator?.installPilotStyleIfNeeded()
-
         }
         .store(in: &context.coordinator.cancelables)
 
         // CAMERA CHANGES
 
         mapView.mapboxMap.onCameraChanged.observe { [weak coordinator = context.coordinator] event in
-
             guard let coordinator else {
                 return
             }
@@ -72,17 +69,11 @@ struct RadarViewRepresentable: UIViewRepresentable {
             let camera = event.cameraState
 
             coordinator.prefsManager.userPrefs.lastZoom = camera.zoom
-
             coordinator.prefsManager.userPrefs.lastLatitude = camera.center.latitude
-
             coordinator.prefsManager.userPrefs.lastLongitude = camera.center.longitude
         }
         .store(in: &context.coordinator.cancelables)
-
-        // INSTALL INTERACTIONS
-
         context.coordinator.installTapInteractions()
-
         return mapView
     }
 
@@ -92,26 +83,20 @@ struct RadarViewRepresentable: UIViewRepresentable {
         _ mapView: MapView,
         context: Context
     ) {
-
         context.coordinator.updatePilots(
-            viewModel.pilots
+            viewModel.pilots,
+            selectedCID: viewModel.selectedCID
         )
     }
 
     // MARK: - Coordinator
 
     final class Coordinator {
-
         weak var mapView: MapView?
-
         var cancelables = Set<AnyCancelable>()
-
         let viewModel: RadarViewModel
-
         let prefsManager: PreferencesManager
-
         private let styleManager = RadarStyleManager()
-
         private var didInstallStyle = false
 
         // MARK: - Init
@@ -122,7 +107,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
         ) {
 
             self.viewModel = viewModel
-
             self.prefsManager = prefsManager
         }
 
@@ -139,20 +123,15 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
 
             do {
-
                 try styleManager.configurePilots(
-                    on: mapView
-                )
-
+                    on: mapView)
                 didInstallStyle = true
-
                 styleManager.updatePilots(
                     on: mapView,
-                    pilots: viewModel.pilots
+                    pilots: viewModel.pilots,
+                    selectedCID: viewModel.selectedCID
                 )
-
             } catch {
-
                 print("❌ Failed to configure pilot style:", error)
             }
         }
@@ -160,39 +139,27 @@ struct RadarViewRepresentable: UIViewRepresentable {
         // MARK: - Configure Ornaments
         
         func configureOrnaments(for mapView: MapView) {
-
-            // SCALE BAR
             mapView.ornaments.options.scaleBar.visibility = .hidden
-
-            // COMPASS
             mapView.ornaments.options.compass.position = .topTrailing
             mapView.ornaments.options.compass.margins = CGPoint(x: 8, y: 8)
-
-            // ATTRIBUTION
             mapView.ornaments.options.attributionButton.position = .bottomLeading
             mapView.ornaments.options.attributionButton.margins = CGPoint(x: 85, y: 6)
-
-            // LOGO (optional but usually bottom-right default)
             mapView.ornaments.options.logo.position = .bottomLeading
         }
 
         // MARK: - Update GeoJSON Source
 
         func updatePilots(
-            _ pilots: [Pilot]
+            _ pilots: [Pilot],
+            selectedCID: Int?
         ) {
 
-            guard let mapView else {
-                return
-            }
-
-            guard didInstallStyle else {
-                return
-            }
+            guard let mapView, didInstallStyle else { return }
 
             styleManager.updatePilots(
                 on: mapView,
-                pilots: pilots
+                pilots: pilots,
+                selectedCID: selectedCID
             )
         }
 
@@ -215,7 +182,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 }
 
                 let properties = feature.properties
-                // properties is a JSONObject: [String: JSONValue?]
                 guard
                     let jsonValue = properties["cid"] ?? nil,
                     case let .number(cidNumber) = jsonValue
@@ -245,7 +211,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 }
 
                 let properties = feature.properties
-                // properties is a JSONObject: [String: JSONValue?]
                 guard
                     let jsonValue = properties["cid"] ?? nil,
                     case let .number(cidNumber) = jsonValue

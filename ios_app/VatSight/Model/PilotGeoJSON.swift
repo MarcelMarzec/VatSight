@@ -1,23 +1,30 @@
-//
-//  PilotGeoJSON.swift
-//  VatSight
-//
-
 import Foundation
 import MapboxMaps
 import Turf
 
 enum PilotGeoJSON {
 
-    static func featureCollection(from pilots: [Pilot]) -> FeatureCollection {
-        FeatureCollection(features: pilots.map(feature(from:)))
+    static func featureCollection(
+        from pilots: [Pilot],
+        selectedCID: Int?
+    ) -> FeatureCollection {
+
+        FeatureCollection(
+            features: pilots.map {
+                feature(from: $0, selectedCID: selectedCID)
+            }
+        )
     }
 
-    static func feature(from pilot: Pilot) -> Feature {
+    static func feature(
+        from pilot: Pilot,
+        selectedCID: Int?
+    ) -> Feature {
+
         var feature = Feature(
             geometry: .point(
                 Point(
-                    LocationCoordinate2D(
+                    CLLocationCoordinate2D(
                         latitude: pilot.latitude,
                         longitude: pilot.longitude
                     )
@@ -25,11 +32,13 @@ enum PilotGeoJSON {
             )
         )
 
+        let isSelected = pilot.cid == selectedCID
+
         feature.properties = [
             "cid": .number(Double(pilot.cid)),
             "callsign": .string(pilot.callsign),
-            "name": .string(pilot.name),
-            "heading": .number(Double(pilot.heading))
+            "heading": .number(Double(pilot.heading)),
+            "isSelected": .boolean(isSelected)
         ]
 
         return feature

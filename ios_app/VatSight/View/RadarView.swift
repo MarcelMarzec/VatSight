@@ -16,9 +16,6 @@ struct RadarView: View {
     
     @State private var selectedPilot: Pilot = Pilot(cid: 0, name: "N/A", callsign: "N/A", server: "N/A", pilot_rating: 0, military_rating: 0, latitude: 0.0, longitude: 0.0, altitude: 0, groundspeed: 0, transponder: "0", heading: 0, qnh_i_hg: 0, qnh_mb: 0, logon_time: "0", last_updated: "0", flight_plan: nil)
     
-    
-    @State private var isShowingSheet: Bool = false
-    
     var body: some View {
         let backgroundColor = Color.Resolved(red: 0.2, green: 0.2, blue: 0.2)
         
@@ -26,7 +23,7 @@ struct RadarView: View {
             RadarViewRepresentable(viewModel: viewModel,
                                    prefsManager: prefsManager)
             .ignoresSafeArea()
-            .sheet(item: $viewModel.selectedPilot) { pilot in
+            .sheet(item: $viewModel.selectedPilot, onDismiss: resetSelectedPilot) { pilot in
                 PilotDetailsView(pilot: pilot)
                     .clipShape(
                         UnevenRoundedRectangle(
@@ -38,7 +35,7 @@ struct RadarView: View {
                         )
                     )
                     .presentationDragIndicator(.visible)
-                    .presentationDetents([.fraction(0.3), .medium,.large])
+                    .presentationDetents([.fraction(0.275), .medium,.large])
                     .presentationBackgroundInteraction(.enabled)
             }
             .onAppear {
@@ -66,7 +63,7 @@ struct RadarView: View {
     
     func resetSelectedPilot() {
         selectedPilot = Pilot(cid: 0, name: "N/A", callsign: "N/A", server: "N/A", pilot_rating: 0, military_rating: 0, latitude: 0.0, longitude: 0.0, altitude: 0, groundspeed: 0, transponder: "0", heading: 0, qnh_i_hg: 0, qnh_mb: 0, logon_time: "0", last_updated: "0", flight_plan: nil)
-        isShowingSheet = false
+        viewModel.selectedCID = nil
     }
 }
 

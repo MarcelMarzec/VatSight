@@ -10,6 +10,7 @@ final class RadarViewModel: ObservableObject {
 
     @Published var pilots: [Pilot] = []
     @Published var selectedPilot: Pilot?
+    @Published var selectedCID: Int?
 
     private let service = VatsimService()
     private var timer: Timer?
@@ -44,5 +45,6 @@ final class RadarViewModel: ObservableObject {
 
     func selectPilot(cid: Int) {
         selectedPilot = pilots.first { $0.cid == cid }
+        selectedCID = cid
     }
 }

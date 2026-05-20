@@ -8,13 +8,10 @@ import UIKit
 import MapboxMaps
 
 final class RadarStyleManager {
-
     static let pilotSourceId = "pilots-source"
-
     static let pilotIconImageId = "pilot"
-
+    static let selectedPilotIconImageId = "selectedPilot"
     static let pilotIconLayerId = "pilot-icon-layer"
-
     static let pilotLabelLayerId = "pilot-label-layer"
 
     enum RadarStyleError: Error {
@@ -28,11 +25,8 @@ final class RadarStyleManager {
     ) throws {
 
         try addPilotImage(to: mapView)
-
         try addPilotSource(to: mapView)
-
         try addPilotIconLayer(to: mapView)
-
         try addPilotLabelLayer(to: mapView)
     }
 
@@ -40,11 +34,14 @@ final class RadarStyleManager {
 
     func updatePilots(
         on mapView: MapView,
-        pilots: [Pilot]
+        pilots: [Pilot],
+        selectedCID: Int?
     ) {
 
-        let collection = PilotGeoJSON
-            .featureCollection(from: pilots)
+        let collection = PilotGeoJSON.featureCollection(
+            from: pilots,
+            selectedCID: selectedCID
+        )
 
         mapView.mapboxMap.updateGeoJSONSource(
             withId: Self.pilotSourceId,
@@ -54,18 +51,15 @@ final class RadarStyleManager {
 
     // MARK: - Add Image
 
-    private func addPilotImage(
-        to mapView: MapView
-    ) throws {
+    private func addPilotImage(to mapView: MapView) throws {
 
-        guard let image = UIImage(named: "pilot") else {
+        guard let pilot = UIImage(named: "pilot"),
+              let selected = UIImage(named: "selectedPilot") else {
             throw RadarStyleError.missingPilotAsset
         }
 
-        try mapView.mapboxMap.addImage(
-            image,
-            id: Self.pilotIconImageId
-        )
+        try mapView.mapboxMap.addImage(pilot, id: "pilot")
+        try mapView.mapboxMap.addImage(selected, id: "selectedPilot")
     }
 
     // MARK: - Add Source
@@ -92,30 +86,34 @@ final class RadarStyleManager {
     private func addPilotIconLayer(
         to mapView: MapView
     ) throws {
-        
+
         var layer = SymbolLayer(
             id: Self.pilotIconLayerId,
             source: Self.pilotSourceId
         )
-        
+
         layer.slot = "top"
-        
-        layer.iconImage = .constant(
-            .name(Self.pilotIconImageId)
-        )
-        
-        layer.iconSize = .constant(0.75)
-        
-        layer.iconAllowOverlap = .constant(true)
-        
-        layer.iconRotationAlignment = .constant(.map)
-        
-        layer.iconRotate = .expression(
-            Exp(.get) {
-                "heading"
+
+        layer.iconImage = .expression(
+            Exp(.switchCase) {
+                Exp(.eq) {
+                    Exp(.get) { "isSelected" }
+                    true
+                }
+                "selectedPilot"
+                "pilot"
             }
         )
-        
+
+        layer.iconSize = .constant(0.65)
+
+        layer.iconRotate = .expression(
+            Exp(.get) { "heading" }
+        )
+
+        layer.iconAllowOverlap = .constant(true)
+        layer.iconRotationAlignment = .constant(.map)
+
         try mapView.mapboxMap.addLayer(layer)
     }
 
@@ -131,7 +129,6 @@ final class RadarStyleManager {
         )
 
         layer.slot = "top"
-
         layer.textField = .expression(
             Exp(.get) {
                 "callsign"
@@ -139,35 +136,15 @@ final class RadarStyleManager {
         )
 
         layer.textSize = .constant(12)
-
         layer.textAnchor = .constant(.top)
-
-        layer.textOffset = .constant([0, -1.8])
-
+        layer.textOffset = .constant([0, -1.9])
         layer.textAllowOverlap = .constant(false)
-
-        layer.textColor = .constant(
-            StyleColor(.white)
-        )
-
-        layer.textHaloColor = .constant(
-            StyleColor(.black)
-        )
-
-        layer.textHaloWidth = .constant(1)
-
-        // SHOW ONLY WHEN ZOOM >= 5
-
-        layer.textOpacity = .expression(
-
-            Exp(.step) {
-
-                Exp(.zoom)
-
+        layer.textPadding = .constant(5)
+        layer.textColor = .constant(StyleColor(.white))
+        layer.textOpacity = .expression(Exp(.step) {
+            Exp(.zoom)
                 0
-
                 5
-
                 1
             }
         )
