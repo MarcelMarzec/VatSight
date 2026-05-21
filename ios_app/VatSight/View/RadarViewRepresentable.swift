@@ -228,6 +228,19 @@ struct RadarViewRepresentable: UIViewRepresentable {
             mapView.mapboxMap.addInteraction(
                 labelInteraction
             )
+            
+            let mapTapInteraction = TapInteraction { [weak self] context in
+
+                    guard let self else {
+                        return false
+                    }
+
+                    self.viewModel.dismissPilotSheet()
+
+                    return true
+                }
+
+                mapView.mapboxMap.addInteraction(mapTapInteraction)
         }
     }
 }

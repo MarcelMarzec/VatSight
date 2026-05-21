@@ -23,20 +23,23 @@ struct RadarView: View {
             RadarViewRepresentable(viewModel: viewModel,
                                    prefsManager: prefsManager)
             .ignoresSafeArea()
-            .sheet(item: $viewModel.selectedPilot, onDismiss: resetSelectedPilot) { pilot in
-                PilotDetailsView(pilot: pilot)
-                    .clipShape(
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: 20,
-                            bottomLeadingRadius: 50,
-                            bottomTrailingRadius: 50,
-                            topTrailingRadius: 20,
-                            style: .continuous
+            .sheet(isPresented: $viewModel.isShowingPilotSheet,
+                onDismiss: { viewModel.dismissPilotSheet() }
+            ) { if let pilot = viewModel.selectedPilot {
+                    PilotDetailsView(pilot: pilot)
+                        .clipShape(
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: 20,
+                                bottomLeadingRadius: 50,
+                                bottomTrailingRadius: 50,
+                                topTrailingRadius: 20,
+                                style: .continuous
+                            )
                         )
-                    )
-                    .presentationDragIndicator(.visible)
-                    .presentationDetents([.fraction(0.275), .medium,.large])
-                    .presentationBackgroundInteraction(.enabled)
+                        .presentationDragIndicator(.visible)
+                        .presentationDetents([.fraction(0.275), .medium, .large])
+                        .presentationBackgroundInteraction(.enabled)
+                }
             }
             .onAppear {
                 viewModel.startAutoRefresh()
