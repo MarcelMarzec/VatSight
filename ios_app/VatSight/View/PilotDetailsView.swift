@@ -53,18 +53,18 @@ struct PilotDetailsView: View {
                         HStack {
                             Text(fp.departure)
                                 .font(.title3.bold())
-                            LabelledDivider(label: fp.enroute_time)
+                            LabelledDivider(label: fp.enroute_timeFormatted)
                             Text(fp.arrival)
                                 .font(.title3.bold())
                         }
 
                         HStack {
                             Spacer()
-                            metric("Dep Time", fp.deptime)
+                            metric("Dep Time", fp.deptimeFormatted)
                             Spacer()
-                            metric("Fuel Time", fp.fuel_time)
+                            metric("Fuel Time", fp.fuel_timeFormatted)
                             Spacer()
-                            metric("Logon Time", pilot.logon_time)
+                            metric("Logon Time", pilot.logon_timeFormatted)
                             Spacer()
                         }
 
@@ -92,7 +92,7 @@ struct PilotDetailsView: View {
                         Text("Last Updated")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(pilot.last_updated)
+                        Text(pilot.last_updatedFormatted)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -154,5 +154,6 @@ struct LabelledDivider: View {
 }
 
 #Preview {
-    PilotDetailsView(pilot: Pilot(cid: 1234567, name: "Kennedy Steve KJFK", callsign: "DAL1", server: "USA-EAST", pilot_rating: 0, military_rating: 0, latitude: 40.64222, longitude: -73.76981, altitude: 12, groundspeed: 0, transponder: "1000", heading: 44, qnh_i_hg: 29.92, qnh_mb: 1013, logon_time: "1970-01-01T00:00:00.000000Z", last_updated: "1970-01-01T00:00:00.000000Z", flight_plan: fp(flight_rules: "I", aircraft: "B764/H-SDE3FGHIM3RWXY/LB1", aircraft_faa: "B764/L", aircraft_short: "B764", departure: "KJFK", arrival: "EGLL", alternate: "EGBB", deptime: "0000", enroute_time: "0615", fuel_time: "0745", remarks: "/V/", route: "GREKI DCT JUDDS DCT MARTN DCT BAREE DCT NEEKO NATX LIMRI NATX XETBO DCT EVRIN DCT INFEC DCT JETZI DCT OGLUN DCT OCTIZ P2 SIRIC SIRI1H", revision_id: 1, assigned_transponder: "3456")))
+    PilotDetailsView(pilot: Pilot(cid: 1234567, name: "Kennedy Steve KJFK", callsign: "DAL1", server: "USA-EAST", pilot_rating: 0, military_rating: 0, latitude: 40.64222, longitude: -73.76981, altitude: 12, groundspeed: 0, transponder: "1000", heading: 44, qnh_i_hg: 29.92, qnh_mb: 1013, logon_time: Date.now, last_updated: Date.now, flight_plan: fp(flight_rules: "I", aircraft: "B764/H-SDE3FGHIM3RWXY/LB1", aircraft_faa: "B764/L", aircraft_short: "B764", departure: "KJFK", arrival: "EGLL", alternate: "EGBB", deptime: "0000", enroute_time: "0615", fuel_time: "0745", remarks: "/V/", route: "GREKI DCT JUDDS DCT MARTN DCT BAREE DCT NEEKO NATX LIMRI NATX XETBO DCT EVRIN DCT INFEC DCT JETZI DCT OGLUN DCT OCTIZ P2 SIRIC SIRI1H", revision_id: 1, assigned_transponder: "3456")))
+    
 }
