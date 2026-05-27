@@ -25,11 +25,11 @@ struct PilotDetailsView: View {
                                     dismiss()
                                 }label: {
                                     Image(systemName: "xmark")
-                                        .font(.title2)
+                                        .font(.title)
                                 }.foregroundColor(.white)
                             }
                             
-                            Text(verbatim: "\(pilot.cid) | \(pilot.name)")
+                            Text(verbatim: "\(pilot.name) (\(pilot.cid))")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -53,19 +53,19 @@ struct PilotDetailsView: View {
                         HStack {
                             Text(fp.departure)
                                 .font(.title3.bold())
-                            LabelledDivider(label: fp.enroute_timeFormatted)
+                            LabelledDivider(label: fp.alternate)
                             Text(fp.arrival)
                                 .font(.title3.bold())
                         }
 
                         HStack {
+                            metric("Logon Time", pilot.logon_timeFormatted)
                             Spacer()
                             metric("Dep Time", fp.deptimeFormatted)
                             Spacer()
+                            metric("Enroute Time", fp.enroute_timeFormatted)
+                            Spacer()
                             metric("Fuel Time", fp.fuel_timeFormatted)
-                            Spacer()
-                            metric("Logon Time", pilot.logon_timeFormatted)
-                            Spacer()
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
@@ -140,7 +140,7 @@ struct LabelledDivider: View {
                 Text(label)
                     .foregroundColor(color)
                     .offset(x: 0, y: 10)
-                Text("Enroute Time")
+                Text("Alternate")
                     .foregroundColor(color)
                     .offset(x: 0, y: -12)
             }

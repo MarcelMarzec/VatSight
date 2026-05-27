@@ -49,6 +49,7 @@ struct SettingsView: View {
                         }
                         .keyboardType(.numberPad)
                 }
+                // Not currently functional
                 Section("Miscellaneous"){
                     Link("Get In Contact", destination: URL(string: "mailto:contact@marcelmarzec.com")!)
                         .foregroundColor(.primary)

@@ -13,6 +13,7 @@ struct RadarView: View {
     
     @Environment(PreferencesManager.self) private var prefsManager
     @StateObject private var viewModel = RadarViewModel()
+    @State private var slider: Double = 0.5
     
     @State private var selectedPilot: Pilot = Pilot(cid: 0, name: "N/A", callsign: "N/A", server: "N/A", pilot_rating: 0, military_rating: 0, latitude: 0.0, longitude: 0.0, altitude: 0, groundspeed: 0, transponder: "0", heading: 0, qnh_i_hg: 0, qnh_mb: 0, logon_time: Date.now, last_updated: Date.now, flight_plan: nil)
     
@@ -47,20 +48,6 @@ struct RadarView: View {
             .onDisappear {
                 viewModel.stopAutoRefresh()
             }
-            
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button{}label: {
-                        Text("Pilot count: \(viewModel.pilots.count)")
-                            .font(.footnote)
-                    }.padding()
-                        .glassEffect()
-                }
-            }
-            .foregroundColor(.white)
-            .padding(EdgeInsets(top: 10, leading: 20, bottom: 10, trailing: 20))
         }
     }
     

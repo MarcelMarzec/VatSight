@@ -23,28 +23,38 @@ class VatsimService {
             do {
                 let decoder = JSONDecoder()
 
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [
+                let formatterWithFractional = ISO8601DateFormatter()
+                formatterWithFractional.formatOptions = [
                     .withInternetDateTime,
                     .withFractionalSeconds
+                ]
+
+                let formatterWithoutFractional = ISO8601DateFormatter()
+                formatterWithoutFractional.formatOptions = [
+                    .withInternetDateTime
                 ]
 
                 decoder.dateDecodingStrategy = .custom { decoder in
                     let container = try decoder.singleValueContainer()
                     let string = try container.decode(String.self)
 
-                    if let date = formatter.date(from: string) {
+                    if let date = formatterWithFractional.date(from: string) {
+                        return date
+                    }
+
+                    if let date = formatterWithoutFractional.date(from: string) {
                         return date
                     }
 
                     throw DecodingError.dataCorruptedError(
                         in: container,
-                        debugDescription: "Invalid date format"
+                        debugDescription: "Invalid date format: \(string)"
                     )
                 }
 
                 let decoded = try decoder.decode(VatsimResponse.self, from: data)
                 completion(.success(decoded.pilots))
+
             } catch {
                 completion(.failure(error))
             }
