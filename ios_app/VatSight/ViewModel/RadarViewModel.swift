@@ -31,14 +31,14 @@ final class RadarViewModel: ObservableObject {
     }
     
     func loadPilots() {
-        service.fetchPilots { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let pilots):
-                    self?.pilots = pilots
-                case .failure(let error):
-                    print("Error fetching pilots:", error)
+        service.fetchAllData { [weak self] result in
+            switch result {
+            case .success(let response):
+                DispatchQueue.main.async {
+                    self?.pilots = response.pilots
                 }
+            case .failure(let error):
+                print("Failed to fetch data: \(error)")
             }
         }
     }
