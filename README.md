@@ -1,36 +1,21 @@
 # VatSight
-VatSight in an in development IOS app for exloring the live traffic on the VATSIM network. Track pilots, check for ATC, and visualize airspace in real time.s
+VatSight in an in development IOS app for visualising live VATSIM traffic. 
 
-## What is VatSight?
-VatSight is a map-based viewer for the VATSIM network.
+Track your own flight, check for ATC coverage, and visualise airspace in real time using the latest Vatglasses Data
 
-Whether you're:
+## Open Source!
+I believe in the power of community driven projects therefore VatSight is **source-available**, meaning:
 
-* A pilot planning your next flight
-* An ATC looking at coverage
-* Or just exploring live traffic
+* ✅ You can view and scrutinise my work!
+* ✅ You can contribute improvements!
+* ❌ You cannot redistribute or sell it as a competing app!
 
-## Why VatSight?
-Most VATSIM tools are powerful—but often cluttered or outdated.
+Please share your thoughts, feedback and future in the repo's Issues / Discussions
 
-VatSight focuses on:
+See [LICENSE](./LICENSE)
 
-* **Clarity over complexity**
-* **Speed over feature bloat**
-* **Mobile-first experience**
-
-## Open Source
-VatSight is **source-available**, meaning:
-
-* ✅ You can view and learn from the code
-* ✅ You can contribute improvements
-* ❌ You cannot redistribute or sell it as a competing app
-
-See [LICENSE](./LICENSE) for details.
-
-## Contributing
+## What to help out?
 Contributions are welcome and appreciated.
-
 You can help by:
 
 * Fixing bugs
@@ -38,29 +23,22 @@ You can help by:
 * Enhancing UI/UX
 * Suggesting new features
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
+See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ## Tech Stack
 * Swift / SwiftUI
 * Mapbox IOS Native SDK
 * VATSIM data APIs
-
-## Community
-* Discussions: GitHub Issues / Discussions
-* Feature requests welcome
-* Feedback is encouraged early and often
+* Vatglasses Sector Data
 
 ## Acknowledgements
 * User data sourced from VATSIM API
 * Airspace data sourced from Vatglassses
-* Built for the flight simulation community
-
-## Disclaimer
-VatSight is an independent project and is **not affiliated with or endorsed by VATSIM**.
+* VatSight is an independent project and is **not affiliated with or endorsed by VATSIM**.
 
 ## Support the Project
 If you find VatSight useful:
 
-* Star the repository ⭐
 * Share it with the community
 * Contribute or provide feedback
+* Star the repository ⭐
