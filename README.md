@@ -11,7 +11,7 @@ Here's a sneak peak at what I've been working on and hasn't been pushed to the r
 
 <img width="300" alt="Simulator Screenshot - iPhone 17 - 2026-08-04 at 13 16 32" src="https://github.com/user-attachments/assets/a55d86dc-ad90-4244-a68e-d0f7691355a4" />
 <img width="300" alt="Simulator Screenshot - iPhone 17 - 2026-08-04 at 13 17 15" src="https://github.com/user-attachments/assets/026cd37e-0548-4496-8fed-968f3a45399b" />
-<img width="300" alt="Simulator Screenshot - iPhone 17 - 2026-08-04 at 13 18 00" src="https://github.com/user-attachments/assets/3c382d4b-3a35-41c1-b637-aaedd002e2eb" />
+<img width="300" alt="Simulator Screenshot - iPhone 17 - 2026-08-04 at 13 18 00" src="https://github.com/user-attachments/assets/3c382d4b-3a35-41c1-b637-aaedd002e2eb" /> 
 
 
 ### Open Source!
