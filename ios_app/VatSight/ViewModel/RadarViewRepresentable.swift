@@ -54,8 +54,13 @@ struct RadarViewRepresentable: UIViewRepresentable {
 
         // STYLE LOADED
 
+        // Layer order from bottom to top: sectors → airports → routes → pilots → sector labels
         mapView.mapboxMap.onMapLoaded.observeNext { [weak coordinator = context.coordinator] _ in
+            coordinator?.installSectorStyleIfNeeded()
+            coordinator?.installAirportStyleIfNeeded()
+            coordinator?.installRouteStyleIfNeeded()
             coordinator?.installPilotStyleIfNeeded()
+            coordinator?.ensureSectorLabelsOnTop()
         }
         .store(in: &context.coordinator.cancelables)
 
@@ -87,6 +92,18 @@ struct RadarViewRepresentable: UIViewRepresentable {
             viewModel.pilots,
             selectedCID: viewModel.selectedCID
         )
+        
+        context.coordinator.updateSectors(
+            viewModel.sectorsToDisplay,
+            controllers: viewModel.controllers
+        )
+        
+        context.coordinator.updateAirports(viewModel.airportsToDisplay, filledICAOs: viewModel.filledAirportICAOs)
+
+        context.coordinator.updateRoutes(
+            pilot: viewModel.selectedPilot,
+            airportCoordinates: viewModel.airportCoordinates
+        )
     }
 
     // MARK: - Coordinator
@@ -96,8 +113,14 @@ struct RadarViewRepresentable: UIViewRepresentable {
         var cancelables = Set<AnyCancelable>()
         let viewModel: RadarViewModel
         let prefsManager: PreferencesManager
-        private let styleManager = RadarStyleManager()
-        private var didInstallStyle = false
+        private let pilotStyleManager = RadarStyleManager()
+        private let sectorStyleManager = SectorStyleManager()
+        private let airportStyleManager = AirportStyleManager()
+        private let routeStyleManager = FlightRouteStyleManager()
+        private var didInstallPilotStyle = false
+        private var didInstallSectorStyle = false
+        private var didInstallAirportStyle = false
+        private var didInstallRouteStyle = false
 
         // MARK: - Init
 
@@ -118,22 +141,89 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 return
             }
 
-            guard !didInstallStyle else {
+            guard !didInstallPilotStyle else {
                 return
             }
 
             do {
-                try styleManager.configurePilots(
-                    on: mapView)
-                didInstallStyle = true
-                styleManager.updatePilots(
+                try pilotStyleManager.configurePilots(on: mapView)
+                didInstallPilotStyle = true
+                pilotStyleManager.updatePilots(
                     on: mapView,
                     pilots: viewModel.pilots,
                     selectedCID: viewModel.selectedCID
                 )
             } catch {
-                print("❌ Failed to configure pilot style:", error)
+                print("Failed to configure pilot style:", error)
             }
+        }
+        
+        func installSectorStyleIfNeeded() {
+            guard let mapView else {
+                return
+            }
+            
+            guard !didInstallSectorStyle else {
+                return
+            }
+            
+            do {
+                try sectorStyleManager.configureSectors(on: mapView)
+                didInstallSectorStyle = true
+                sectorStyleManager.updateSectors(
+                    on: mapView,
+                    sectors: viewModel.sectors,
+                    controllers: viewModel.controllers
+                )
+            } catch {
+                print("Failed to configure sector style:", error)
+            }
+        }
+        
+        func installAirportStyleIfNeeded() {
+            guard let mapView else {
+                return
+            }
+            
+            guard !didInstallAirportStyle else {
+                return
+            }
+            
+            do {
+                try airportStyleManager.configureAirports(on: mapView)
+                didInstallAirportStyle = true
+                airportStyleManager.updateAirports(
+                    on: mapView,
+                    airports: viewModel.airportsToDisplay,
+                    filledICAOs: viewModel.filledAirportICAOs
+                )
+            } catch {
+                print("Failed to configure airport style:", error)
+            }
+        }
+        
+        func installRouteStyleIfNeeded() {
+            guard let mapView else { return }
+            guard !didInstallRouteStyle else { return }
+
+            do {
+                try routeStyleManager.configureRoutes(on: mapView)
+                didInstallRouteStyle = true
+                routeStyleManager.updateRoutes(
+                    on: mapView,
+                    pilot: viewModel.selectedPilot,
+                    airportCoordinates: viewModel.airportCoordinates
+                )
+            } catch {
+                print("Failed to configure route style:", error)
+            }
+        }
+
+        func ensureSectorLabelsOnTop() {
+            guard let mapView, didInstallSectorStyle else {
+                return
+            }
+            sectorStyleManager.ensureSectorLabelIsOnTop(on: mapView)
         }
         
         // MARK: - Configure Ornaments
@@ -154,13 +244,36 @@ struct RadarViewRepresentable: UIViewRepresentable {
             selectedCID: Int?
         ) {
 
-            guard let mapView, didInstallStyle else { return }
+            guard let mapView, didInstallPilotStyle else { return }
 
-            styleManager.updatePilots(
+            pilotStyleManager.updatePilots(
                 on: mapView,
                 pilots: pilots,
                 selectedCID: selectedCID
             )
+        }
+        
+        func updateSectors(
+            _ sectors: [VatglassesSector],
+            controllers: [Controllers]
+        ) {
+            guard let mapView, didInstallSectorStyle else { return }
+            
+            sectorStyleManager.updateSectors(
+                on: mapView,
+                sectors: sectors,
+                controllers: controllers
+            )
+        }
+        
+        func updateAirports(_ airports: [VatglassesAirport], filledICAOs: Set<String>) {
+            guard let mapView else { return }
+            airportStyleManager.updateAirports(on: mapView, airports: airports, filledICAOs: filledICAOs)
+        }
+
+        func updateRoutes(pilot: Pilot?, airportCoordinates: [String: CLLocationCoordinate2D]) {
+            guard let mapView else { return }
+            routeStyleManager.updateRoutes(on: mapView, pilot: pilot, airportCoordinates: airportCoordinates)
         }
 
         // MARK: - Tap Interaction
@@ -170,8 +283,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             guard let mapView else {
                 return
             }
-
-            // PILOT ICON TAPS
 
             let pilotInteraction = TapInteraction(
                 .layer(RadarStyleManager.pilotIconLayerId)
@@ -199,8 +310,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             mapView.mapboxMap.addInteraction(
                 pilotInteraction
             )
-
-            // CALLSIGN LABEL TAPS
 
             let labelInteraction = TapInteraction(
                 .layer(RadarStyleManager.pilotLabelLayerId)

@@ -1,0 +1,12 @@
+# Secrets — never commit these
+ios_app/VatSight/Secrets.xcconfig
+
+# macOS
+.DS_Store
+
+# Xcode user data
+*.xcuserstate
+xcuserdata/
+
+# Swift Package Manager
+.build/
