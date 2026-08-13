@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 // MARK: - Ad Provider Protocol
 // Implement this protocol to swap in a real ad SDK (e.g. Google AdMob rewarded ads)
@@ -80,6 +81,7 @@ private enum PlaybackState {
 // MARK: - AdView
 struct AdView: View {
     @Environment(PreferencesManager.self) private var prefsManager
+    @Environment(\.dismiss) private var dismiss
 
     // Swap SimulatedAdProvider() for your real SDK provider here
     private let adProvider: AdProvider = SimulatedAdProvider()
@@ -133,7 +135,7 @@ struct AdView: View {
 
             // All-time total counter
             Section {
-                HStack {
+                HStack(spacing: 16) {
                     Image(systemName: "trophy.fill")
                         .foregroundColor(.yellow)
                     Text("Total ads watched")
@@ -301,10 +303,11 @@ struct AdView: View {
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button(role: .cancel) {
+                Button {
                     reset()
+                    dismiss()
                 } label: {
-                    Text("Done")
+                    Label("Return to VatSight", systemImage: "chevron.left")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -384,7 +387,7 @@ struct AdView: View {
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let context = ModelContext(container)
 
-    return NavigationStack {
+    NavigationStack {
         AdView()
     }
     .environment(PreferencesManager(context: context))

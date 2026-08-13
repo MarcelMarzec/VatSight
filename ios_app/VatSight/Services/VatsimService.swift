@@ -11,10 +11,8 @@ final class VatsimService {
     
     private let url = URL(string: "https://data.vatsim.net/v3/vatsim-data.json")!
     
-    // MARK: - Cached state (important for performance)
-    private var cachedResponse: VatsimResponse?
+    private var cachedResponse: VatsimResponseModel?
     
-    // MARK: - Date decoding (reuse once)
     private let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
         
@@ -48,20 +46,7 @@ final class VatsimService {
         return decoder
     }()
     
-    // MARK: - MAIN FETCH (replaces all partial fetches)
-    func fetchPilots(completion: @escaping (Result<[Pilot], Error>) -> Void) {
-        fetchAllData { result in
-            switch result {
-            case .success(let response):
-                completion(.success(response.pilots))
-            case .failure(let error):
-                completion(.failure(error))
-            }
-        }
-    }
-    
-    // MARK: - CORE FETCH (NEW)
-    func fetchAllData(completion: @escaping (Result<VatsimResponse, Error>) -> Void) {
+    func fetchAllData(completion: @escaping (Result<VatsimResponseModel, Error>) -> Void) {
         
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             
@@ -77,9 +62,8 @@ final class VatsimService {
             do {
                 guard let self = self else { return }
                 
-                let decoded = try self.decoder.decode(VatsimResponse.self, from: data)
+                let decoded = try self.decoder.decode(VatsimResponseModel.self, from: data)
                 
-                // cache it for Mapbox / UI reuse
                 self.cachedResponse = decoded
                 
                 completion(.success(decoded))
@@ -90,9 +74,7 @@ final class VatsimService {
             
         }.resume()
     }
-    
-    // MARK: - FAST ACCESSORS (NO network call)
-    
+
     func getCachedPilots() -> [Pilot] {
         cachedResponse?.pilots ?? []
     }

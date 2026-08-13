@@ -40,12 +40,14 @@ enum PilotGeoJSON {
         )
 
         let isSelected = pilot.cid == selectedCID
+        let isOnGround = pilot.groundspeed < 40
 
         feature.properties = [
             "cid": .number(Double(pilot.cid)),
             "callsign": .string(pilot.callsign),
             "heading": .number(Double(pilot.heading)),
-            "isSelected": .boolean(isSelected)
+            "isSelected": .boolean(isSelected),
+            "isOnGround": .boolean(isOnGround)
         ]
 
         return feature

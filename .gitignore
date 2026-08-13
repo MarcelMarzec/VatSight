@@ -1,5 +1,5 @@
 # Secrets — never commit these
-ios_app/VatSight/Secrets.xcconfig
+ios_app/Secrets.xcconfig
 
 # macOS
 .DS_Store

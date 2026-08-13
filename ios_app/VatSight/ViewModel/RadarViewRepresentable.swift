@@ -60,7 +60,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
             coordinator?.installAirportStyleIfNeeded()
             coordinator?.installRouteStyleIfNeeded()
             coordinator?.installPilotStyleIfNeeded()
-            coordinator?.ensureSectorLabelsOnTop()
+            coordinator?.ensureLabelsOnTop()
         }
         .store(in: &context.coordinator.cancelables)
 
@@ -95,15 +95,30 @@ struct RadarViewRepresentable: UIViewRepresentable {
         
         context.coordinator.updateSectors(
             viewModel.sectorsToDisplay,
-            controllers: viewModel.controllers
+            controllers: viewModel.effectiveControllers,
+            airports: viewModel.airportsToDisplay,
+            selectedControllerCID: viewModel.selectedSectorControllerCID
         )
         
-        context.coordinator.updateAirports(viewModel.airportsToDisplay, filledICAOs: viewModel.filledAirportICAOs)
+        context.coordinator.updateAirports(
+            viewModel.airportsToDisplay,
+            filledICAOs: viewModel.filledAirportICAOs,
+            selectedICAO: viewModel.selectedAirportICAO
+        )
 
         context.coordinator.updateRoutes(
             pilot: viewModel.selectedPilot,
-            airportCoordinates: viewModel.airportCoordinates
+            airportCoordinates: viewModel.airportCoordinates,
+            selectedAirportICAO: viewModel.selectedAirportICAO,
+            airportTraffic: viewModel.selectedAirportTraffic
         )
+
+        if let coordinate = viewModel.pendingCameraFlyTo {
+            context.coordinator.flyTo(coordinate: coordinate)
+            DispatchQueue.main.async { viewModel.pendingCameraFlyTo = nil }
+        }
+
+
     }
 
     // MARK: - Coordinator
@@ -122,13 +137,28 @@ struct RadarViewRepresentable: UIViewRepresentable {
         private var didInstallAirportStyle = false
         private var didInstallRouteStyle = false
 
+        // Last-seen values — used to skip redundant Mapbox source updates.
+        private var lastPilots: [Pilot] = []
+        private var lastSelectedCID: Int? = nil
+        private var lastSectors: [VatglassesSector] = []
+        private var lastActiveSectorCount: Int = -1
+        private var lastOwnershipSignature: Int = 0
+        private var lastSelectedControllerCID: Int? = nil
+        private var lastAirports: [VatglassesAirport] = []
+        private var lastFilledICAOs: Set<String> = []
+        private var lastSelectedAirportICAO: String? = nil
+        private var lastRoutePilotCID: Int? = nil
+        private var lastRouteAirportICAO: String? = nil
+        /// Incremented each time pilots data is pushed to the map; used to trigger
+        /// route redraws when aircraft positions change while the same selection is active.
+        private var pilotsVersion: Int = 0
+        private var lastRoutePilotsVersion: Int = -1
         // MARK: - Init
 
         init(
             viewModel: RadarViewModel,
             prefsManager: PreferencesManager
         ) {
-
             self.viewModel = viewModel
             self.prefsManager = prefsManager
         }
@@ -172,8 +202,9 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 didInstallSectorStyle = true
                 sectorStyleManager.updateSectors(
                     on: mapView,
-                    sectors: viewModel.sectors,
-                    controllers: viewModel.controllers
+                    sectors: viewModel.sectorsToDisplay,
+                    controllers: viewModel.effectiveControllers,
+                    airports: viewModel.airportsToDisplay
                 )
             } catch {
                 print("Failed to configure sector style:", error)
@@ -209,28 +240,40 @@ struct RadarViewRepresentable: UIViewRepresentable {
             do {
                 try routeStyleManager.configureRoutes(on: mapView)
                 didInstallRouteStyle = true
-                routeStyleManager.updateRoutes(
-                    on: mapView,
+                updateRoutes(
                     pilot: viewModel.selectedPilot,
-                    airportCoordinates: viewModel.airportCoordinates
+                    airportCoordinates: viewModel.airportCoordinates,
+                    selectedAirportICAO: viewModel.selectedAirportICAO,
+                    airportTraffic: viewModel.selectedAirportTraffic
                 )
             } catch {
                 print("Failed to configure route style:", error)
             }
         }
 
-        func ensureSectorLabelsOnTop() {
-            guard let mapView, didInstallSectorStyle else {
-                return
+        func ensureLabelsOnTop() {
+            guard let mapView else { return }
+            if didInstallSectorStyle {
+                sectorStyleManager.ensureSectorLabelIsOnTop(on: mapView)
             }
-            sectorStyleManager.ensureSectorLabelIsOnTop(on: mapView)
+            if didInstallAirportStyle {
+                airportStyleManager.ensureAirportLabelIsOnTop(on: mapView)
+            }
         }
-        
+
+        // MARK: - Camera
+
+        func flyTo(coordinate: CLLocationCoordinate2D) {
+            guard let mapView else { return }
+            let camera = CameraOptions(center: coordinate, zoom: max(mapView.mapboxMap.cameraState.zoom, 7))
+            mapView.camera.ease(to: camera, duration: 0.6)
+        }
+
         // MARK: - Configure Ornaments
         
         func configureOrnaments(for mapView: MapView) {
             mapView.ornaments.options.scaleBar.visibility = .hidden
-            mapView.ornaments.options.compass.position = .topTrailing
+            mapView.ornaments.options.compass.position = .topLeading
             mapView.ornaments.options.compass.margins = CGPoint(x: 8, y: 8)
             mapView.ornaments.options.attributionButton.position = .bottomLeading
             mapView.ornaments.options.attributionButton.margins = CGPoint(x: 85, y: 6)
@@ -243,8 +286,11 @@ struct RadarViewRepresentable: UIViewRepresentable {
             _ pilots: [Pilot],
             selectedCID: Int?
         ) {
-
             guard let mapView, didInstallPilotStyle else { return }
+            guard pilots.count != lastPilots.count || selectedCID != lastSelectedCID else { return }
+            lastPilots = pilots
+            lastSelectedCID = selectedCID
+            pilotsVersion += 1
 
             pilotStyleManager.updatePilots(
                 on: mapView,
@@ -255,25 +301,85 @@ struct RadarViewRepresentable: UIViewRepresentable {
         
         func updateSectors(
             _ sectors: [VatglassesSector],
-            controllers: [Controllers]
+            controllers: [Controllers],
+            airports: [VatglassesAirport] = [],
+            selectedControllerCID: Int? = nil
         ) {
             guard let mapView, didInstallSectorStyle else { return }
-            
+            let activeSectorCount = sectors.filter { $0.isActive }.count
+            // Hash the active owner assignment per sector so that ownership transfers
+            // (same count, different controllers) are also detected.
+            let ownershipSignature = sectors.reduce(into: 0) { hash, sector in
+                hash ^= sector.id.hashValue
+                hash ^= (sector.activeController?.cid ?? -1).hashValue
+            }
+            guard sectors.count != lastSectors.count
+                    || activeSectorCount != lastActiveSectorCount
+                    || ownershipSignature != lastOwnershipSignature
+                    || selectedControllerCID != lastSelectedControllerCID else { return }
+            lastSectors = sectors
+            lastActiveSectorCount = activeSectorCount
+            lastOwnershipSignature = ownershipSignature
+            lastSelectedControllerCID = selectedControllerCID
+
             sectorStyleManager.updateSectors(
                 on: mapView,
                 sectors: sectors,
-                controllers: controllers
+                controllers: controllers,
+                airports: airports,
+                selectedControllerCID: selectedControllerCID
             )
         }
         
-        func updateAirports(_ airports: [VatglassesAirport], filledICAOs: Set<String>) {
+        func updateAirports(_ airports: [VatglassesAirport], filledICAOs: Set<String>, selectedICAO: String? = nil) {
             guard let mapView else { return }
-            airportStyleManager.updateAirports(on: mapView, airports: airports, filledICAOs: filledICAOs)
+            guard airports.count != lastAirports.count || filledICAOs != lastFilledICAOs || selectedICAO != lastSelectedAirportICAO else { return }
+            lastAirports = airports
+            lastFilledICAOs = filledICAOs
+            lastSelectedAirportICAO = selectedICAO
+            airportStyleManager.updateAirports(on: mapView, airports: airports, filledICAOs: filledICAOs, selectedICAO: selectedICAO)
         }
 
-        func updateRoutes(pilot: Pilot?, airportCoordinates: [String: CLLocationCoordinate2D]) {
+        func updateRoutes(
+            pilot: Pilot?,
+            airportCoordinates: [String: CLLocationCoordinate2D],
+            selectedAirportICAO: String?,
+            airportTraffic: AirportTraffic?
+        ) {
             guard let mapView else { return }
-            routeStyleManager.updateRoutes(on: mapView, pilot: pilot, airportCoordinates: airportCoordinates)
+            let incomingPilotCID = pilot?.cid
+            guard incomingPilotCID != lastRoutePilotCID
+                    || selectedAirportICAO != lastRouteAirportICAO
+                    || pilotsVersion != lastRoutePilotsVersion else { return }
+            lastRoutePilotCID = incomingPilotCID
+            lastRouteAirportICAO = selectedAirportICAO
+            lastRoutePilotsVersion = pilotsVersion
+
+            if let pilot {
+                // A pilot is selected — draw pilot-to-airport lines
+                routeStyleManager.updateRoutes(
+                    on: mapView,
+                    pilot: pilot,
+                    airportCoordinates: airportCoordinates
+                )
+            } else if let icao = selectedAirportICAO,
+                      let traffic = airportTraffic,
+                      let airportCoord = airportCoordinates[icao] {
+                // An airport is selected — draw colour-coded airport-to-pilot lines
+                routeStyleManager.updateAirportRoutes(
+                    on: mapView,
+                    airportCoordinate: airportCoord,
+                    airborneDepartures: traffic.airborneDepartures,
+                    airborneArrivals: traffic.airborneArrivals
+                )
+            } else {
+                // Nothing selected — clear all lines
+                routeStyleManager.updateRoutes(
+                    on: mapView,
+                    pilot: nil,
+                    airportCoordinates: airportCoordinates
+                )
+            }
         }
 
         // MARK: - Tap Interaction
@@ -337,19 +443,83 @@ struct RadarViewRepresentable: UIViewRepresentable {
             mapView.mapboxMap.addInteraction(
                 labelInteraction
             )
-            
+
+            let pilotGroundIconInteraction = TapInteraction(
+                .layer(RadarStyleManager.pilotGroundIconLayerId)
+            ) { [weak self] feature, context in
+                guard let self else { return false }
+                guard
+                    let jsonValue = feature.properties["cid"] ?? nil,
+                    case let .number(cidNumber) = jsonValue
+                else { return false }
+                self.viewModel.selectPilot(cid: Int(cidNumber))
+                return true
+            }
+            mapView.mapboxMap.addInteraction(pilotGroundIconInteraction)
+
+            let pilotGroundLabelInteraction = TapInteraction(
+                .layer(RadarStyleManager.pilotGroundLabelLayerId)
+            ) { [weak self] feature, context in
+                guard let self else { return false }
+                guard
+                    let jsonValue = feature.properties["cid"] ?? nil,
+                    case let .number(cidNumber) = jsonValue
+                else { return false }
+                self.viewModel.selectPilot(cid: Int(cidNumber))
+                return true
+            }
+            mapView.mapboxMap.addInteraction(pilotGroundLabelInteraction)
+
+            // Airport circle tap
+            let airportCircleInteraction = TapInteraction(
+                .layer(AirportStyleManager.airportLayerId)
+            ) { [weak self] feature, context in
+                guard let self else { return false }
+                guard
+                    let jsonValue = feature.properties["icao"] ?? nil,
+                    case let .string(icao) = jsonValue
+                else { return false }
+                DispatchQueue.main.async { self.viewModel.selectAirport(icao: icao) }
+                return true
+            }
+            mapView.mapboxMap.addInteraction(airportCircleInteraction)
+
+            // Airport label tap
+            let airportLabelInteraction = TapInteraction(
+                .layer(AirportStyleManager.airportLabelLayerId)
+            ) { [weak self] feature, context in
+                guard let self else { return false }
+                guard
+                    let jsonValue = feature.properties["icao"] ?? nil,
+                    case let .string(icao) = jsonValue
+                else { return false }
+                DispatchQueue.main.async { self.viewModel.selectAirport(icao: icao) }
+                return true
+            }
+            mapView.mapboxMap.addInteraction(airportLabelInteraction)
+
+            // Sector label tap
+            let sectorLabelInteraction = TapInteraction(
+                .layer(SectorStyleManager.sectorLabelLayerId)
+            ) { [weak self] feature, context in
+                guard let self else { return false }
+                guard
+                    let jsonValue = feature.properties["id"] ?? nil,
+                    case let .string(sectorId) = jsonValue
+                else { return false }
+                DispatchQueue.main.async { self.viewModel.selectSector(id: sectorId) }
+                return true
+            }
+            mapView.mapboxMap.addInteraction(sectorLabelInteraction)
+
             let mapTapInteraction = TapInteraction { [weak self] context in
-
-                    guard let self else {
-                        return false
-                    }
-
-                    self.viewModel.dismissPilotSheet()
-
-                    return true
-                }
-
-                mapView.mapboxMap.addInteraction(mapTapInteraction)
+                guard let self else { return false }
+                self.viewModel.dismissPilotSheet()
+                self.viewModel.dismissAirportSheet()
+                self.viewModel.dismissSectorSheet()
+                return true
+            }
+            mapView.mapboxMap.addInteraction(mapTapInteraction)
         }
     }
 }

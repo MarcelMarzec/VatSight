@@ -23,7 +23,7 @@ struct Prefiles: Codable, Identifiable {
     
     private static let utcTimeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "HH:mm'Z'"
+        f.dateFormat = "HH:mm'z'"
         f.timeZone = TimeZone(secondsFromGMT: 0)
         return f
     }()

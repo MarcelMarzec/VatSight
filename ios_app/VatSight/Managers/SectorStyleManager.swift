@@ -11,10 +11,11 @@ import MapboxMaps
 
 final class SectorStyleManager {
     static let sectorSourceId = "sectors-source"
+    static let sectorLabelSourceId = "sectors-label-source"
     static let sectorFillLayerId = "sector-fill-layer"
     static let sectorOutlineLayerId = "sector-outline-layer"
     static let sectorLabelLayerId = "sector-label-layer"
-    
+
     private let activeSectorFillColor = StyleColor(UIColor.systemBlue.withAlphaComponent(0.08))
     private let activeSectorStrokeColor = StyleColor(UIColor.systemBlue.withAlphaComponent(0.6))
     private let inactiveSectorFillColor = StyleColor(UIColor.systemGray.withAlphaComponent(0.03))
@@ -30,6 +31,7 @@ final class SectorStyleManager {
         try addSectorSource(to: mapView)
         try addSectorFillLayer(to: mapView)
         try addSectorOutlineLayer(to: mapView)
+        try addSectorLabelSource(to: mapView)
         try addSectorLabelLayer(to: mapView)
     }
     
@@ -38,16 +40,28 @@ final class SectorStyleManager {
     func updateSectors(
         on mapView: MapView,
         sectors: [VatglassesSector],
-        controllers: [Controllers]
+        controllers: [Controllers],
+        airports: [VatglassesAirport] = [],
+        selectedControllerCID: Int? = nil
     ) {
         let collection = SectorGeoJSON.featureCollection(
             from: sectors,
-            controllers: controllers
+            controllers: controllers,
+            selectedControllerCID: selectedControllerCID
         )
-        
         mapView.mapboxMap.updateGeoJSONSource(
             withId: Self.sectorSourceId,
             geoJSON: .featureCollection(collection)
+        )
+
+        let labelCollection = SectorGeoJSON.labelPointFeatureCollection(
+            from: sectors,
+            airports: airports,
+            selectedControllerCID: selectedControllerCID
+        )
+        mapView.mapboxMap.updateGeoJSONSource(
+            withId: Self.sectorLabelSourceId,
+            geoJSON: .featureCollection(labelCollection)
         )
     }
     
@@ -76,12 +90,19 @@ final class SectorStyleManager {
         try? mapView.mapboxMap.removeLayer(withId: Self.sectorOutlineLayerId)
         try? mapView.mapboxMap.removeLayer(withId: Self.sectorFillLayerId)
         try? mapView.mapboxMap.removeSource(withId: Self.sectorSourceId)
+        try? mapView.mapboxMap.removeSource(withId: Self.sectorLabelSourceId)
     }
     
     // MARK: - Add Source
     
     private func addSectorSource(to mapView: MapView) throws {
         var source = GeoJSONSource(id: Self.sectorSourceId)
+        source.data = .featureCollection(FeatureCollection(features: []))
+        try mapView.mapboxMap.addSource(source)
+    }
+
+    private func addSectorLabelSource(to mapView: MapView) throws {
+        var source = GeoJSONSource(id: Self.sectorLabelSourceId)
         source.data = .featureCollection(FeatureCollection(features: []))
         try mapView.mapboxMap.addSource(source)
     }
@@ -96,6 +117,8 @@ final class SectorStyleManager {
         
         layer.fillColor = .expression(
             Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 0.1 }
                 Exp(.eq) {
                     Exp(.get) { "isActive" }
                     true
@@ -105,16 +128,18 @@ final class SectorStyleManager {
                     Exp(.toColor) {
                         Exp(.get) { "colorHex" }
                     }
-                    Exp(.rgba) { 30; 144; 255; 0.08 }
+                    Exp(.rgba) { 30; 144; 255; 0.05 }
                 }
                 Exp(.rgba) { 128; 128; 128; 0.03 }
             }
         )
 
-        // Active sectors with a custom color use fillOpacity for transparency;
-        // others encode alpha directly in their fill color.
+        // Selected sectors use a fixed opacity; active sectors with a custom color use
+        // fillOpacity for transparency; others encode alpha directly in their fill color.
         layer.fillOpacity = .expression(
             Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                1.0
                 Exp(.all) {
                     Exp(.eq) {
                         Exp(.get) { "isActive" }
@@ -122,7 +147,7 @@ final class SectorStyleManager {
                     }
                     Exp(.has) { "colorHex" }
                 }
-                0.08
+                0.05
                 1.0
             }
         )
@@ -140,6 +165,8 @@ final class SectorStyleManager {
         
         layer.lineColor = .expression(
             Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
                 Exp(.eq) {
                     Exp(.get) { "isActive" }
                     true
@@ -151,12 +178,14 @@ final class SectorStyleManager {
                     }
                     Exp(.rgba) { 30; 144; 255; 0.6 }
                 }
-                Exp(.rgba) { 128; 128; 128; 0.2 }
+                Exp(.rgba) { 128; 128; 128; 0.5 }
             }
         )
 
         layer.lineWidth = .expression(
             Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                3.0
                 Exp(.eq) {
                     Exp(.get) { "isActive" }
                     true
@@ -166,9 +195,11 @@ final class SectorStyleManager {
             }
         )
         
-        // Active sectors with a custom color use lineOpacity; others encode alpha in the color itself.
+        // Selected and active sectors with custom color use lineOpacity; others encode alpha in the color itself.
         layer.lineOpacity = .expression(
             Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                1.0
                 Exp(.all) {
                     Exp(.eq) {
                         Exp(.get) { "isActive" }
@@ -185,56 +216,72 @@ final class SectorStyleManager {
     }
     
     // MARK: - Label Layer
-    
+
+    /// The label layer reads from the dedicated label-point source, not the polygon source.
+    /// Below zoom 7: shows only the short callsign (e.g. "LRBB_S").
+    /// At zoom 7+, or when selected: shows full callsign + frequency on two lines.
     private func addSectorLabelLayer(to mapView: MapView) throws {
         var layer = SymbolLayer(
             id: Self.sectorLabelLayerId,
-            source: Self.sectorSourceId
+            source: Self.sectorLabelSourceId
         )
-        
-        // Only display a label for active sectors that have controller info
+
+        // Below zoom 7 show short callsign; at zoom 7+ (or when selected) show full label.
         layer.textField = .expression(
-            Exp(.switchCase) {
-                Exp(.all) {
-                    Exp(.eq) {
-                        Exp(.get) { "isActive" }
-                        true
+            Exp(.step) {
+                Exp(.zoom)
+                // zoom < 7: short callsign, unless selected
+                Exp(.switchCase) {
+                    Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                    Exp(.concat) {
+                        Exp(.get) { "controllerCallsign" }
+                        "\n"
+                        Exp(.get) { "controllerFrequency" }
                     }
-                    Exp(.has) { "controllerCallsign" }
-                    Exp(.has) { "controllerFrequency" }
+                    Exp(.get) { "controllerShortCallsign" }
                 }
+                7
+                // zoom >= 7: always full callsign + frequency
                 Exp(.concat) {
                     Exp(.get) { "controllerCallsign" }
                     "\n"
                     Exp(.get) { "controllerFrequency" }
                 }
-                ""
             }
         )
 
         layer.textSize = .constant(12)
-        layer.textColor = .constant(StyleColor(.white))
-        layer.textHaloColor = .constant(StyleColor(UIColor.black))
-        layer.textHaloWidth = .constant(50.0)
-        layer.textLetterSpacing = .constant(0.05)
-        layer.textLineHeight = .constant(1.2)
-        layer.textAllowOverlap = .constant(false)
-        layer.textIgnorePlacement = .constant(true)
-        layer.textOptional = .constant(false)
-        layer.textPadding = .constant(5)
+        layer.textFont = .constant(["Arial Unicode MS Regular"])
 
-        // Match the zoom threshold used by pilot labels
+        // White text, red when selected — matching airport label style.
+        layer.textColor = .expression(
+            Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.rgba) { 255; 255; 255; 1.0 }
+            }
+        )
+
+        layer.textHaloColor = .constant(StyleColor(.black))
+        layer.textHaloWidth = .constant(1.0)
+        layer.textPadding = .constant(5)
+        layer.textLineHeight = .constant(1.2)
+
+        // Always show — the placement algorithm already avoids airports.
+        layer.textAllowOverlap = .constant(true)
+        layer.textIgnorePlacement = .constant(true)
+
+        // Fade in above zoom 4 to match airport labels.
         layer.textOpacity = .expression(
             Exp(.step) {
                 Exp(.zoom)
                 0
-                5
+                4
                 1
             }
         )
 
         layer.symbolPlacement = .constant(.point)
-        layer.symbolSortKey = .constant(10000)
         layer.symbolZOrder = .constant(.auto)
 
         try mapView.mapboxMap.addLayer(layer)

@@ -259,10 +259,10 @@ final class FlightRouteStyleManager {
         layer.lineColor = .expression(
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "kind" }; Self.kindDeparture }
-                StyleColor(UIColor.systemRed)
+                Exp(.rgba) { 255; 59; 48; 1 }    // systemRed
                 Exp(.eq) { Exp(.get) { "kind" }; Self.kindArrival }
-                StyleColor(UIColor.systemGreen)
-                StyleColor(UIColor.white)   // fallback
+                Exp(.rgba) { 52; 199; 89; 1 }    // systemGreen
+                Exp(.rgba) { 255; 255; 255; 1 }  // fallback white
             }
         )
 

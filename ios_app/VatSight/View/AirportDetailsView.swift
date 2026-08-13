@@ -42,6 +42,7 @@ struct AirportDetailsView: View {
 
     // MARK: - Main content
 
+    @ViewBuilder
     private var mainContent: some View {
         VStack {
             // Header
@@ -76,14 +77,12 @@ struct AirportDetailsView: View {
                             systemImage: "airplane.departure"
                         )
                         Spacer()
-                        if traffic.totalOnGround > 0 {
-                            trafficMetric(
-                                "On Ground",
-                                count: traffic.totalOnGround,
-                                systemImage: "airplane.landed"
-                            )
-                            Spacer()
-                        }
+                        trafficMetric(
+                            "On Ground",
+                            count: traffic.totalOnGround,
+                            systemImage: "airplane.landed"
+                        )
+                        Spacer()
                         trafficMetric(
                             "Arrivals",
                             count: traffic.totalArrivals,
@@ -94,11 +93,9 @@ struct AirportDetailsView: View {
 
                     let totalPrefiles = traffic.prefileDepartures.count + traffic.prefileArrivals.count
                     HStack {
-                        if totalPrefiles > 0 {
-                            Text("Includes \(totalPrefiles) prefiled flight plan\(totalPrefiles == 1 ? "" : "s")")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                        Text("Includes \(totalPrefiles) prefiled flight plan\(totalPrefiles == 1 ? "" : "s")")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         Spacer()
                         Button("More Details >") {
                             withAnimation { showingTraffic = true }
@@ -132,27 +129,30 @@ struct AirportDetailsView: View {
             }
             if !atisStations.isEmpty {
                     ForEach(atisStations) { station in
-                        VStack(alignment: .leading, spacing: 5) {
+                        VStack(alignment: .leading) {
+                            Text("ATIS Information").font(.caption).foregroundColor(.secondary)
                             HStack {
                                 Text(station.callsign)
                                     .font(.subheadline.bold())
                                 if let code = station.atis_code {
+                                    Spacer()
                                     Text("Info \(code)")
                                         .font(.subheadline)
-                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Text(station.frequency)
-                                    .font(.subheadline.monospaced())
-                                    .foregroundStyle(.secondary)
+                                    .font(.subheadline)
                             }
+                            Text("\(station.name) (\(String(station.cid)))")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.secondary)
                             if let lines = station.text_atis {
-                                Text(lines.joined(separator: " "))
-                                    .font(.caption)
+                                Text(lines.joined(separator: "\n"))
+                                    .font(.subheadline)
                                     .foregroundStyle(.secondary)
+                                    .padding(.top, 1)
                             }
                         }
-                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     }
                 }
             }
@@ -243,26 +243,30 @@ private struct ControllerRow: View {
     }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(positionLabel)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(controller.callsign)
-                    .font(.subheadline.bold())
-                HStack{
+            VStack(alignment: .leading) {
+                    Text(positionLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                HStack {
+                    Text(controller.callsign)
+                        .font(.subheadline)
+                    Spacer()
+                    Text(controller.frequency)
+                        .font(.subheadline)
+                }
+                
                     Text(controller.name + " (\(String(controller.cid)))")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
+                
+                if let atis = controller.text_atis, !atis.isEmpty {
+                    Text(atis.joined(separator: "\n"))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 1)
                 }
             }
-            Spacer()
-            Text(controller.frequency)
-                .font(.subheadline.monospaced())
-                .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 0)
-    }
 }
 
 #Preview {
@@ -285,7 +289,11 @@ private struct ControllerRow: View {
                 rating: 5,
                 server: "UK",
                 visual_range: 50,
-                text_atis: nil,
+                text_atis: [
+                    "Heathrow Tower - DLC EGLL",
+                    "Feedback to xxxx.xxx.xxxx",
+                    "Some other Random Stuff..."
+                ],
                 logon_time: Date(),
                 last_updated: Date()
             )
@@ -293,7 +301,7 @@ private struct ControllerRow: View {
         atis: [
             ATIS(
                 cid: 9876543,
-                name: "Preview ATIS",
+                name: "Hans Zimmer",
                 callsign: "EGLL_ATIS",
                 frequency: "113.750",
                 facility: 1,

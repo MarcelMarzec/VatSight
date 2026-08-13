@@ -7,10 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		950ED6E5301B69010046E1F8 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 950ED6E4301B69010046E1F8 /* Secrets.xcconfig */; };
+		9522F6CE2FCB118000E31BE6 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 9522F6CD2FCB118000E31BE6 /* ZIPFoundation */; };
 		958325AF2FACEC020078184B /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 958325AE2FACEC020078184B /* MapboxMaps */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		950ED6E4301B69010046E1F8 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		954F0C5E2FABC0AE0036E8EC /* VatSight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VatSight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -41,6 +44,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				958325AF2FACEC020078184B /* MapboxMaps in Frameworks */,
+				9522F6CE2FCB118000E31BE6 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -52,6 +56,7 @@
 			children = (
 				954F0C602FABC0AE0036E8EC /* VatSight */,
 				954F0C5F2FABC0AE0036E8EC /* Products */,
+				950ED6E4301B69010046E1F8 /* Secrets.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -84,6 +89,7 @@
 			name = VatSight;
 			packageProductDependencies = (
 				958325AE2FACEC020078184B /* MapboxMaps */,
+				9522F6CD2FCB118000E31BE6 /* ZIPFoundation */,
 			);
 			productName = VatSight;
 			productReference = 954F0C5E2FABC0AE0036E8EC /* VatSight.app */;
@@ -115,6 +121,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				958325AD2FACEC020078184B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
+				9522F6CC2FCB118000E31BE6 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 954F0C5F2FABC0AE0036E8EC /* Products */;
@@ -131,6 +138,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				950ED6E5301B69010046E1F8 /* Secrets.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -270,6 +278,7 @@
 		};
 		954F0C6C2FABC0AF0036E8EC /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 950ED6E4301B69010046E1F8 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -304,6 +313,7 @@
 		};
 		954F0C6D2FABC0AF0036E8EC /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 950ED6E4301B69010046E1F8 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -360,6 +370,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		9522F6CC2FCB118000E31BE6 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.20;
+			};
+		};
 		958325AD2FACEC020078184B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios.git";
@@ -371,6 +389,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		9522F6CD2FCB118000E31BE6 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9522F6CC2FCB118000E31BE6 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
+		};
 		958325AE2FACEC020078184B /* MapboxMaps */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 958325AD2FACEC020078184B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;

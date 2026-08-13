@@ -29,6 +29,7 @@ struct ContentView: View {
                         }
                     }
                     .environment(manager)
+                    .preferredColorScheme(.dark)
                 } else {
                     ProgressView("Loading preferences...")
                 }
@@ -42,12 +43,9 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
-        .environment(
-            PreferencesManager(
-                context: try! ModelContext(
-                    ModelContainer(for: UserPreferencesModel.self)
-                )
-            )
-        )
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
+    
+    return ContentView()
+        .modelContainer(container)
 }

@@ -8,15 +8,15 @@ import SwiftUI
 struct AirportDetailsTrafficView: View {
     let airport: VatglassesAirport
     let traffic: AirportTraffic
+    /// Called when the user taps the back button.
+    var onBack: (() -> Void)? = nil
     /// Called when the user taps a pilot row; passes the pilot's CID and coordinate.
     var onPilotSelected: ((Int, Double, Double) -> Void)? = nil
 
-    @Environment(\.dismiss) private var dismiss
-
     enum TrafficTab: String, CaseIterable {
         case departures = "Departures"
-        case arrivals   = "Arrivals"
         case onGround   = "On Ground"
+        case arrivals   = "Arrivals"
     }
 
     @State private var selectedTab: TrafficTab = .departures
@@ -43,71 +43,82 @@ struct AirportDetailsTrafficView: View {
     private var currentList: [PilotOrPrefile] {
         switch selectedTab {
         case .departures: return departures
-        case .arrivals:   return arrivals
         case .onGround:   return onGround
+        case .arrivals:   return arrivals
         }
     }
 
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(airport.icao)
-                                .font(.title.bold())
-                            Spacer()
-                            Button {
-                                dismiss()
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.title)
-                            }
-                            .foregroundColor(.white)
-                        }
-                        if let name = airport.callsign {
-                            Text(name)
-                                .font(.title2)
-                                .foregroundStyle(.secondary)
-                        }
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Button {
+                    onBack?()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
                     }
+                    .font(.subheadline)
                 }
-                .padding()
+                .foregroundColor(.white)
 
-                // Picker
-                Picker("Traffic", selection: $selectedTab) {
-                    ForEach(TrafficTab.allCases, id: \.self) { tab in
-                        Text(tabLabel(tab)).tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                Spacer()
 
-                // List
-                if currentList.isEmpty {
-                    Spacer()
-                    Text("No \(selectedTab.rawValue.lowercased()) at \(airport.icao).")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                } else {
-                    List(currentList) { item in
-                        TrafficRow(item: item)
-                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if case .pilot(let pilot) = item {
-                                    onPilotSelected?(pilot.cid, pilot.latitude, pilot.longitude)
-                                    dismiss()
-                                }
-                            }
+                VStack(spacing: 2) {
+                    Text(airport.icao)
+                        .font(.title3.bold())
+                    if let name = airport.callsign {
+                        Text(name)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    .listStyle(.insetGrouped)
                 }
+
+                Spacer()
+                // Balance the back button
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                    Text("Back")
+                }
+                .font(.subheadline)
+                .hidden()
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
+            .padding(.bottom, 8)
+
+            // Picker
+            Picker("Traffic", selection: $selectedTab) {
+                ForEach(TrafficTab.allCases, id: \.self) { tab in
+                    Text(tabLabel(tab)).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+
+            // List
+            if currentList.isEmpty {
+                Spacer()
+                Text("No \(selectedTab.rawValue.lowercased()) at \(airport.icao).")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            } else {
+                List(currentList) { item in
+                    TrafficRow(item: item)
+                        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if case .pilot(let pilot) = item {
+                                onPilotSelected?(pilot.cid, pilot.latitude, pilot.longitude)
+                            }
+                        }
+                }
+                .listStyle(.insetGrouped)
             }
         }
     }
@@ -116,9 +127,9 @@ struct AirportDetailsTrafficView: View {
 
     private func tabLabel(_ tab: TrafficTab) -> String {
         switch tab {
-        case .departures: return "Dep (\(departures.count))"
-        case .arrivals:   return "Arr (\(arrivals.count))"
-        case .onGround:   return "Gnd (\(onGround.count))"
+        case .departures: return "Departures (\(departures.count))"
+        case .onGround:   return "On Ground (\(onGround.count))"
+        case .arrivals:   return "Arrivals (\(arrivals.count))"
         }
     }
 }
@@ -185,6 +196,9 @@ private struct TrafficRow: View {
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
             }
+            Image(systemName: "chevron.right")
+                .imageScale(.small)
+                .foregroundColor(.secondary)
         }
     }
 

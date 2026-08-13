@@ -23,7 +23,23 @@ struct ATIS: Codable, Identifiable {
     let last_updated: Date
 
     var id: Int { cid }
-    
+
+    /// Resolved facility from the shared registry. e.g. `.short` → "ATIS", `.long` → "ATIS"
+    var facilityInfo: Facilities? {
+        VatsimRatings.shared.facilities[facility]
+    }
+
+    /// Duration online as a formatted string, e.g. "2h 34m"
+    var onlineDuration: String {
+        let elapsed = Int(Date().timeIntervalSince(logon_time))
+        let hours = elapsed / 3600
+        let minutes = (elapsed % 3600) / 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
+    }
+
     var logon_timeFormatted: String {
         Self.utcTimeFormatter.string(from: logon_time)
     }
@@ -34,7 +50,7 @@ struct ATIS: Codable, Identifiable {
     
     private static let utcTimeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "HH:mm'Z'"
+        f.dateFormat = "HH:mm'z'"
         f.timeZone = TimeZone(secondsFromGMT: 0)
         return f
     }()

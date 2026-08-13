@@ -7,8 +7,12 @@ import SwiftUI
 
 struct PilotDetailsView: View {
     let pilot: Pilot
+    /// Returns the human-readable name for a given airport ICAO, or nil if unknown.
+    var airportName: ((String) -> String?)? = nil
+    /// Called when the user taps a departure or arrival ICAO chip.
+    var onAirportSelected: ((String) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
-
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -33,41 +37,59 @@ struct PilotDetailsView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-
+                        
                         Spacer()
                     }
-
-                    HStack {
-                        metric("Altitude", "\(pilot.altitude) ft")
-                        Spacer()
-                        metric("Speed", "\(pilot.groundspeed) kt")
-                        Spacer()
-                        metric("Heading", "\(pilot.heading)°")
-                        Spacer()
-                        metric("Transponder", pilot.transponder, highlightEmergency: pilot.isEmergency)
-                    }
-
+                    
+                    MetricContainer(metrics: [
+                        ("Altitude", "\(pilot.altitude) ft", false),
+                        ("Speed", "\(pilot.groundspeed) kt", false),
+                        ("Heading", "\(pilot.heading)°", false),
+                        ("Transponder", pilot.transponder, pilot.isEmergency)
+                    ])
+                    
                     if let fp = pilot.flight_plan {
                         sectionTitle("Flight Plan")
-
+                        
                         HStack {
-                            Text(fp.departure)
-                                .font(.title3.bold())
-                            LabelledDivider(label: fp.alternate)
-                            Text(fp.arrival)
-                                .font(.title3.bold())
+                            ICAOChip(
+                                type: "Departure",
+                                typeImage: "airplane.departure",
+                                icao: fp.departure,
+                                name: airportName?(fp.departure),
+                                onTap: onAirportSelected.map { action in
+                                    { action(fp.departure); dismiss() }
+                                }
+                            )
+                            Spacer()
+                            ICAOChip(
+                                type: "Arrival",
+                                typeImage: "airplane.arrival",
+                                icao: fp.arrival,
+                                name: airportName?(fp.arrival),
+                                onTap: onAirportSelected.map { action in
+                                    { action(fp.arrival); dismiss() }
+                                }
+                            )
+                            Spacer()
+                            ICAOChip(
+                                type: "Alternate",
+                                typeImage: "airplane.cloud",
+                                icao: fp.alternate,
+                                name: airportName?(fp.alternate),
+                                onTap: onAirportSelected.map { action in
+                                    { action(fp.alternate); dismiss() }
+                                }
+                            )
                         }
-
-                        HStack {
-                            metric("Logon Time", pilot.logon_timeFormatted)
-                            Spacer()
-                            metric("Dep Time", fp.deptimeFormatted)
-                            Spacer()
-                            metric("Enroute Time", fp.enroute_timeFormatted)
-                            Spacer()
-                            metric("Fuel Time", fp.fuel_timeFormatted)
-                        }
-
+                        
+                        MetricContainer(metrics: [
+                            ("Logon Time", pilot.logon_timeFormatted, false),
+                            ("Dep Time", fp.deptimeFormatted, false),
+                            ("Enroute Time", fp.enroute_timeFormatted, false),
+                            ("Fuel Time", fp.fuel_timeFormatted, false)
+                        ])
+                        
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Route")
                                 .font(.caption)
@@ -75,7 +97,7 @@ struct PilotDetailsView: View {
                             Text(fp.route)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
-
+                        
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Remarks")
                                 .font(.caption)
@@ -87,7 +109,7 @@ struct PilotDetailsView: View {
                         Text("Flight plan not filed.")
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-
+                    
                     VStack(spacing: 4) {
                         Text("Last Updated")
                             .font(.caption)
@@ -96,7 +118,7 @@ struct PilotDetailsView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
-
+                    
                     Spacer(minLength: 24)
                 }
                 .padding()
@@ -109,51 +131,74 @@ struct PilotDetailsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .font(.headline)
     }
+}
 
-    private func metric(_ title: String, _ value: String, highlightEmergency: Bool = false) -> some View {
-        VStack(spacing: 4) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .foregroundStyle(highlightEmergency ? .red : .primary)
+// MARK: - MetricContainer
+
+private struct MetricContainer: View {
+    /// Each tuple is (label, value, highlightRed)
+    let metrics: [(String, String, Bool)]
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(metrics.enumerated()), id: \.offset) { index, metric in
+                if index > 0 {
+                    Divider()
+                        .padding(.vertical, 8)
+                }
+                VStack(spacing: 4) {
+                    Text(metric.0)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(metric.1)
+                        .foregroundStyle(metric.2 ? .red : .primary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+            }
         }
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
-struct LabelledDivider: View {
+// MARK: - ICAOChip
 
-    let label: String
-    let horizontalPadding: CGFloat
-    let color: Color
-
-    init(label: String, horizontalPadding: CGFloat = 8, color: Color = .gray) {
-        self.label = label
-        self.horizontalPadding = horizontalPadding
-        self.color = color
-    }
-
+private struct ICAOChip: View {
+    let type: String
+    let typeImage: String
+    let icao: String
+    let name: String?
+    let onTap: (() -> Void)?
+    
     var body: some View {
-        HStack {
-            ZStack {
-                line
-                Text(label)
-                    .foregroundColor(color)
-                    .offset(x: 0, y: 10)
-                Text("Alternate")
-                    .foregroundColor(color)
-                    .offset(x: 0, y: -12)
+        VStack {
+            HStack {
+                Image(systemName: typeImage).imageScale(.small).foregroundColor(.secondary)
+                Text(type).font(.caption).foregroundColor(.secondary)
+            }
+            VStack {
+                Text(icao)
+                if let name {
+                    Text(name)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: 100)
+                }
             }
         }
-    }
-
-    var line: some View {
-        VStack { Divider().background(color) }
-            .padding(horizontalPadding)
+        .onTapGesture {
+            onTap?()
+        }
+        .opacity(onTap != nil ? 1 : 1)
     }
 }
 
 #Preview {
-    PilotDetailsView(pilot: Pilot(cid: 1234567, name: "Kennedy Steve KJFK", callsign: "DAL1", server: "USA-EAST", pilot_rating: 0, military_rating: 0, latitude: 40.64222, longitude: -73.76981, altitude: 12, groundspeed: 0, transponder: "1000", heading: 44, qnh_i_hg: 29.92, qnh_mb: 1013, logon_time: Date.now, last_updated: Date.now, flight_plan: fp(flight_rules: "I", aircraft: "B764/H-SDE3FGHIM3RWXY/LB1", aircraft_faa: "B764/L", aircraft_short: "B764", departure: "KJFK", arrival: "EGLL", alternate: "EGBB", deptime: "0000", enroute_time: "0615", fuel_time: "0745", remarks: "/V/", route: "GREKI DCT JUDDS DCT MARTN DCT BAREE DCT NEEKO NATX LIMRI NATX XETBO DCT EVRIN DCT INFEC DCT JETZI DCT OGLUN DCT OCTIZ P2 SIRIC SIRI1H", revision_id: 1, assigned_transponder: "3456")))
-    
+    PilotDetailsView(
+        pilot: Pilot(cid: 1234567, name: "Kennedy Steve KJFK", callsign: "DAL1", server: "USA-EAST", pilot_rating: 0, military_rating: 0, latitude: 40.64222, longitude: -73.76981, altitude: 12, groundspeed: 0, transponder: "1000", heading: 44, qnh_i_hg: 29.92, qnh_mb: 1013, logon_time: Date.now, last_updated: Date.now, flight_plan: fp(flight_rules: "I", aircraft: "B764/H-SDE3FGHIM3RWXY/LB1", aircraft_faa: "B764/L", aircraft_short: "B764", departure: "KJFK", arrival: "EGLL", alternate: "EGBB", deptime: "0000", enroute_time: "0615", fuel_time: "0745", remarks: "/V/", route: "GREKI DCT JUDDS DCT MARTN DCT BAREE DCT NEEKO NATX LIMRI NATX XETBO DCT EVRIN DCT INFEC DCT JETZI DCT OGLUN DCT OCTIZ P2 SIRIC SIRI1H", revision_id: 1, assigned_transponder: "3456")),
+        airportName: { icao in
+            ["KJFK": "New York", "EGLL": "Heathrow", "EGBB": "Birmingham Intl"][icao]
+        }
+    )
 }

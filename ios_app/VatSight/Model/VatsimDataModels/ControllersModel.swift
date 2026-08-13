@@ -22,7 +22,17 @@ struct Controllers: Codable, Identifiable {
     let last_updated: Date
 
     var id: Int { cid }
-    
+
+    /// Resolved controller rating from the shared registry. e.g. `.short` → "C1"
+    var ratingInfo: ControllerRatings? {
+        VatsimRatings.shared.controllerRatings[rating]
+    }
+
+    /// Resolved facility from the shared registry. e.g. `.short` → "CTR", `.long` → "Centre"
+    var facilityInfo: Facilities? {
+        VatsimRatings.shared.facilities[facility]
+    }
+
     var logon_timeFormatted: String {
         Self.utcTimeFormatter.string(from: logon_time)
     }
@@ -30,10 +40,21 @@ struct Controllers: Codable, Identifiable {
     var last_updatedFormatted: String {
         Self.utcTimeFormatter.string(from: last_updated)
     }
+
+    /// Duration online as a formatted string, e.g. "2h 34m"
+    var onlineDuration: String {
+        let elapsed = Int(Date().timeIntervalSince(logon_time))
+        let hours = elapsed / 3600
+        let minutes = (elapsed % 3600) / 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
+    }
     
     private static let utcTimeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "HH:mm'Z'"
+        f.dateFormat = "HH:mm'z'"
         f.timeZone = TimeZone(secondsFromGMT: 0)
         return f
     }()

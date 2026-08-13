@@ -22,14 +22,24 @@ struct Pilot: Codable, Identifiable {
     let transponder: String
     let heading: Int
     let qnh_i_hg: Double
-    let qnh_mb: Double
+    let qnh_mb: Int
     let logon_time: Date
     let last_updated: Date
     let flight_plan: fp?
     
     
     var id: Int { cid }
-    
+
+    /// Resolved pilot rating from the shared registry. e.g. `.short_name` → "PPL"
+    var pilotRatingInfo: PilotRatings? {
+        VatsimRatings.shared.pilotRatings[pilot_rating]
+    }
+
+    /// Resolved military rating from the shared registry. e.g. `.short_name` → "M1"
+    var militaryRatingInfo: MilitaryRatings? {
+        VatsimRatings.shared.militaryRatings[military_rating]
+    }
+
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
@@ -41,6 +51,17 @@ struct Pilot: Codable, Identifiable {
         transponder == "7601"
     }
     
+    /// Duration online as a formatted string, e.g. "2h 34m"
+    var onlineDuration: String {
+        let elapsed = Int(Date().timeIntervalSince(logon_time))
+        let hours = elapsed / 3600
+        let minutes = (elapsed % 3600) / 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
+    }
+
     var logon_timeFormatted: String {
         Self.utcTimeFormatter.string(from: logon_time)
     }
@@ -51,7 +72,7 @@ struct Pilot: Codable, Identifiable {
     
     private static let utcTimeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "HH:mm'Z'"
+        f.dateFormat = "HH:mm'z'"
         f.timeZone = TimeZone(secondsFromGMT: 0)
         return f
     }()
@@ -87,7 +108,7 @@ struct fp: Codable {
     
     private static let utcTimeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "HH:mm'Z'"
+        f.dateFormat = "HH:mm'z'"
         f.timeZone = TimeZone(secondsFromGMT: 0)
         return f
     }()

@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct VatsimResponse: Codable {
+struct VatsimResponseModel: Codable {
     let general: General
     let pilots: [Pilot]
     let controllers: [Controllers]

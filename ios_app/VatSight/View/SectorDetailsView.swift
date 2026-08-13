@@ -8,28 +8,35 @@ import SwiftUI
 struct SectorDetailsView: View {
     let sector: VatglassesSector
     let controller: Controllers
+    @Binding var headerHeight: CGFloat
 
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
+            headerSection
             List {
-                headerSection
                 controllerDetailsSection
-            }
+            }.scrollDisabled(true)
         }
     }
 
     // MARK: - Sections
 
     var headerSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
                 callsignRow
                 Text(controller.frequency)
                     .font(.title2)
                 atisText
-            }
+        }
+        .padding()
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+        } action: { newHeight in
+            guard newHeight > 0 else { return }
+            // Add drag indicator height (~20pt)
+            headerHeight = newHeight + 20
         }
     }
 
@@ -92,6 +99,8 @@ struct SectorDetailsView: View {
     private var atisText: some View {
         if let atis = controller.text_atis, !atis.isEmpty {
             Text(atis.joined(separator: "\n"))
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -147,5 +156,5 @@ struct SectorDetailsView: View {
         activeOwnerRef: "ed/EDYY",
         activeController: controller
     )
-    SectorDetailsView(sector: sector, controller: controller)
+    SectorDetailsView(sector: sector, controller: controller, headerHeight: .constant(0))
 }

@@ -10,8 +10,6 @@ import CoreLocation
 
 struct General: Codable {
     let version: Int
-    let reload: Int
-    let update: String
     let update_timestamp: Date
     let connected_clients: Int
     let unique_users: Int
@@ -22,7 +20,7 @@ struct General: Codable {
     
     private static let utcTimeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "HH:mm'Z'"
+        f.dateFormat = "HH:mm'z'"
         f.timeZone = TimeZone(secondsFromGMT: 0)
         return f
     }()
