@@ -12,6 +12,10 @@ final class VatglassesService {
     
     private let commitURL = URL(string: "https://api.github.com/repos/lennycolton/vatglasses-data/commits/main")!
     private let repoURL = URL(string: "https://api.github.com/repos/lennycolton/vatglasses-data/zipball/main")!
+
+    /// Cache of compiled NSRegularExpression objects keyed by pattern string.
+    /// Avoids recompiling the same regex on every resolvePositionLabel call.
+    private var regexCache: [String: NSRegularExpression] = [:]
     
     private var cachedData: VatglassesData?
     private var lastFetchDate: Date?
@@ -118,8 +122,9 @@ final class VatglassesService {
         guard let value = Double(raw) else { return raw }
         // Format with up to 3 decimal places then strip trailing zeros
         var formatted = String(format: "%.3f", value)
+        // Find the last non-zero character after the decimal, stopping before ".0"
         while formatted.hasSuffix("0") && !formatted.hasSuffix(".0") {
-            formatted = String(formatted.dropLast())
+            formatted.removeLast()
         }
         return formatted
     }
@@ -892,8 +897,16 @@ final class VatglassesService {
         // Regex fallback for pattern keys like "^[A-Z]".
         for (pattern, label) in middleMap {
             guard !pattern.isEmpty else { continue }
-            if let regex = try? NSRegularExpression(pattern: pattern),
-               regex.firstMatch(in: middle, range: NSRange(middle.startIndex..., in: middle)) != nil {
+            let regex: NSRegularExpression
+            if let cached = regexCache[pattern] {
+                regex = cached
+            } else if let compiled = try? NSRegularExpression(pattern: pattern) {
+                regexCache[pattern] = compiled
+                regex = compiled
+            } else {
+                continue
+            }
+            if regex.firstMatch(in: middle, range: NSRange(middle.startIndex..., in: middle)) != nil {
                 return label
             }
         }

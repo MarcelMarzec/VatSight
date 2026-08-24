@@ -10,14 +10,14 @@ import SwiftUI
 /// The three searchable categories.
 private enum SearchCategory: String, CaseIterable {
     case airport  = "Airport"
-    case aircraft = "Aircraft"
+    case pilot    = "Pilots"
     case atc      = "ATC"
 
     var icon: String {
         switch self {
-        case .airport:  return "airplane.ticket"
-        case .aircraft: return "paperplane"
-        case .atc:      return "antenna.radiowaves.left.and.right"
+        case .airport: return "airplane.ticket"
+        case .pilot:   return "paperplane"
+        case .atc:     return "antenna.radiowaves.left.and.right"
         }
     }
 }
@@ -39,7 +39,7 @@ struct SearchView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var query:              String = ""
-    @State private var category:           SearchCategory = .atc
+    @State private var category: SearchCategory = .atc
     @State private var visibleCount:       Int = pageSize
     /// Facility IDs explicitly included (first tap — accent). Empty means no include filter.
     @State private var selectedFacilities: Set<Int> = []
@@ -48,6 +48,44 @@ struct SearchView: View {
     @State private var excludedFacilities: Set<Int> = [0]
     /// When true, inactive airports are included in the airport list.
     @State private var showInactiveAirports: Bool = false
+
+    // MARK: - Cached pre-computations
+
+    /// Pilots sorted once alphabetically by callsign. Avoids re-sorting on every computed access.
+    private var sortedPilots: [Pilot] {
+        pilots.sorted { $0.callsign < $1.callsign }
+    }
+
+    /// Traffic counts keyed by uppercase ICAO. Built once from the full pilots array
+    /// so the airport list doesn't iterate all pilots for every visible row.
+    private var trafficCountsByICAO: [String: AirportCounts] {
+        var result: [String: AirportCounts] = [:]
+        for pilot in pilots {
+            guard let fp = pilot.flight_plan else { continue }
+            let dep = fp.departure.uppercased()
+            let arr = fp.arrival.uppercased()
+            let onGnd = pilot.groundspeed < 40
+            if !dep.isEmpty {
+                var c = result[dep] ?? AirportCounts(departures: 0, arrivals: 0, onGround: 0)
+                if onGnd {
+                    c = AirportCounts(departures: c.departures, arrivals: c.arrivals, onGround: c.onGround + 1)
+                } else {
+                    c = AirportCounts(departures: c.departures + 1, arrivals: c.arrivals, onGround: c.onGround)
+                }
+                result[dep] = c
+            }
+            if !arr.isEmpty && arr != dep {
+                var c = result[arr] ?? AirportCounts(departures: 0, arrivals: 0, onGround: 0)
+                if onGnd {
+                    c = AirportCounts(departures: c.departures, arrivals: c.arrivals, onGround: c.onGround + 1)
+                } else {
+                    c = AirportCounts(departures: c.departures, arrivals: c.arrivals + 1, onGround: c.onGround)
+                }
+                result[arr] = c
+            }
+        }
+        return result
+    }
 
     // MARK: - Facility chip data
 
@@ -82,10 +120,9 @@ struct SearchView: View {
     }
 
     private var filteredPilots: [Pilot] {
-        let sorted = pilots.sorted { $0.callsign < $1.callsign }
-        guard !query.isEmpty else { return sorted }
+        guard !query.isEmpty else { return sortedPilots }
         let q = query.uppercased()
-        return sorted.filter {
+        return sortedPilots.filter {
             $0.callsign.uppercased().contains(q) ||
             ($0.flight_plan?.departure.uppercased().contains(q) ?? false) ||
             ($0.flight_plan?.arrival.uppercased().contains(q) ?? false) ||
@@ -124,22 +161,6 @@ struct SearchView: View {
         let onGround: Int
     }
 
-    private func trafficCounts(for icao: String) -> AirportCounts {
-        let upper = icao.uppercased()
-        var dep = 0, arr = 0, ground = 0
-        for pilot in pilots {
-            guard let fp = pilot.flight_plan else { continue }
-            let isDep = fp.departure.uppercased() == upper
-            let isArr = fp.arrival.uppercased() == upper
-            guard isDep || isArr else { continue }
-            let onGnd = pilot.groundspeed < 40
-            if isDep && !onGnd { dep += 1 }
-            if isArr && !onGnd { arr += 1 }
-            if (isDep || isArr) && onGnd { ground += 1 }
-        }
-        return AirportCounts(departures: dep, arrivals: arr, onGround: ground)
-    }
-
     // MARK: - Visible slices
 
     private var visibleAirports:    [VatglassesAirport] { Array(filteredAirports.prefix(visibleCount)) }
@@ -149,7 +170,7 @@ struct SearchView: View {
     private var totalCount: Int {
         switch category {
         case .airport:  return filteredAirports.count
-        case .aircraft: return filteredPilots.count
+        case .pilot: return filteredPilots.count
         case .atc:      return filteredControllers.count
         }
     }
@@ -165,8 +186,8 @@ struct SearchView: View {
                 Picker("Category", selection: $category) {
                     Text("\(SearchCategory.atc.rawValue) (\(controllers.count))")
                         .tag(SearchCategory.atc)
-                    Text("\(SearchCategory.aircraft.rawValue) (\(pilots.count))")
-                        .tag(SearchCategory.aircraft)
+                    Text("\(SearchCategory.pilot.rawValue) (\(pilots.count))")
+                        .tag(SearchCategory.pilot)
                     Text("\(SearchCategory.airport.rawValue) (\(airports.count))")
                         .tag(SearchCategory.airport)
                 }
@@ -211,7 +232,7 @@ struct SearchView: View {
                 // Results list
                 List {
                     switch category {
-                    case .aircraft:
+                    case .pilot:
                         aircraftResults
                     case .atc:
                         atcResults
@@ -337,8 +358,8 @@ struct SearchView: View {
                             groundServiceBadges(airport.groundServiceIndicators)
                                 .padding(.leading, 4)
                         }
-                        // Traffic counts
-                        let counts = trafficCounts(for: airport.icao)
+                        // Traffic counts (pre-computed once across all pilots)
+                        let counts = trafficCountsByICAO[airport.icao.uppercased()] ?? AirportCounts(departures: 0, arrivals: 0, onGround: 0)
                         HStack(spacing: 10) {
                             trafficStat("airplane.departure", count: counts.departures)
                             trafficStat("airplane.arrival",   count: counts.arrivals)
@@ -486,7 +507,7 @@ struct SearchView: View {
     private var placeholder: String {
         switch category {
         case .airport:  return "ICAO or airport name"
-        case .aircraft: return "Callsign, route or pilot name"
+        case .pilot: return "Callsign, route or pilot name"
         case .atc:      return "Callsign, name or frequency"
         }
     }
@@ -541,7 +562,7 @@ private func previewPilots() -> [Pilot] {
             groundspeed: gs, transponder: "1234", heading: 270,
             qnh_i_hg: 29.92, qnh_mb: 1013,
             logon_time: Date().addingTimeInterval(-3600), last_updated: Date(),
-            flight_plan: fp(
+            flight_plan: FlightPlan(
                 flight_rules: "I", aircraft: "B738", aircraft_faa: "B738",
                 aircraft_short: "B738", departure: dep, arrival: arr,
                 alternate: "", deptime: "1000", enroute_time: "0130",

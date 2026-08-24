@@ -42,10 +42,16 @@ final class AirportStyleManager {
         on mapView: MapView,
         airports: [VatglassesAirport],
         filledICAOs: Set<String>,
-        selectedICAO: String? = nil
+        selectedICAO: String? = nil,
+        friendControlledICAOs: Set<String> = []
     ) {
         guard mapView.mapboxMap.sourceExists(withId: Self.airportSourceId) else { return }
-        let collection = AirportGeoJSON.featureCollection(from: airports, filledICAOs: filledICAOs, selectedICAO: selectedICAO)
+        let collection = AirportGeoJSON.featureCollection(
+            from: airports,
+            filledICAOs: filledICAOs,
+            selectedICAO: selectedICAO,
+            friendControlledICAOs: friendControlledICAOs
+        )
         mapView.mapboxMap.updateGeoJSONSource(
             withId: Self.airportSourceId,
             geoJSON: .featureCollection(collection)
@@ -92,6 +98,8 @@ final class AirportStyleManager {
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 4.0
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                3.0
                 Exp(.eq) { Exp(.get) { "isFilled" }; true }
                 3.0
                 2.0
@@ -102,6 +110,8 @@ final class AirportStyleManager {
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                Exp(.rgba) { 52; 199; 89; 1.0 }
                 Exp(.eq) { Exp(.get) { "isFilled" }; true }
                 Exp(.rgba) { 255; 255; 255; 1.0 }
                 Exp(.rgba) { 0; 0; 0; 0.0 }
@@ -112,6 +122,8 @@ final class AirportStyleManager {
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                Exp(.rgba) { 52; 199; 89; 1.0 }
                 Exp(.rgba) { 255; 255; 255; 1.0 }
             }
         )
@@ -139,6 +151,8 @@ final class AirportStyleManager {
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                Exp(.rgba) { 52; 199; 89; 1.0 }
                 Exp(.rgba) { 255; 255; 255; 1.0 }
             }
         )

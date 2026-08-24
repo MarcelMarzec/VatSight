@@ -25,12 +25,12 @@ struct Controllers: Codable, Identifiable {
 
     /// Resolved controller rating from the shared registry. e.g. `.short` → "C1"
     var ratingInfo: ControllerRatings? {
-        VatsimRatings.shared.controllerRatings[rating]
+        VatsimRatingsRegistry.shared.controllerRatings[rating]
     }
 
     /// Resolved facility from the shared registry. e.g. `.short` → "CTR", `.long` → "Centre"
     var facilityInfo: Facilities? {
-        VatsimRatings.shared.facilities[facility]
+        VatsimRatingsRegistry.shared.facilities[facility]
     }
 
     var logon_timeFormatted: String {

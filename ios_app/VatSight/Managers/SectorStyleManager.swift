@@ -42,7 +42,8 @@ final class SectorStyleManager {
         sectors: [VatglassesSector],
         controllers: [Controllers],
         airports: [VatglassesAirport] = [],
-        selectedControllerCID: Int? = nil
+        selectedControllerCID: Int? = nil,
+        friendCIDs: Set<Int> = []
     ) {
         let collection = SectorGeoJSON.featureCollection(
             from: sectors,
@@ -57,7 +58,8 @@ final class SectorStyleManager {
         let labelCollection = SectorGeoJSON.labelPointFeatureCollection(
             from: sectors,
             airports: airports,
-            selectedControllerCID: selectedControllerCID
+            selectedControllerCID: selectedControllerCID,
+            friendCIDs: friendCIDs
         )
         mapView.mapboxMap.updateGeoJSONSource(
             withId: Self.sectorLabelSourceId,
@@ -253,11 +255,13 @@ final class SectorStyleManager {
         layer.textSize = .constant(12)
         layer.textFont = .constant(["Arial Unicode MS Regular"])
 
-        // White text, red when selected — matching airport label style.
+        // White text, red when selected, green for friend controllers.
         layer.textColor = .expression(
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                Exp(.rgba) { 52; 199; 89; 1.0 }
                 Exp(.rgba) { 255; 255; 255; 1.0 }
             }
         )

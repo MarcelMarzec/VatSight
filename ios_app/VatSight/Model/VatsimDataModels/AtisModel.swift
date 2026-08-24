@@ -26,7 +26,7 @@ struct ATIS: Codable, Identifiable {
 
     /// Resolved facility from the shared registry. e.g. `.short` → "ATIS", `.long` → "ATIS"
     var facilityInfo: Facilities? {
-        VatsimRatings.shared.facilities[facility]
+        VatsimRatingsRegistry.shared.facilities[facility]
     }
 
     /// Duration online as a formatted string, e.g. "2h 34m"

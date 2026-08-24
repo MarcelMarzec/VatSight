@@ -28,7 +28,7 @@ struct AirspaceDataView: View {
                 Section("Vatglasses Sector Data") {
                     HStack {
                         VStack(spacing: 4) {
-                            Text("Nu of Sectors")
+                            Text("No. of Sectors")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Text("\(sectorCount)")
@@ -38,7 +38,7 @@ struct AirspaceDataView: View {
                         Divider()
                         Spacer()
                         VStack(spacing: 4) {
-                            Text("Nu of Positions")
+                            Text("No. of Positions")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Text("\(positionCount)")
@@ -48,7 +48,7 @@ struct AirspaceDataView: View {
                         Divider()
                         Spacer()
                         VStack(spacing: 4) {
-                            Text("Nu of Airports")
+                            Text("No. of Airports")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Text("\(airportCount)")

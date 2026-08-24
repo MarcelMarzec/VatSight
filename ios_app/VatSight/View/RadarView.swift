@@ -12,7 +12,7 @@ import MapboxMaps
 struct RadarView: View {
 
     @Environment(PreferencesManager.self) private var prefsManager
-    @StateObject private var viewModel = RadarViewModel()
+    @EnvironmentObject private var viewModel: RadarViewModel
     @Namespace private var glassNamespace
     @State private var loadingRotation: Double = 0
     @State private var showingLayerMenu = false
@@ -33,27 +33,30 @@ struct RadarView: View {
             .ignoresSafeArea()
             .sheet(isPresented: $viewModel.isShowingPilotSheet,
                 onDismiss: {
-                    viewModel.dismissPilotSheet()
+                    viewModel.onPilotSheetDismissed()
                     pilotDetent = .fraction(0.3)
                 }
-            ) { if let pilot = viewModel.selectedPilot {
+            ) {
+                // Bind directly to the live selectedPilot — content updates in-place when
+                // a new pilot is tapped without dismissing and re-presenting the sheet.
+                if let pilot = viewModel.selectedPilot {
                     PilotDetailsView(
                         pilot: pilot,
                         airportName: { viewModel.airportName(for: $0) },
                         onAirportSelected: { icao in viewModel.selectAirportAndFly(icao: icao) }
                     )
-                        .clipShape(
-                            UnevenRoundedRectangle(
-                                topLeadingRadius: 20,
-                                bottomLeadingRadius: 50,
-                                bottomTrailingRadius: 50,
-                                topTrailingRadius: 20,
-                                style: .continuous
-                            )
+                    .clipShape(
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 20,
+                            bottomLeadingRadius: 50,
+                            bottomTrailingRadius: 50,
+                            topTrailingRadius: 20,
+                            style: .continuous
                         )
-                        .presentationDragIndicator(.visible)
-                        .presentationDetents([.fraction(0.325), .medium, .large], selection: $pilotDetent)
-                        .presentationBackgroundInteraction(.enabled)
+                    )
+                    .presentationDragIndicator(.visible)
+                    .presentationDetents([.fraction(0.325), .medium, .large], selection: $pilotDetent)
+                    .presentationBackgroundInteraction(.enabled)
                 }
             }
             .sheet(isPresented: $viewModel.isShowingAirportSheet,
@@ -72,7 +75,8 @@ struct RadarView: View {
                         onPilotSelected: { cid, lat, lon in
                             viewModel.selectPilotAndFly(
                                 cid: cid,
-                                coordinate: .init(latitude: lat, longitude: lon)
+                                coordinate: .init(latitude: lat, longitude: lon),
+                                enableTracking: true
                             )
                         }
                     )
@@ -125,6 +129,20 @@ struct RadarView: View {
             }
             .onChange(of: prefsManager.userPrefs.vatsimRefreshRate) { _, _ in
                 viewModel.restartAutoRefresh()
+            }
+            .onChange(of: prefsManager.pendingNavigateToCID) { _, cid in
+                guard let cid else { return }
+                defer { prefsManager.pendingNavigateToCID = nil }
+
+                if let pilot = viewModel.pilots.first(where: { $0.cid == cid }) {
+                    viewModel.selectPilotAndFly(cid: cid, coordinate: pilot.coordinate)
+                } else if let controller = viewModel.controllers.first(where: { $0.cid == cid }),
+                          let airport = viewModel.airports.first(where: { $0.activeController?.cid == cid }) {
+                    viewModel.selectAirportAndFly(icao: airport.icao)
+                } else if let controller = viewModel.controllers.first(where: { $0.cid == cid }),
+                          let sector = viewModel.sectors.first(where: { $0.activeController?.cid == cid }) {
+                    viewModel.selectSector(id: sector.id)
+                }
             }
             if viewModel.isLoadingData {
                 VStack {
@@ -230,9 +248,22 @@ struct RadarView: View {
         .overlay(alignment: .trailing) {
             if viewModel.altitudeFilterEnabled {
                 GeometryReader { geo in
-                    // Reserve space for the buttons above (~160 pt) and bottom safe area
+                    // Reserve space for the buttons above (~160 pt) and bottom safe area.
+                    // When a sheet is open, push the slider up so it isn't covered.
                     let topOffset: CGFloat = 180
-                    let bottomPad: CGFloat = 16
+                    let sheetHeight: CGFloat = {
+                        if viewModel.isShowingSectorSheet {
+                            return sectorHeaderHeight + 2
+                        }
+                        if viewModel.isShowingPilotSheet {
+                            return geo.size.height * 0.325 + 2
+                        }
+                        if viewModel.isShowingAirportSheet {
+                            return geo.size.height * 0.3 + 2
+                        }
+                        return 16
+                    }()
+                    let bottomPad: CGFloat = sheetHeight
                     let availableHeight = geo.size.height - topOffset - bottomPad
                     let trackHeight = max(availableHeight - 56, 60) // subtract label heights
 
@@ -316,7 +347,8 @@ struct RadarView: View {
                     guard let pilot = viewModel.pilots.first(where: { $0.cid == cid }) else { return }
                     viewModel.selectPilotAndFly(
                         cid: cid,
-                        coordinate: pilot.coordinate
+                        coordinate: pilot.coordinate,
+                        enableTracking: true
                     )
                 },
                 onControllerSelected: { controller in
@@ -347,4 +379,5 @@ struct RadarView: View {
     
     return RadarView()
         .environment(PreferencesManager(context: context))
+        .environmentObject(RadarViewModel())
 }

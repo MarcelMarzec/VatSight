@@ -14,6 +14,7 @@ struct ContentView: View {
     
     @Environment(\.modelContext) private var context
     @State private var manager: PreferencesManager?
+    @StateObject private var radarViewModel = RadarViewModel()
     
     var body: some View {
             Group {
@@ -29,7 +30,11 @@ struct ContentView: View {
                         }
                     }
                     .environment(manager)
+                    .environmentObject(radarViewModel)
                     .preferredColorScheme(.dark)
+                    .onChange(of: manager.pendingNavigateToCID) { _, cid in
+                        if cid != nil { selectedTab = 0 }
+                    }
                 } else {
                     ProgressView("Loading preferences...")
                 }

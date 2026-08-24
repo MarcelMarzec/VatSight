@@ -1,5 +1,5 @@
 //
-//  VatsimResponse.swift
+//  VatsimResponseModel.swift
 //  VatSight
 //
 //  Created by Marcel Marzec on 09/05/2026.

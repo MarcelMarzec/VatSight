@@ -11,6 +11,7 @@ final class RadarStyleManager {
     static let pilotSourceId = "pilots-source"
     static let pilotIconImageId = "pilot"
     static let selectedPilotIconImageId = "selectedPilot"
+    static let friendPilotIconImageId = "friendPilot"
     static let pilotIconLayerId = "pilot-icon-layer"
     static let pilotLabelLayerId = "pilot-label-layer"
     static let pilotGroundIconLayerId = "pilot-ground-icon-layer"
@@ -39,12 +40,14 @@ final class RadarStyleManager {
     func updatePilots(
         on mapView: MapView,
         pilots: [Pilot],
-        selectedCID: Int?
+        selectedCID: Int?,
+        friendCIDs: Set<Int> = []
     ) {
 
         let collection = PilotGeoJSON.featureCollection(
             from: pilots,
-            selectedCID: selectedCID
+            selectedCID: selectedCID,
+            friendCIDs: friendCIDs
         )
 
         mapView.mapboxMap.updateGeoJSONSource(
@@ -58,12 +61,14 @@ final class RadarStyleManager {
     private func addPilotImage(to mapView: MapView) throws {
 
         guard let pilot = UIImage(named: "pilot"),
-              let selected = UIImage(named: "selectedPilot") else {
+              let selected = UIImage(named: "selectedPilot"),
+              let friend = UIImage(named: "friendPilot") else {
             throw RadarStyleError.missingPilotAsset
         }
 
         try mapView.mapboxMap.addImage(pilot, id: "pilot")
         try mapView.mapboxMap.addImage(selected, id: "selectedPilot")
+        try mapView.mapboxMap.addImage(friend, id: "friendPilot")
     }
 
     // MARK: - Add Source
@@ -98,11 +103,10 @@ final class RadarStyleManager {
 
         layer.iconImage = .expression(
             Exp(.switchCase) {
-                Exp(.eq) {
-                    Exp(.get) { "isSelected" }
-                    true
-                }
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 "selectedPilot"
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                "friendPilot"
                 "pilot"
             }
         )
@@ -150,7 +154,13 @@ final class RadarStyleManager {
         layer.textOffset = .constant([0.8, 0])
         layer.textAllowOverlap = .constant(false)
         layer.textIgnorePlacement = .constant(true)
-        layer.textColor = .constant(StyleColor(.white))
+        layer.textColor = .expression(
+            Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                Exp(.rgba) { 52; 199; 89; 1.0 }
+                Exp(.rgba) { 255; 255; 255; 1.0 }
+            }
+        )
         layer.textHaloColor = .constant(StyleColor(.black))
         layer.textHaloWidth = .constant(1.0)
         layer.textFont = .constant(["Arial Unicode MS Regular"])
@@ -183,6 +193,8 @@ final class RadarStyleManager {
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 "selectedPilot"
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                "friendPilot"
                 "pilot"
             }
         )
@@ -219,7 +231,13 @@ final class RadarStyleManager {
         layer.textOffset = .constant([0.8, 0])
         layer.textAllowOverlap = .constant(false)
         layer.textIgnorePlacement = .constant(true)
-        layer.textColor = .constant(StyleColor(.white))
+        layer.textColor = .expression(
+            Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                Exp(.rgba) { 52; 199; 89; 1.0 }
+                Exp(.rgba) { 255; 255; 255; 1.0 }
+            }
+        )
         layer.textHaloColor = .constant(StyleColor(.black))
         layer.textHaloWidth = .constant(1.0)
         layer.textFont = .constant(["Arial Unicode MS Regular"])

@@ -16,6 +16,10 @@ final class PreferencesManager {
 
     var userPrefs: UserPreferencesModel
 
+    /// Set to a CID to request the app switch to the Map tab and navigate to that pilot/controller.
+    /// Cleared by RadarView after it consumes the value.
+    var pendingNavigateToCID: Int? = nil
+
     init(context: ModelContext) {
         self.context = context
 
@@ -94,6 +98,29 @@ final class PreferencesManager {
     func updateAltitudeFilterEnabled(_ value: Bool) {
         userPrefs.altitudeFilterEnabled = value
         try? context.save()
+    }
+
+    // MARK: - Tracked CIDs
+
+    func addTrackedCID(_ cid: Int) {
+        guard !userPrefs.trackedCIDs.contains(cid) else { return }
+        userPrefs.trackedCIDs.append(cid)
+        try? context.save()
+    }
+
+    func removeTrackedCID(_ cid: Int) {
+        userPrefs.trackedCIDs.removeAll { $0 == cid }
+        try? context.save()
+    }
+
+    /// All CIDs that should be treated as "friends" on the map:
+    /// the user's own CID plus all explicitly tracked CIDs.
+    var allFriendCIDs: Set<Int> {
+        var cids = Set(userPrefs.trackedCIDs)
+        if userPrefs.vatsimCID > 0 {
+            cids.insert(userPrefs.vatsimCID)
+        }
+        return cids
     }
 
     func incrementAdsWatched(by count: Int = 1) {

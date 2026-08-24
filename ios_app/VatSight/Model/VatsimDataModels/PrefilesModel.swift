@@ -12,7 +12,7 @@ struct Prefiles: Codable, Identifiable {
     let cid: Int
     let name: String
     let callsign: String
-    let flight_plan: fp?
+    let flight_plan: FlightPlan?
     let last_updated: Date
 
     var id: Int { cid }

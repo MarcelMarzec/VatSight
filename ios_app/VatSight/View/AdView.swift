@@ -70,8 +70,8 @@ enum AdCount: Int, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Playback State
-private enum PlaybackState {
+// MARK: - Ad Playback State
+private enum AdPlaybackState {
     case idle
     case playing
     case betweenAds   // shown after each ad except the last, offering exit or continue
@@ -86,7 +86,7 @@ struct AdView: View {
     // Swap SimulatedAdProvider() for your real SDK provider here
     private let adProvider: AdProvider = SimulatedAdProvider()
 
-    @State private var playbackState: PlaybackState = .idle
+    @State private var playbackState: AdPlaybackState = .idle
     @State private var adsWatchedThisSession = 0
     @State private var totalAdsToWatch = 0
     @State private var currentAdProgress: Double = 0

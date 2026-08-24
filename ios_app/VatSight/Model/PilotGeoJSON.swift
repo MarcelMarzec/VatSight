@@ -7,25 +7,26 @@
 
 import Foundation
 import MapboxMaps
-import Turf
 
 enum PilotGeoJSON {
 
     static func featureCollection(
         from pilots: [Pilot],
-        selectedCID: Int?
+        selectedCID: Int?,
+        friendCIDs: Set<Int> = []
     ) -> FeatureCollection {
 
         FeatureCollection(
             features: pilots.map {
-                feature(from: $0, selectedCID: selectedCID)
+                feature(from: $0, selectedCID: selectedCID, friendCIDs: friendCIDs)
             }
         )
     }
 
     static func feature(
         from pilot: Pilot,
-        selectedCID: Int?
+        selectedCID: Int?,
+        friendCIDs: Set<Int> = []
     ) -> Feature {
 
         var feature = Feature(
@@ -41,13 +42,15 @@ enum PilotGeoJSON {
 
         let isSelected = pilot.cid == selectedCID
         let isOnGround = pilot.groundspeed < 40
+        let isFriend = friendCIDs.contains(pilot.cid)
 
         feature.properties = [
             "cid": .number(Double(pilot.cid)),
             "callsign": .string(pilot.callsign),
             "heading": .number(Double(pilot.heading)),
             "isSelected": .boolean(isSelected),
-            "isOnGround": .boolean(isOnGround)
+            "isOnGround": .boolean(isOnGround),
+            "isFriend": .boolean(isFriend)
         ]
 
         return feature

@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct AirportDetailsView: View {
     let airport: VatglassesAirport
@@ -107,6 +108,7 @@ struct AirportDetailsView: View {
             }
         }
         .padding()
+        .textSelection(.enabled)
 
         List {
             // Controllers section
@@ -174,6 +176,7 @@ struct AirportDetailsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .textSelection(.enabled)
         .task {
             await fetchMetar()
         }
@@ -222,8 +225,12 @@ private struct ControllerRow: View {
     let airportICAO: String
     var labelResolver: ((String) -> String?)? = nil
 
-    /// Returns a human-readable position label for the controller's callsign.
-    /// Uses the vatglasses callsigns definitions when available, falling back to hardcoded strings.
+    @Environment(PreferencesManager.self) private var prefsManager
+
+    private var isTracked: Bool {
+        prefsManager.userPrefs.trackedCIDs.contains(controller.cid)
+    }
+
     var positionLabel: String {
         if let resolved = labelResolver?(controller.callsign) { return resolved }
         let upper = controller.callsign.uppercased()
@@ -236,8 +243,6 @@ private struct ControllerRow: View {
         return "Controller"
     }
 
-    /// True when this controller's callsign does not start with the airport ICAO — i.e. it is
-    /// covering the airport top-down rather than being assigned directly to it.
     var isTopdown: Bool {
         !controller.callsign.uppercased().hasPrefix(airportICAO.uppercased() + "_")
     }
@@ -255,9 +260,23 @@ private struct ControllerRow: View {
                         .font(.subheadline)
                 }
                 
-                    Text(controller.name + " (\(String(controller.cid)))")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                HStack(spacing: 4) {
+                        Text(controller.name + " (\(String(controller.cid)))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    
+                        Button {
+                            if isTracked {
+                                prefsManager.removeTrackedCID(controller.cid)
+                            } else {
+                                prefsManager.addTrackedCID(controller.cid)
+                            }
+                        } label: {
+                            Image(systemName: isTracked ? "star.fill" : "star")
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(isTracked ? .green : .secondary)
+                    }
                 
                 if let atis = controller.text_atis, !atis.isEmpty {
                     Text(atis.joined(separator: "\n"))
@@ -270,6 +289,10 @@ private struct ControllerRow: View {
 }
 
 #Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
+    let manager = PreferencesManager(context: ModelContext(container))
+
     AirportDetailsView(
         airport: VatglassesAirport(
             icao: "EGLL",
@@ -330,7 +353,7 @@ private struct ControllerRow: View {
                     qnh_i_hg: 29.92, qnh_mb: 1013,
                     logon_time: Date().addingTimeInterval(-5400),
                     last_updated: Date(),
-                    flight_plan: fp(
+                    flight_plan: FlightPlan(
                         flight_rules: "I", aircraft: "B738", aircraft_faa: "B738",
                         aircraft_short: "B738", departure: "EGLL", arrival: "EDDF",
                         alternate: "EDDM", deptime: "0900", enroute_time: "0130",
@@ -346,4 +369,5 @@ private struct ControllerRow: View {
             prefileArrivals: []
         )
     )
+    .environment(manager)
 }

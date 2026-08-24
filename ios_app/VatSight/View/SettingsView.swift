@@ -11,10 +11,8 @@ import SwiftData
 struct SettingsView: View {
     @Environment(PreferencesManager.self) private var prefsManager
     @State private var cidInputText = ""
-    @State private var isEditingCID = false
-    @State private var keepMapPosition = true
     @FocusState private var cidFieldFocused: Bool
-    private var vatsimDataRR = ["15s", "30s", "1min"]
+    private var vatsimDataRefreshRates = ["15s", "30s", "1min"]
 
     // Computed property to display CID or "ENTER" prompt
     private var displayedCID: String {
@@ -36,60 +34,15 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section("Settings") {
-                    // CID Input
-                    VStack(alignment: .leading){
-                        if isEditingCID {
-                            HStack {
-                                TextField("Enter your CID", text: $cidInputText)
-                                    .keyboardType(.numberPad)
-                                    .focused($cidFieldFocused)
-                                    .textFieldStyle(.roundedBorder)
-                                
-                                Button("Save") {
-                                    if let cid = Int(cidInputText), cid > 0 {
-                                        prefsManager.updateCID(cid)
-                                        isEditingCID = false
-                                        cidInputText = ""
-                                        cidFieldFocused = false
-                                    }
-                                }
-                                .buttonStyle(.borderedProminent)
-                                
-                                Button("Cancel") {
-                                    isEditingCID = false
-                                    cidInputText = ""
-                                    cidFieldFocused = false
-                                }
-                                .buttonStyle(.bordered)
-                            }
-                        } else {
-                            Button(action: {
-                                isEditingCID = true
-                                cidFieldFocused = true
-                                // Pre-fill with current CID if it exists
-                                if prefsManager.userPrefs.vatsimCID > 0 {
-                                    cidInputText = String(prefsManager.userPrefs.vatsimCID)
-                                }
-                            }) {
-                                HStack {
-                                    Text("Track your CID")
-                                    Spacer()
-                                    Text(displayedCID)
-                                        .foregroundColor(.secondary)
-                                    Image(systemName: "chevron.right")
-                                        .imageScale(.small)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .foregroundColor(.primary)
-                        }
+
+                    NavigationLink("Track Vatsim CIDs") {
+                        VatsimTrackedView()
                     }
-                    
-                    // Refresh Rate Picker
+
                     VStack(alignment: .leading){
                         Text("Select Vatsim Data Refresh Rate")
                         Picker("", selection: vatsimRefreshRate) {
-                            ForEach(vatsimDataRR, id: \.self) {
+                            ForEach(vatsimDataRefreshRates, id: \.self) {
                                 Text($0)
                             }
                         }
@@ -150,13 +103,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Misc")
                 }
-                footer: {
-                    HStack(alignment: .center){
-                        Spacer()
-                        Text("")
-                        Spacer()
-                    }
-                }
+
             }
             .navigationDestination(for: String.self) { _ in
                 AirspaceDataView(viewModel: RadarViewModel())

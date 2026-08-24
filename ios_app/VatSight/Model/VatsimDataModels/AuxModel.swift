@@ -36,8 +36,8 @@ struct MilitaryRatings: Codable, Identifiable {
 
 /// Shared lookup tables populated once per VATSIM fetch on the main thread.
 /// Allows Controllers and Pilot to expose resolved rating objects as computed properties.
-final class VatsimRatings {
-    static let shared = VatsimRatings()
+final class VatsimRatingsRegistry {
+    static let shared = VatsimRatingsRegistry()
     private init() {}
 
     var controllerRatings: [Int: ControllerRatings] = [:]

@@ -15,7 +15,12 @@ enum AirportGeoJSON {
     /// - Parameters:
     ///   - airports: Airports to render (must have isActive stamped by VatglassesService.getActiveAirports).
     ///   - filledICAOs: Set of ICAO codes that should render as filled circles (active controller or flight plan).
-    static func featureCollection(from airports: [VatglassesAirport], filledICAOs: Set<String>, selectedICAO: String? = nil) -> FeatureCollection {
+    static func featureCollection(
+        from airports: [VatglassesAirport],
+        filledICAOs: Set<String>,
+        selectedICAO: String? = nil,
+        friendControlledICAOs: Set<String> = []
+    ) -> FeatureCollection {
         let features: [Feature] = airports.map { airport in
             let coordinate = CLLocationCoordinate2D(
                 latitude: airport.latitude,
@@ -29,6 +34,7 @@ enum AirportGeoJSON {
             properties["isActive"] = .boolean(airport.isActive)
             properties["isFilled"] = .boolean(filledICAOs.contains(airport.icao))
             properties["isSelected"] = .boolean(airport.icao == selectedICAO)
+            properties["isFriendControlled"] = .boolean(friendControlledICAOs.contains(airport.icao))
             
             if let controller = airport.activeController {
                 properties["controllerCallsign"] = .string(controller.callsign)

@@ -20,6 +20,7 @@ final class UserPreferencesModel {
     var showInactiveSectors: Bool = false
     var showAirports: Bool = false
     var altitudeFilterEnabled: Bool = false
+    var trackedCIDs: [Int] = []
 
     init(
         vatsimCID: Int,
@@ -30,7 +31,8 @@ final class UserPreferencesModel {
         totalAdsWatched: Int = 0,
         showInactiveSectors: Bool = false,
         showAirports: Bool = false,
-        altitudeFilterEnabled: Bool = false
+        altitudeFilterEnabled: Bool = false,
+        trackedCIDs: [Int] = []
     ) {
         self.vatsimCID = vatsimCID
         self.lastLatitude = lastLatitude
@@ -41,6 +43,7 @@ final class UserPreferencesModel {
         self.showInactiveSectors = showInactiveSectors
         self.showAirports = showAirports
         self.altitudeFilterEnabled = altitudeFilterEnabled
+        self.trackedCIDs = trackedCIDs
     }
 
     convenience init() {

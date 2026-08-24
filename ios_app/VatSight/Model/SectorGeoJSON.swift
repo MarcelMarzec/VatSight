@@ -14,6 +14,10 @@ enum SectorGeoJSON {
 
     // MARK: - Label placement helpers
 
+    /// Cache of previously computed label coordinates keyed by sector ID.
+    /// Avoids recomputing expensive distance calculations on every render.
+    private static var labelCoordinateCache: [String: CLLocationCoordinate2D] = [:]
+
     /// Approximate degrees-per-metre at mid-latitudes (1 deg lat ≈ 111 km).
     private static let degreesPerMetre: Double = 1.0 / 111_000
 
@@ -82,15 +86,24 @@ enum SectorGeoJSON {
 
     /// Finds the best label coordinate for a sector by nudging the centroid away from airports.
     /// Falls back to the raw centroid if no clear position is found.
+    /// Results are cached by sector ID to avoid recomputing on every render.
     static func labelCoordinate(
         for sector: VatglassesSector,
         airports: [VatglassesAirport]
     ) -> CLLocationCoordinate2D? {
+        if let cached = labelCoordinateCache[sector.id] { return cached }
+
         guard let center = centroid(of: sector) else { return nil }
-        guard !airports.isEmpty else { return center }
+        guard !airports.isEmpty else {
+            labelCoordinateCache[sector.id] = center
+            return center
+        }
 
         // If the centroid is already clear, use it.
-        if isClearOfAirports(center, airports: airports) { return center }
+        if isClearOfAirports(center, airports: airports) {
+            labelCoordinateCache[sector.id] = center
+            return center
+        }
 
         // Try progressively larger offsets in each direction.
         for multiplier in 1...4 {
@@ -102,13 +115,20 @@ enum SectorGeoJSON {
                     longitude: center.longitude + dx * dDeg / max(cos(center.latitude * .pi / 180), 0.001)
                 )
                 if isClearOfAirports(candidate, airports: airports) {
+                    labelCoordinateCache[sector.id] = candidate
                     return candidate
                 }
             }
         }
 
         // No clear position found — fall back to centroid (better than nothing).
+        labelCoordinateCache[sector.id] = center
         return center
+    }
+
+    /// Clears the label coordinate cache. Call this when airport data changes.
+    static func clearLabelCoordinateCache() {
+        labelCoordinateCache.removeAll()
     }
 
     // MARK: - Callsign Helpers
@@ -229,7 +249,8 @@ enum SectorGeoJSON {
     static func labelPointFeatureCollection(
         from sectors: [VatglassesSector],
         airports: [VatglassesAirport],
-        selectedControllerCID: Int? = nil
+        selectedControllerCID: Int? = nil,
+        friendCIDs: Set<Int> = []
     ) -> FeatureCollection {
         var controllersWithLabels = Set<Int>()
 
@@ -248,7 +269,8 @@ enum SectorGeoJSON {
                 "controllerCallsign": .string(controller.callsign),
                 "controllerFrequency": .string(controller.frequency),
                 "controllerShortCallsign": .string(Self.shortCallsign(from: controller.callsign)),
-                "isSelected": .boolean(selectedControllerCID != nil && sector.activeController?.cid == selectedControllerCID)
+                "isSelected": .boolean(selectedControllerCID != nil && sector.activeController?.cid == selectedControllerCID),
+                "isFriend": .boolean(friendCIDs.contains(controller.cid))
             ]
             return feature
         }

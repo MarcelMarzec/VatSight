@@ -78,6 +78,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
             coordinator.prefsManager.userPrefs.lastLongitude = camera.center.longitude
         }
         .store(in: &context.coordinator.cancelables)
+
         context.coordinator.installTapInteractions()
         return mapView
     }
@@ -88,22 +89,28 @@ struct RadarViewRepresentable: UIViewRepresentable {
         _ mapView: MapView,
         context: Context
     ) {
+        let friendCIDs = prefsManager.allFriendCIDs
+        let friendControlledICAOs = viewModel.friendControlledAirportICAOs(friendCIDs: friendCIDs)
+
         context.coordinator.updatePilots(
             viewModel.pilots,
-            selectedCID: viewModel.selectedCID
+            selectedCID: viewModel.selectedCID,
+            friendCIDs: friendCIDs
         )
         
         context.coordinator.updateSectors(
             viewModel.sectorsToDisplay,
             controllers: viewModel.effectiveControllers,
             airports: viewModel.airportsToDisplay,
-            selectedControllerCID: viewModel.selectedSectorControllerCID
+            selectedControllerCID: viewModel.selectedSectorControllerCID,
+            friendCIDs: friendCIDs
         )
         
         context.coordinator.updateAirports(
             viewModel.airportsToDisplay,
             filledICAOs: viewModel.filledAirportICAOs,
-            selectedICAO: viewModel.selectedAirportICAO
+            selectedICAO: viewModel.selectedAirportICAO,
+            friendControlledICAOs: friendControlledICAOs
         )
 
         context.coordinator.updateRoutes(
@@ -117,7 +124,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             context.coordinator.flyTo(coordinate: coordinate)
             DispatchQueue.main.async { viewModel.pendingCameraFlyTo = nil }
         }
-
 
     }
 
@@ -140,6 +146,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
         // Last-seen values — used to skip redundant Mapbox source updates.
         private var lastPilots: [Pilot] = []
         private var lastSelectedCID: Int? = nil
+        private var lastFriendCIDs: Set<Int> = []
         private var lastSectors: [VatglassesSector] = []
         private var lastActiveSectorCount: Int = -1
         private var lastOwnershipSignature: Int = 0
@@ -147,6 +154,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
         private var lastAirports: [VatglassesAirport] = []
         private var lastFilledICAOs: Set<String> = []
         private var lastSelectedAirportICAO: String? = nil
+        private var lastFriendControlledICAOs: Set<String> = []
         private var lastRoutePilotCID: Int? = nil
         private var lastRouteAirportICAO: String? = nil
         /// Incremented each time pilots data is pushed to the map; used to trigger
@@ -181,7 +189,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 pilotStyleManager.updatePilots(
                     on: mapView,
                     pilots: viewModel.pilots,
-                    selectedCID: viewModel.selectedCID
+                    selectedCID: viewModel.selectedCID,
+                    friendCIDs: prefsManager.allFriendCIDs
                 )
             } catch {
                 print("Failed to configure pilot style:", error)
@@ -204,7 +213,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
                     on: mapView,
                     sectors: viewModel.sectorsToDisplay,
                     controllers: viewModel.effectiveControllers,
-                    airports: viewModel.airportsToDisplay
+                    airports: viewModel.airportsToDisplay,
+                    friendCIDs: prefsManager.allFriendCIDs
                 )
             } catch {
                 print("Failed to configure sector style:", error)
@@ -223,10 +233,12 @@ struct RadarViewRepresentable: UIViewRepresentable {
             do {
                 try airportStyleManager.configureAirports(on: mapView)
                 didInstallAirportStyle = true
+                let friendCIDs = prefsManager.allFriendCIDs
                 airportStyleManager.updateAirports(
                     on: mapView,
                     airports: viewModel.airportsToDisplay,
-                    filledICAOs: viewModel.filledAirportICAOs
+                    filledICAOs: viewModel.filledAirportICAOs,
+                    friendControlledICAOs: viewModel.friendControlledAirportICAOs(friendCIDs: friendCIDs)
                 )
             } catch {
                 print("Failed to configure airport style:", error)
@@ -284,18 +296,21 @@ struct RadarViewRepresentable: UIViewRepresentable {
 
         func updatePilots(
             _ pilots: [Pilot],
-            selectedCID: Int?
+            selectedCID: Int?,
+            friendCIDs: Set<Int> = []
         ) {
             guard let mapView, didInstallPilotStyle else { return }
-            guard pilots.count != lastPilots.count || selectedCID != lastSelectedCID else { return }
+            guard pilots.count != lastPilots.count || selectedCID != lastSelectedCID || friendCIDs != lastFriendCIDs else { return }
             lastPilots = pilots
             lastSelectedCID = selectedCID
+            lastFriendCIDs = friendCIDs
             pilotsVersion += 1
 
             pilotStyleManager.updatePilots(
                 on: mapView,
                 pilots: pilots,
-                selectedCID: selectedCID
+                selectedCID: selectedCID,
+                friendCIDs: friendCIDs
             )
         }
         
@@ -303,7 +318,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
             _ sectors: [VatglassesSector],
             controllers: [Controllers],
             airports: [VatglassesAirport] = [],
-            selectedControllerCID: Int? = nil
+            selectedControllerCID: Int? = nil,
+            friendCIDs: Set<Int> = []
         ) {
             guard let mapView, didInstallSectorStyle else { return }
             let activeSectorCount = sectors.filter { $0.isActive }.count
@@ -316,7 +332,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
             guard sectors.count != lastSectors.count
                     || activeSectorCount != lastActiveSectorCount
                     || ownershipSignature != lastOwnershipSignature
-                    || selectedControllerCID != lastSelectedControllerCID else { return }
+                    || selectedControllerCID != lastSelectedControllerCID
+                    || friendCIDs != lastFriendCIDs else { return }
             lastSectors = sectors
             lastActiveSectorCount = activeSectorCount
             lastOwnershipSignature = ownershipSignature
@@ -327,17 +344,33 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 sectors: sectors,
                 controllers: controllers,
                 airports: airports,
-                selectedControllerCID: selectedControllerCID
+                selectedControllerCID: selectedControllerCID,
+                friendCIDs: friendCIDs
             )
         }
         
-        func updateAirports(_ airports: [VatglassesAirport], filledICAOs: Set<String>, selectedICAO: String? = nil) {
+        func updateAirports(
+            _ airports: [VatglassesAirport],
+            filledICAOs: Set<String>,
+            selectedICAO: String? = nil,
+            friendControlledICAOs: Set<String> = []
+        ) {
             guard let mapView else { return }
-            guard airports.count != lastAirports.count || filledICAOs != lastFilledICAOs || selectedICAO != lastSelectedAirportICAO else { return }
+            guard airports.count != lastAirports.count
+                    || filledICAOs != lastFilledICAOs
+                    || selectedICAO != lastSelectedAirportICAO
+                    || friendControlledICAOs != lastFriendControlledICAOs else { return }
             lastAirports = airports
             lastFilledICAOs = filledICAOs
             lastSelectedAirportICAO = selectedICAO
-            airportStyleManager.updateAirports(on: mapView, airports: airports, filledICAOs: filledICAOs, selectedICAO: selectedICAO)
+            lastFriendControlledICAOs = friendControlledICAOs
+            airportStyleManager.updateAirports(
+                on: mapView,
+                airports: airports,
+                filledICAOs: filledICAOs,
+                selectedICAO: selectedICAO,
+                friendControlledICAOs: friendControlledICAOs
+            )
         }
 
         func updateRoutes(
@@ -523,3 +556,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
         }
     }
 }
+
+
+

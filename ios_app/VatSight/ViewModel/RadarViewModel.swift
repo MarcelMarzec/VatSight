@@ -96,12 +96,13 @@ final class RadarViewModel: ObservableObject {
             switch result {
             case .success(let response):
                 DispatchQueue.main.async {
-                    VatsimRatings.shared.populate(from: response)
+                    VatsimRatingsRegistry.shared.populate(from: response)
                     self?.pilots = response.pilots
                     self?.prefiles = response.prefiles
                     self?.controllers = response.controllers
                     self?.atis = response.atis
                     self?.updateSectorActiveStatus()
+                    self?.syncAltitudeFilterToSelectedPilot()
                     self?.vatsimFetchDone = true
                     self?.dismissLoadingIfReady()
                 }
@@ -174,6 +175,14 @@ final class RadarViewModel: ObservableObject {
         if vatsimFetchDone && sectorFetchDone {
             isLoadingData = false
         }
+    }
+
+    /// When altitude filtering is on and a pilot is selected, keeps `selectedAltitudeFt`
+    /// in sync with that pilot's latest reported altitude after each data refresh.
+    private func syncAltitudeFilterToSelectedPilot() {
+        guard altitudeFilterEnabled, let cid = selectedCID,
+              let pilot = pilots.first(where: { $0.cid == cid }) else { return }
+        selectedAltitudeFt = Double(pilot.altitude)
     }
     
     private func updateSectorActiveStatus() {
@@ -282,35 +291,43 @@ final class RadarViewModel: ObservableObject {
         sectors.filter { $0.isActive }
     }
     
+    /// Selects a pilot from a map tap (no camera fly-to).
+    /// If tracking is already active, transfers it to the new pilot.
     func selectPilot(cid: Int) {
-        if isShowingAirportSheet || isShowingSectorSheet {
-            // Dismiss other sheets first, then open pilot sheet after a brief delay
-            isShowingAirportSheet = false
-            selectedAirportICAO = nil
-            isShowingSectorSheet = false
-            selectedSectorId = nil
-            selectedCID = cid
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-                self?.isShowingPilotSheet = true
-            }
-        } else {
-            selectedCID = cid
-            isShowingPilotSheet = true
-        }
+        openPilotSheet(cid: cid, flyTo: nil, enableTracking: false)
     }
 
-    /// Selects a pilot, dismisses all sheets, pans the camera, and opens the pilot sheet.
-    func selectPilotAndFly(cid: Int, coordinate: CLLocationCoordinate2D) {
+    /// Selects a pilot, pans the camera, and opens the pilot sheet.
+    func selectPilotAndFly(cid: Int, coordinate: CLLocationCoordinate2D, enableTracking: Bool = false) {
+        openPilotSheet(cid: cid, flyTo: coordinate, enableTracking: enableTracking)
+    }
+
+    /// Shared implementation for all pilot selection paths.
+    ///
+    /// - If another sheet is open it is dismissed first; the pilot sheet stays open when
+    ///   switching between pilots so the content updates without a flicker.
+    /// - Tracking transfers automatically when it was already active, or when explicitly requested.
+    /// - The altitude filter snaps to the selected aircraft's current altitude.
+    private func openPilotSheet(cid: Int, flyTo coordinate: CLLocationCoordinate2D?, enableTracking: Bool) {
+        // Dismiss non-pilot sheets.
         isShowingAirportSheet = false
         selectedAirportICAO = nil
         controllersAtSelectedAirport = []
         isShowingSectorSheet = false
         selectedSectorId = nil
-        isShowingPilotSheet = false
+
+        // Snap altitude filter to the selected aircraft's current altitude.
+        if altitudeFilterEnabled, let pilot = pilots.first(where: { $0.cid == cid }) {
+            selectedAltitudeFt = Double(pilot.altitude)
+        }
+
+        // Update selection — the sheet observes selectedPilot live, so it updates in-place
+        // without needing a dismiss/re-present cycle.
         selectedCID = cid
-        pendingCameraFlyTo = coordinate
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.isShowingPilotSheet = true
+        isShowingPilotSheet = true
+
+        if let coordinate {
+            pendingCameraFlyTo = coordinate
         }
     }
 
@@ -338,6 +355,12 @@ final class RadarViewModel: ObservableObject {
     
     func dismissPilotSheet() {
         isShowingPilotSheet = false
+        selectedCID = nil
+    }
+
+    /// Called by the sheet's onDismiss handler (user swipe-dismiss).
+    /// Clears selection.
+    func onPilotSheetDismissed() {
         selectedCID = nil
     }
     
@@ -400,7 +423,7 @@ final class RadarViewModel: ObservableObject {
         altitudeFilterEnabled.toggle()
         prefsManager?.updateAltitudeFilterEnabled(altitudeFilterEnabled)
     }
-    
+
     /// The upper bound for the altitude slider, capped at FL600 (60 000 ft).
     var maxSectorAltitudeFt: Double { 60_000 }
 
@@ -446,6 +469,20 @@ final class RadarViewModel: ObservableObject {
             airports.map { ($0.icao, CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)) },
             uniquingKeysWith: { first, _ in first }
         )
+    }
+
+    // MARK: - Friend CID Helpers
+
+    /// Returns the set of airport ICAOs where a tracked CID is the active controller.
+    func friendControlledAirportICAOs(friendCIDs: Set<Int>) -> Set<String> {
+        guard !friendCIDs.isEmpty else { return [] }
+        var result = Set<String>()
+        for airport in airports {
+            if let controller = airport.activeController, friendCIDs.contains(controller.cid) {
+                result.insert(airport.icao)
+            }
+        }
+        return result
     }
 
     /// Traffic data for the currently selected airport, derived from live pilots and prefiles.

@@ -90,13 +90,26 @@ struct AirportDetailsTrafficView: View {
             .padding(.top, 16)
             .padding(.bottom, 8)
 
-            // Picker
-            Picker("Traffic", selection: $selectedTab) {
+            // Traffic tab picker
+            HStack(spacing: 8) {
                 ForEach(TrafficTab.allCases, id: \.self) { tab in
-                    Text(tabLabel(tab)).tag(tab)
+                    Button {
+                        selectedTab = tab
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: tabIcon(tab))
+                                .font(.system(size: 15))
+                            Text(tabLabel(tab))
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(selectedTab == tab ? Color.white.opacity(0.2) : Color.white.opacity(0.07))
+                        .foregroundStyle(selectedTab == tab ? Color.primary : Color.secondary)
+                        .clipShape(Capsule())
+                    }
                 }
             }
-            .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.bottom, 8)
 
@@ -124,6 +137,14 @@ struct AirportDetailsTrafficView: View {
     }
 
     // MARK: - Helpers
+
+    private func tabIcon(_ tab: TrafficTab) -> String {
+        switch tab {
+        case .departures: return "airplane.departure"
+        case .onGround:   return "airplane.landed"
+        case .arrivals:   return "airplane.arrival"
+        }
+    }
 
     private func tabLabel(_ tab: TrafficTab) -> String {
         switch tab {
@@ -260,7 +281,7 @@ private struct TrafficRow: View {
                     qnh_i_hg: 29.92, qnh_mb: 1013,
                     logon_time: Date().addingTimeInterval(-5400),
                     last_updated: Date(),
-                    flight_plan: fp(
+                    flight_plan: FlightPlan(
                         flight_rules: "I", aircraft: "B738", aircraft_faa: "B738",
                         aircraft_short: "B738", departure: "EGLL", arrival: "EDDF",
                         alternate: "EDDM", deptime: "0900", enroute_time: "0130",
@@ -278,7 +299,7 @@ private struct TrafficRow: View {
                     qnh_i_hg: 29.92, qnh_mb: 1013,
                     logon_time: Date().addingTimeInterval(-2700),
                     last_updated: Date(),
-                    flight_plan: fp(
+                    flight_plan: FlightPlan(
                         flight_rules: "I", aircraft: "A320", aircraft_faa: "A320",
                         aircraft_short: "A320", departure: "LEMD", arrival: "EGLL",
                         alternate: "EGKK", deptime: "0730", enroute_time: "0210",
@@ -296,7 +317,7 @@ private struct TrafficRow: View {
                     qnh_i_hg: 29.92, qnh_mb: 1013,
                     logon_time: Date().addingTimeInterval(-1200),
                     last_updated: Date(),
-                    flight_plan: fp(
+                    flight_plan: FlightPlan(
                         flight_rules: "I", aircraft: "A321", aircraft_faa: "A321",
                         aircraft_short: "A321", departure: "EGLL", arrival: "LEMD",
                         alternate: "LEBB", deptime: "1015", enroute_time: "0215",
@@ -314,7 +335,7 @@ private struct TrafficRow: View {
                     qnh_i_hg: 29.92, qnh_mb: 1013,
                     logon_time: Date().addingTimeInterval(-9000),
                     last_updated: Date(),
-                    flight_plan: fp(
+                    flight_plan: FlightPlan(
                         flight_rules: "I", aircraft: "B789", aircraft_faa: "B789",
                         aircraft_short: "B789", departure: "EHAM", arrival: "EGLL",
                         alternate: "EGKK", deptime: "0800", enroute_time: "0045",
@@ -326,7 +347,7 @@ private struct TrafficRow: View {
             prefileDepartures: [
                 Prefiles(
                     cid: 6666666, name: "Preview Prefile 1", callsign: "TOM001",
-                    flight_plan: fp(
+                    flight_plan: FlightPlan(
                         flight_rules: "I", aircraft: "B738", aircraft_faa: "B738",
                         aircraft_short: "B738", departure: "EGLL", arrival: "LEMG",
                         alternate: "LEMD", deptime: "1100", enroute_time: "0245",
@@ -339,7 +360,7 @@ private struct TrafficRow: View {
             prefileArrivals: [
                 Prefiles(
                     cid: 7777777, name: "Preview Prefile 2", callsign: "RYR5TG",
-                    flight_plan: fp(
+                    flight_plan: FlightPlan(
                         flight_rules: "I", aircraft: "B738", aircraft_faa: "B738",
                         aircraft_short: "B738", departure: "EIDW", arrival: "EGLL",
                         alternate: "EGKK", deptime: "1030", enroute_time: "0110",

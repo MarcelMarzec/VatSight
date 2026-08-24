@@ -1,5 +1,5 @@
 //
-//  Pilot.swift
+//  PilotModel.swift
 //  VatSight
 //
 //  Created by Marcel Marzec on 09/05/2026.
@@ -25,19 +25,19 @@ struct Pilot: Codable, Identifiable {
     let qnh_mb: Int
     let logon_time: Date
     let last_updated: Date
-    let flight_plan: fp?
+    let flight_plan: FlightPlan?
     
     
     var id: Int { cid }
 
     /// Resolved pilot rating from the shared registry. e.g. `.short_name` → "PPL"
     var pilotRatingInfo: PilotRatings? {
-        VatsimRatings.shared.pilotRatings[pilot_rating]
+        VatsimRatingsRegistry.shared.pilotRatings[pilot_rating]
     }
 
     /// Resolved military rating from the shared registry. e.g. `.short_name` → "M1"
     var militaryRatingInfo: MilitaryRatings? {
-        VatsimRatings.shared.militaryRatings[military_rating]
+        VatsimRatingsRegistry.shared.militaryRatings[military_rating]
     }
 
     var coordinate: CLLocationCoordinate2D {
@@ -78,7 +78,7 @@ struct Pilot: Codable, Identifiable {
     }()
 }
 
-struct fp: Codable {
+struct FlightPlan: Codable {
     let flight_rules: String
     let aircraft: String
     let aircraft_faa: String
