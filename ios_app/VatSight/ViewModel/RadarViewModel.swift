@@ -6,9 +6,11 @@
 import Foundation
 import Combine
 import CoreLocation
+import UIKit
 
 final class RadarViewModel: ObservableObject {
     
+    @Published var general: General?
     @Published var pilots: [Pilot] = []
     @Published var prefiles: [Prefiles] = []
     @Published var controllers: [Controllers] = []
@@ -34,6 +36,12 @@ final class RadarViewModel: ObservableObject {
     @Published var selectedAltitudeFt: Double = 0
     /// When false, altitude filtering is bypassed and all sectors within the inactive-sectors toggle pass through.
     @Published var altitudeFilterEnabled = false
+
+    // MARK: - Error / staleness state
+    /// Set to true when the most recent VATSIM fetch failed.
+    @Published var lastFetchFailed = false
+    /// Timestamp of the last successful VATSIM data fetch.
+    @Published var lastSuccessfulFetch: Date? = nil
 
     // MARK: - Debug overrides
     /// When non-empty, these controllers are injected on top of the live data for testing.
@@ -97,17 +105,21 @@ final class RadarViewModel: ObservableObject {
             case .success(let response):
                 DispatchQueue.main.async {
                     VatsimRatingsRegistry.shared.populate(from: response)
+                    self?.general = response.general
                     self?.pilots = response.pilots
                     self?.prefiles = response.prefiles
                     self?.controllers = response.controllers
                     self?.atis = response.atis
                     self?.updateSectorActiveStatus()
                     self?.syncAltitudeFilterToSelectedPilot()
+                    self?.lastFetchFailed = false
+                    self?.lastSuccessfulFetch = Date()
                     self?.vatsimFetchDone = true
                     self?.dismissLoadingIfReady()
                 }
             case .failure:
                 DispatchQueue.main.async {
+                    self?.lastFetchFailed = true
                     self?.vatsimFetchDone = true
                     self?.dismissLoadingIfReady()
                 }
@@ -175,6 +187,12 @@ final class RadarViewModel: ObservableObject {
         if vatsimFetchDone && sectorFetchDone {
             isLoadingData = false
         }
+    }
+
+    /// Returns true if data is more than 2× the refresh interval old (i.e. at least one refresh was missed).
+    var isDataStale: Bool {
+        guard let last = lastSuccessfulFetch else { return false }
+        return Date().timeIntervalSince(last) > (refreshInterval * 2)
     }
 
     /// When altitude filtering is on and a pilot is selected, keeps `selectedAltitudeFt`
@@ -325,6 +343,7 @@ final class RadarViewModel: ObservableObject {
         // without needing a dismiss/re-present cycle.
         selectedCID = cid
         isShowingPilotSheet = true
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
 
         if let coordinate {
             pendingCameraFlyTo = coordinate
@@ -343,6 +362,7 @@ final class RadarViewModel: ObservableObject {
         if let airport = airports.first(where: { $0.icao == icao }) {
             pendingCameraFlyTo = CLLocationCoordinate2D(latitude: airport.latitude, longitude: airport.longitude)
         }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             self?.isShowingAirportSheet = true
         }
@@ -365,6 +385,7 @@ final class RadarViewModel: ObservableObject {
     }
     
     func selectAirport(icao: String) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         if isShowingPilotSheet || isShowingSectorSheet {
             isShowingPilotSheet = false
             selectedCID = nil
@@ -389,6 +410,7 @@ final class RadarViewModel: ObservableObject {
     }
     
     func selectSector(id: String) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         if isShowingPilotSheet || isShowingAirportSheet {
             isShowingPilotSheet = false
             selectedCID = nil

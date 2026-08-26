@@ -17,22 +17,44 @@ final class RadarStyleManager {
     static let pilotGroundIconLayerId = "pilot-ground-icon-layer"
     static let pilotGroundLabelLayerId = "pilot-ground-label-layer"
 
+    private var isDarkTheme: Bool = true
+
     enum RadarStyleError: Error {
         case missingPilotAsset
     }
 
     // MARK: - Configure
 
-    func configurePilots(
-        on mapView: MapView
-    ) throws {
-
+    func configurePilots(on mapView: MapView, isDark: Bool = true) throws {
+        isDarkTheme = isDark
         try addPilotImage(to: mapView)
         try addPilotSource(to: mapView)
         try addPilotIconLayer(to: mapView)
         try addPilotLabelLayer(to: mapView)
         try addPilotGroundIconLayer(to: mapView)
         try addPilotGroundLabelLayer(to: mapView)
+    }
+
+    /// Call this when the app theme changes without a full style reload,
+    /// to update the icon and label tint colors on existing layers.
+    func applyTheme(on mapView: MapView, isDark: Bool) {
+        isDarkTheme = isDark
+
+        let iconExp = pilotIconColorExpression()
+        let labelExp = pilotLabelColorExpression()
+        let haloColor = pilotLabelHaloColor()
+
+        for layerId in [Self.pilotIconLayerId, Self.pilotGroundIconLayerId] {
+            try? mapView.mapboxMap.updateLayer(withId: layerId, type: SymbolLayer.self) { layer in
+                layer.iconColor = .expression(iconExp)
+            }
+        }
+        for layerId in [Self.pilotLabelLayerId, Self.pilotGroundLabelLayerId] {
+            try? mapView.mapboxMap.updateLayer(withId: layerId, type: SymbolLayer.self) { layer in
+                layer.textColor = .expression(labelExp)
+                layer.textHaloColor = .constant(haloColor)
+            }
+        }
     }
 
     // MARK: - Update Source
@@ -66,9 +88,10 @@ final class RadarStyleManager {
             throw RadarStyleError.missingPilotAsset
         }
 
-        try mapView.mapboxMap.addImage(pilot, id: "pilot")
-        try mapView.mapboxMap.addImage(selected, id: "selectedPilot")
-        try mapView.mapboxMap.addImage(friend, id: "friendPilot")
+        // Register as SDF (Signed Distance Field) so Mapbox can tint via iconColor at runtime.
+        try mapView.mapboxMap.addImage(pilot,    id: "pilot",         sdf: true)
+        try mapView.mapboxMap.addImage(selected, id: "selectedPilot", sdf: true)
+        try mapView.mapboxMap.addImage(friend,   id: "friendPilot",   sdf: true)
     }
 
     // MARK: - Add Source
@@ -101,6 +124,7 @@ final class RadarStyleManager {
             source: Self.pilotSourceId
         )
 
+        // All three images are registered as SDF, so iconColor tints them at runtime.
         layer.iconImage = .expression(
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
@@ -110,6 +134,8 @@ final class RadarStyleManager {
                 "pilot"
             }
         )
+
+        layer.iconColor = .expression(pilotIconColorExpression())
 
         layer.iconSize = .constant(0.65)
 
@@ -154,14 +180,8 @@ final class RadarStyleManager {
         layer.textOffset = .constant([0.8, 0])
         layer.textAllowOverlap = .constant(false)
         layer.textIgnorePlacement = .constant(true)
-        layer.textColor = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isFriend" }; true }
-                Exp(.rgba) { 52; 199; 89; 1.0 }
-                Exp(.rgba) { 255; 255; 255; 1.0 }
-            }
-        )
-        layer.textHaloColor = .constant(StyleColor(.black))
+        layer.textColor = .expression(pilotLabelColorExpression())
+        layer.textHaloColor = .constant(pilotLabelHaloColor())
         layer.textHaloWidth = .constant(1.0)
         layer.textFont = .constant(["Arial Unicode MS Regular"])
         layer.textPadding = .constant(2)
@@ -199,6 +219,8 @@ final class RadarStyleManager {
             }
         )
 
+        layer.iconColor = .expression(pilotIconColorExpression())
+
         layer.iconSize = .constant(0.65)
 
         layer.iconRotate = .expression(
@@ -231,14 +253,8 @@ final class RadarStyleManager {
         layer.textOffset = .constant([0.8, 0])
         layer.textAllowOverlap = .constant(false)
         layer.textIgnorePlacement = .constant(true)
-        layer.textColor = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isFriend" }; true }
-                Exp(.rgba) { 52; 199; 89; 1.0 }
-                Exp(.rgba) { 255; 255; 255; 1.0 }
-            }
-        )
-        layer.textHaloColor = .constant(StyleColor(.black))
+        layer.textColor = .expression(pilotLabelColorExpression())
+        layer.textHaloColor = .constant(pilotLabelHaloColor())
         layer.textHaloWidth = .constant(1.0)
         layer.textFont = .constant(["Arial Unicode MS Regular"])
         layer.textPadding = .constant(2)
@@ -247,5 +263,48 @@ final class RadarStyleManager {
         layer.minZoom = 10
 
         try mapView.mapboxMap.addLayer(layer)
+    }
+
+    // MARK: - Helpers
+
+    /// Returns a switchCase Exp that tints the SDF pilot icon by state and theme.
+    private func pilotIconColorExpression() -> Exp {
+        if isDarkTheme {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }    // red
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                Exp(.rgba) { 48; 230; 110; 1.0 }   // bright lime-green — vivid on dark map
+                Exp(.rgba) { 255; 255; 255; 1.0 }  // white
+            }
+        } else {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }    // red
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green — reads well on light map
+                Exp(.rgba) { 75; 80; 95; 1.0 }     // medium slate-grey
+            }
+        }
+    }
+
+    private func pilotLabelColorExpression() -> Exp {
+        if isDarkTheme {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                Exp(.rgba) { 48; 230; 110; 1.0 }   // matches icon
+                Exp(.rgba) { 255; 255; 255; 1.0 }
+            }
+        } else {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                Exp(.rgba) { 20; 155; 65; 1.0 }    // matches icon
+                Exp(.rgba) { 75; 80; 95; 1.0 }
+            }
+        }
+    }
+
+    private func pilotLabelHaloColor() -> StyleColor {
+        isDarkTheme ? StyleColor(.black) : StyleColor(.white)
     }
 }

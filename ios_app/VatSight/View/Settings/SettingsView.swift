@@ -10,6 +10,7 @@ import SwiftData
 
 struct SettingsView: View {
     @Environment(PreferencesManager.self) private var prefsManager
+    @EnvironmentObject private var radarViewModel: RadarViewModel
     @State private var cidInputText = ""
     @FocusState private var cidFieldFocused: Bool
     private var vatsimDataRefreshRates = ["15s", "30s", "1min"]
@@ -34,9 +35,16 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section("Settings") {
-
-                    NavigationLink("Track Vatsim CIDs") {
+                    NavigationLink {
                         VatsimTrackedView()
+                    } label: {
+                        Label("Track Vatsim CIDs", systemImage: "person.2.badge.gearshape").foregroundColor(.primary)
+                    }
+                    
+                    NavigationLink {
+                        AppearanceView()
+                    } label: {
+                        Label("Appearance", systemImage: "slider.horizontal.3").foregroundColor(.primary)
                     }
 
                     VStack(alignment: .leading){
@@ -48,18 +56,16 @@ struct SettingsView: View {
                         }
                         .pickerStyle(.segmented)
                     }
-
-
                 }
                 
-                Section("External Data Sets"){
+                Section("External Data"){
                     NavigationLink(value: "vatglasses") {
-                        Image(systemName: "globe")
-                        Text("Vatglasses Sector Data")
+                        Image(systemName: "sunglasses")
+                        Text("VATGlasses Sector Data")
                     }
-                    NavigationLink(value: "vatsim") {
-                        Image(systemName: "globe")
-                        Text("Vatsim API")
+                    NavigationLink(value: "vatsimdata") {
+                        Image(systemName: "airplane.path.dotted")
+                        Text("VATSIM User Data")
                     }
                 }
                 
@@ -67,14 +73,17 @@ struct SettingsView: View {
                     Link(destination: URL(string: "mailto:contact@marcelmarzec.com?subject=VatSight App Feedback / Support")!) {
                         HStack{
                             Image(systemName: "envelope.fill").foregroundColor(.blue)
-                            Text("Get in Contact")
+                            VStack(alignment: .leading){
+                                Text("Get in Contact")
+                                Text("Send an Email to the developer about any issues, queries or feedback!").font(.subheadline).foregroundColor(.secondary)
+                            }
                             Spacer()
                             Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
                         }
                     }
                     .foregroundColor(.primary)
                     
-                    NavigationLink{
+                    /* NavigationLink{
                         AdView()
                     } label: {
                         HStack(spacing: 20) {
@@ -84,7 +93,7 @@ struct SettingsView: View {
                                 Text("Vatsight is free, support me by volontarily watching an advert").font(.subheadline).foregroundColor(.secondary)
                             }
                         }
-                    }
+                    } */
                 
                     Link(destination: URL(string: "https://github.com/MarcelMarzec/VatSight")!) {
                         HStack {
@@ -94,7 +103,20 @@ struct SettingsView: View {
                                 .frame(width: 25, height: 25)
                             VStack(alignment: .leading) {
                                 Text("VatSight Github Repository")
-                                Text("This project is open source and free for you to view and contribute! Any help is greatly appreciated!").font(.subheadline).foregroundColor(.secondary)
+                                Text("View and Contribute the source code, Any help is greatly appreciated!").font(.subheadline).foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
+                        }.foregroundColor(.primary)
+                    }
+
+                    // TODO: Replace with your hosted privacy policy URL before App Store submission
+                    Link(destination: URL(string: "https://github.com/MarcelMarzec/VatSight/blob/main/PRIVACY.md")!) {
+                        HStack {
+                            Image(systemName: "hand.raised.fill").foregroundColor(.primary)
+                            VStack(alignment: .leading) {
+                                Text("Privacy Policy")
+                                Text("How VatSight handles your data.").font(.subheadline).foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
@@ -104,9 +126,35 @@ struct SettingsView: View {
                     Text("Misc")
                 }
 
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { prefsManager.userPrefs.developerModeEnabled },
+                        set: { newValue in
+                            prefsManager.updateDeveloperMode(newValue)
+                        }
+                    )) {
+                        Label("Developer Mode", systemImage: "hammer.fill")
+                    }
+
+                    if prefsManager.userPrefs.developerModeEnabled {
+                        HStack(spacing: 6) {
+                            Image(systemName: "info.circle")
+                                .foregroundStyle(.secondary)
+                            Text("Sector debug panel enabled on the map.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Developer")
+                }
             }
-            .navigationDestination(for: String.self) { _ in
-                AirspaceDataView(viewModel: RadarViewModel())
+            .navigationDestination(for: String.self) { destination in
+                if destination == "vatsimdata" {
+                    VatsimUserDataView()
+                } else {
+                    VATGlassesDataView()
+                }
             }
             .navigationTitle("VatSight")
             .navigationBarTitleDisplayMode(.inline)

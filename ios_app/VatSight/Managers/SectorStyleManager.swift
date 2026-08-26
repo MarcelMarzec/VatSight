@@ -16,23 +16,41 @@ final class SectorStyleManager {
     static let sectorOutlineLayerId = "sector-outline-layer"
     static let sectorLabelLayerId = "sector-label-layer"
 
-    private let activeSectorFillColor = StyleColor(UIColor.systemBlue.withAlphaComponent(0.08))
-    private let activeSectorStrokeColor = StyleColor(UIColor.systemBlue.withAlphaComponent(0.6))
-    private let inactiveSectorFillColor = StyleColor(UIColor.systemGray.withAlphaComponent(0.03))
-    private let inactiveSectorStrokeColor = StyleColor(UIColor.systemGray.withAlphaComponent(0.2))
-    
+    private var isDarkTheme: Bool = true
+
     enum SectorStyleError: Error {
         case layerAlreadyExists
     }
     
     // MARK: - Configure
     
-    func configureSectors(on mapView: MapView) throws {
+    func configureSectors(on mapView: MapView, isDark: Bool = true) throws {
+        isDarkTheme = isDark
         try addSectorSource(to: mapView)
         try addSectorFillLayer(to: mapView)
         try addSectorOutlineLayer(to: mapView)
         try addSectorLabelSource(to: mapView)
         try addSectorLabelLayer(to: mapView)
+    }
+
+    /// Re-tints sector layers in place when the app theme changes.
+    func applyTheme(on mapView: MapView, isDark: Bool) {
+        isDarkTheme = isDark
+        let halo: StyleColor = isDark ? StyleColor(.black) : StyleColor(.white)
+        let labelColorExp = sectorLabelColorExpression()
+
+        try? mapView.mapboxMap.updateLayer(withId: Self.sectorFillLayerId, type: FillLayer.self) { [self] layer in
+            layer.fillColor = .expression(sectorFillColorExpression())
+            layer.fillOpacity = .expression(sectorFillOpacityExpression())
+        }
+        try? mapView.mapboxMap.updateLayer(withId: Self.sectorOutlineLayerId, type: LineLayer.self) { [self] layer in
+            layer.lineColor = .expression(sectorOutlineColorExpression())
+            layer.lineOpacity = .expression(sectorOutlineOpacityExpression())
+        }
+        try? mapView.mapboxMap.updateLayer(withId: Self.sectorLabelLayerId, type: SymbolLayer.self) { layer in
+            layer.textColor = .expression(labelColorExp)
+            layer.textHaloColor = .constant(halo)
+        }
     }
     
     // MARK: - Update Source
@@ -117,42 +135,8 @@ final class SectorStyleManager {
             source: Self.sectorSourceId
         )
         
-        layer.fillColor = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isSelected" }; true }
-                Exp(.rgba) { 255; 59; 48; 0.1 }
-                Exp(.eq) {
-                    Exp(.get) { "isActive" }
-                    true
-                }
-                Exp(.switchCase) {
-                    Exp(.has) { "colorHex" }
-                    Exp(.toColor) {
-                        Exp(.get) { "colorHex" }
-                    }
-                    Exp(.rgba) { 30; 144; 255; 0.05 }
-                }
-                Exp(.rgba) { 128; 128; 128; 0.03 }
-            }
-        )
-
-        // Selected sectors use a fixed opacity; active sectors with a custom color use
-        // fillOpacity for transparency; others encode alpha directly in their fill color.
-        layer.fillOpacity = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isSelected" }; true }
-                1.0
-                Exp(.all) {
-                    Exp(.eq) {
-                        Exp(.get) { "isActive" }
-                        true
-                    }
-                    Exp(.has) { "colorHex" }
-                }
-                0.05
-                1.0
-            }
-        )
+        layer.fillColor = .expression(sectorFillColorExpression())
+        layer.fillOpacity = .expression(sectorFillOpacityExpression())
         
         try mapView.mapboxMap.addLayer(layer)
     }
@@ -165,25 +149,7 @@ final class SectorStyleManager {
             source: Self.sectorSourceId
         )
         
-        layer.lineColor = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isSelected" }; true }
-                Exp(.rgba) { 255; 59; 48; 1.0 }
-                Exp(.eq) {
-                    Exp(.get) { "isActive" }
-                    true
-                }
-                Exp(.switchCase) {
-                    Exp(.has) { "colorHex" }
-                    Exp(.toColor) {
-                        Exp(.get) { "colorHex" }
-                    }
-                    Exp(.rgba) { 30; 144; 255; 0.6 }
-                }
-                Exp(.rgba) { 128; 128; 128; 0.5 }
-            }
-        )
-
+        layer.lineColor = .expression(sectorOutlineColorExpression())
         layer.lineWidth = .expression(
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
@@ -196,23 +162,7 @@ final class SectorStyleManager {
                 1.5
             }
         )
-        
-        // Selected and active sectors with custom color use lineOpacity; others encode alpha in the color itself.
-        layer.lineOpacity = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isSelected" }; true }
-                1.0
-                Exp(.all) {
-                    Exp(.eq) {
-                        Exp(.get) { "isActive" }
-                        true
-                    }
-                    Exp(.has) { "colorHex" }
-                }
-                0.6
-                1.0
-            }
-        )
+        layer.lineOpacity = .expression(sectorOutlineOpacityExpression())
         
         try mapView.mapboxMap.addLayer(layer)
     }
@@ -255,18 +205,8 @@ final class SectorStyleManager {
         layer.textSize = .constant(12)
         layer.textFont = .constant(["Arial Unicode MS Regular"])
 
-        // White text, red when selected, green for friend controllers.
-        layer.textColor = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isSelected" }; true }
-                Exp(.rgba) { 255; 59; 48; 1.0 }
-                Exp(.eq) { Exp(.get) { "isFriend" }; true }
-                Exp(.rgba) { 52; 199; 89; 1.0 }
-                Exp(.rgba) { 255; 255; 255; 1.0 }
-            }
-        )
-
-        layer.textHaloColor = .constant(StyleColor(.black))
+        layer.textColor = .expression(sectorLabelColorExpression())
+        layer.textHaloColor = .constant(isDarkTheme ? StyleColor(.black) : StyleColor(.white))
         layer.textHaloWidth = .constant(1.0)
         layer.textPadding = .constant(5)
         layer.textLineHeight = .constant(1.2)
@@ -289,5 +229,87 @@ final class SectorStyleManager {
         layer.symbolZOrder = .constant(.auto)
 
         try mapView.mapboxMap.addLayer(layer)
+    }
+
+    // MARK: - Theme Color Helpers
+
+    private func sectorFillColorExpression() -> Exp {
+        if isDarkTheme {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 0.1 }
+                Exp(.eq) { Exp(.get) { "isActive" }; true }
+                Exp(.switchCase) {
+                    Exp(.has) { "colorHex" }
+                    Exp(.toColor) { Exp(.get) { "colorHex" } }
+                    Exp(.rgba) { 30; 144; 255; 0.05 }
+                }
+                Exp(.rgba) { 128; 128; 128; 0.03 }
+            }
+        } else {
+            // Light mode: VATGlasses hex colors are vivid dark-mode colors, so we
+            // fall back to a soft blue tint and keep all fills very light.
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 0.08 }
+                Exp(.eq) { Exp(.get) { "isActive" }; true }
+                Exp(.rgba) { 30; 100; 200; 0.06 }  // soft blue instead of raw hex
+                Exp(.rgba) { 100; 100; 110; 0.04 }
+            }
+        }
+    }
+
+    private func sectorFillOpacityExpression() -> Exp {
+        // Opacity is always 1.0 here because alpha is baked into the fill color.
+        return Exp(.literal) { 1.0 }
+    }
+
+    private func sectorOutlineColorExpression() -> Exp {
+        if isDarkTheme {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isActive" }; true }
+                Exp(.switchCase) {
+                    Exp(.has) { "colorHex" }
+                    Exp(.toColor) { Exp(.get) { "colorHex" } }
+                    Exp(.rgba) { 30; 144; 255; 0.6 }
+                }
+                Exp(.rgba) { 128; 128; 128; 0.5 }
+            }
+        } else {
+            // Light mode: use a muted blue stroke and softer inactive lines
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 0.9 }
+                Exp(.eq) { Exp(.get) { "isActive" }; true }
+                Exp(.rgba) { 30; 100; 200; 0.5 }
+                Exp(.rgba) { 100; 100; 110; 0.35 }
+            }
+        }
+    }
+
+    private func sectorOutlineOpacityExpression() -> Exp {
+        return Exp(.literal) { 1.0 }
+    }
+
+    private func sectorLabelColorExpression() -> Exp {
+        if isDarkTheme {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                Exp(.rgba) { 48; 230; 110; 1.0 }   // bright lime-green — matches pilot/airport
+                Exp(.rgba) { 255; 255; 255; 1.0 }
+            }
+        } else {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriend" }; true }
+                Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green — matches pilot/airport
+                Exp(.rgba) { 75; 80; 95; 1.0 }
+            }
+        }
     }
 }

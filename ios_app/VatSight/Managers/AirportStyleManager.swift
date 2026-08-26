@@ -27,13 +27,35 @@ final class AirportStyleManager {
         case layerAlreadyExists
     }
 
+    private var isDarkTheme: Bool = true
+
     // MARK: - Configure
 
-    func configureAirports(on mapView: MapView) throws {
+    func configureAirports(on mapView: MapView, isDark: Bool = true) throws {
+        isDarkTheme = isDark
         registerIndicatorImages(on: mapView)
         try addAirportSource(to: mapView)
         try addAirportLayer(to: mapView)
         try addAirportLabelLayer(to: mapView)
+    }
+
+    /// Call when the app theme changes to update existing airport layers without a full reload.
+    func applyTheme(on mapView: MapView, isDark: Bool) {
+        isDarkTheme = isDark
+
+        let fillColor = airportFillColorExpression()
+        let strokeColor = airportStrokeColorExpression()
+        let labelColor = airportLabelColorExpression()
+        let halo: StyleColor = isDark ? StyleColor(.black) : StyleColor(.white)
+
+        try? mapView.mapboxMap.updateLayer(withId: Self.airportLayerId, type: CircleLayer.self) { layer in
+            layer.circleColor = .expression(fillColor)
+            layer.circleStrokeColor = .expression(strokeColor)
+        }
+        try? mapView.mapboxMap.updateLayer(withId: Self.airportLabelLayerId, type: SymbolLayer.self) { layer in
+            layer.textColor = .expression(labelColor)
+            layer.textHaloColor = .constant(halo)
+        }
     }
 
     // MARK: - Update Source
@@ -106,27 +128,8 @@ final class AirportStyleManager {
             }
         )
 
-        layer.circleColor = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isSelected" }; true }
-                Exp(.rgba) { 255; 59; 48; 1.0 }
-                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
-                Exp(.rgba) { 52; 199; 89; 1.0 }
-                Exp(.eq) { Exp(.get) { "isFilled" }; true }
-                Exp(.rgba) { 255; 255; 255; 1.0 }
-                Exp(.rgba) { 0; 0; 0; 0.0 }
-            }
-        )
-
-        layer.circleStrokeColor = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isSelected" }; true }
-                Exp(.rgba) { 255; 59; 48; 1.0 }
-                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
-                Exp(.rgba) { 52; 199; 89; 1.0 }
-                Exp(.rgba) { 255; 255; 255; 1.0 }
-            }
-        )
+        layer.circleColor = .expression(airportFillColorExpression())
+        layer.circleStrokeColor = .expression(airportStrokeColorExpression())
         layer.circleStrokeWidth = .constant(1.5)
         layer.circleStrokeOpacity = .constant(1.0)
 
@@ -147,16 +150,8 @@ final class AirportStyleManager {
         // ICAO text
         layer.textField = .expression(Exp(.get) { "icao" })
         layer.textSize = .constant(12)
-        layer.textColor = .expression(
-            Exp(.switchCase) {
-                Exp(.eq) { Exp(.get) { "isSelected" }; true }
-                Exp(.rgba) { 255; 59; 48; 1.0 }
-                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
-                Exp(.rgba) { 52; 199; 89; 1.0 }
-                Exp(.rgba) { 255; 255; 255; 1.0 }
-            }
-        )
-        layer.textHaloColor = .constant(StyleColor(.black))
+        layer.textColor = .expression(airportLabelColorExpression())
+        layer.textHaloColor = .constant(isDarkTheme ? StyleColor(.black) : StyleColor(.white))
         layer.textHaloWidth = .constant(1.0)
         layer.textPadding = .constant(5)
         layer.textFont = .constant(["Arial Unicode MS Regular"])
@@ -274,5 +269,71 @@ final class AirportStyleManager {
         }
 
         return UIGraphicsGetImageFromCurrentImageContext()
+    }
+
+    // MARK: - Theme Color Expressions
+
+    private func airportFillColorExpression() -> Exp {
+        if isDarkTheme {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                Exp(.rgba) { 48; 230; 110; 1.0 }   // bright lime-green
+                Exp(.eq) { Exp(.get) { "isFilled" }; true }
+                Exp(.rgba) { 255; 255; 255; 1.0 }
+                Exp(.rgba) { 0; 0; 0; 0.0 }
+            }
+        } else {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green
+                Exp(.eq) { Exp(.get) { "isFilled" }; true }
+                Exp(.rgba) { 75; 80; 95; 1.0 }
+                Exp(.rgba) { 0; 0; 0; 0.0 }
+            }
+        }
+    }
+
+    private func airportStrokeColorExpression() -> Exp {
+        if isDarkTheme {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                Exp(.rgba) { 48; 230; 110; 1.0 }   // bright lime-green
+                Exp(.rgba) { 255; 255; 255; 1.0 }
+            }
+        } else {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green
+                Exp(.rgba) { 75; 80; 95; 1.0 }
+            }
+        }
+    }
+
+    private func airportLabelColorExpression() -> Exp {
+        if isDarkTheme {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                Exp(.rgba) { 48; 230; 110; 1.0 }   // bright lime-green
+                Exp(.rgba) { 255; 255; 255; 1.0 }
+            }
+        } else {
+            return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                Exp(.rgba) { 255; 59; 48; 1.0 }
+                Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green
+                Exp(.rgba) { 75; 80; 95; 1.0 }
+            }
+        }
     }
 }

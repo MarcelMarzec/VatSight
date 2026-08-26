@@ -334,6 +334,7 @@ struct SearchView: View {
         } else {
             ForEach(visibleAirports) { airport in
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     dismiss()
                     onAirportSelected(airport.icao)
                 } label: {
@@ -425,6 +426,7 @@ struct SearchView: View {
         } else {
             ForEach(visiblePilots) { pilot in
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     dismiss()
                     onPilotSelected(pilot.cid)
                 } label: {
@@ -470,6 +472,7 @@ struct SearchView: View {
         } else {
             ForEach(visibleControllers) { controller in
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     dismiss()
                     onControllerSelected(controller)
                 } label: {

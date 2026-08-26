@@ -22,7 +22,7 @@ struct ATIS: Codable, Identifiable {
     let logon_time: Date
     let last_updated: Date
 
-    var id: Int { cid }
+    var id: String { callsign }
 
     /// Resolved facility from the shared registry. e.g. `.short` → "ATIS", `.long` → "ATIS"
     var facilityInfo: Facilities? {
@@ -50,7 +50,7 @@ struct ATIS: Codable, Identifiable {
     
     private static let utcTimeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "HH:mm'z'"
+        f.dateFormat = "HH:mm:ss'z'"
         f.timeZone = TimeZone(secondsFromGMT: 0)
         return f
     }()

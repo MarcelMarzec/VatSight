@@ -17,34 +17,48 @@ struct ContentView: View {
     @StateObject private var radarViewModel = RadarViewModel()
     
     var body: some View {
-            Group {
-                if let manager {
-                    TabView(selection: $selectedTab) {
+        Group {
+            if let manager {
+                TabView(selection: $selectedTab) {
 
-                        Tab("Map", systemImage: "map.fill", value: 0) {
-                            RadarView()
-                        }
+                    Tab("Map", systemImage: "map.fill", value: 0) {
+                        RadarView()
+                    }
 
-                        Tab("Settings", systemImage: "gearshape.fill", value: 1) {
-                            SettingsView()
-                        }
+                    Tab("Settings", systemImage: "gearshape.fill", value: 1) {
+                        SettingsView()
                     }
-                    .environment(manager)
-                    .environmentObject(radarViewModel)
-                    .preferredColorScheme(.dark)
-                    .onChange(of: manager.pendingNavigateToCID) { _, cid in
-                        if cid != nil { selectedTab = 0 }
+                }
+                .environment(manager)
+                .environmentObject(radarViewModel)
+                .preferredColorScheme(manager.userPrefs.appTheme.colorScheme)
+                .onChange(of: manager.pendingNavigateToCID) { _, cid in
+                    if cid != nil { selectedTab = 0 }
+                }
+                .fullScreenCover(isPresented: Binding(
+                    get: { !manager.userPrefs.hasCompletedOnboarding },
+                    set: { _ in }
+                )) {
+                    OnboardingView()
+                        .environment(manager)
+                }
+                .overlay {
+                    if radarViewModel.isLoadingData {
+                        SplashScreenView()
+                            .transition(.identity)
                     }
-                } else {
-                    ProgressView("Loading preferences...")
                 }
-            }
-            .onAppear {
-                if manager == nil {
-                    manager = PreferencesManager(context: context)
-                }
+            } else {
+                SplashScreenView()
+                    .transition(.identity)
             }
         }
+        .onAppear {
+            if manager == nil {
+                manager = PreferencesManager(context: context)
+            }
+        }
+    }
 }
 
 #Preview {

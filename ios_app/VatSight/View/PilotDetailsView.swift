@@ -33,6 +33,7 @@ struct PilotDetailsView: View {
                                     } else {
                                         prefsManager.addTrackedCID(pilot.cid)
                                     }
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 } label: {
                                     Image(systemName: isTracked ? "star.fill" : "star")
                                         .font(.title2)
@@ -46,7 +47,7 @@ struct PilotDetailsView: View {
                                 } label: {
                                     Image(systemName: "xmark")
                                         .font(.title)
-                                }.foregroundColor(.white)
+                                }.foregroundColor(.primary)
                             }
                             
                             Text(verbatim: "\(pilot.name) (\(pilot.cid))")
@@ -200,6 +201,9 @@ private struct ICAOChip: View {
             }
         }
         .onTapGesture {
+            if onTap != nil {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
             onTap?()
         }
         .opacity(onTap != nil ? 1 : 1)

@@ -8,8 +8,8 @@
 import SwiftUI
 import Combine
 
-struct AirspaceDataView: View {
-    @ObservedObject var viewModel: RadarViewModel
+struct VATGlassesDataView: View {
+    @EnvironmentObject var viewModel: RadarViewModel
     @State private var isRedownloading = false
     @State private var lastUpdatedText = "Loading..."
     @State private var dataVersion = "Loading..."
@@ -25,80 +25,81 @@ struct AirspaceDataView: View {
     
     var body: some View {
         List {
-                Section("Vatglasses Sector Data") {
-                    HStack {
-                        VStack(spacing: 4) {
-                            Text("No. of Sectors")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text("\(sectorCount)")
-                                .font(.body)
-                        }
-                        Spacer()
-                        Divider()
-                        Spacer()
-                        VStack(spacing: 4) {
-                            Text("No. of Positions")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text("\(positionCount)")
-                                .font(.body)
-                        }
-                        Spacer()
-                        Divider()
-                        Spacer()
-                        VStack(spacing: 4) {
-                            Text("No. of Airports")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text("\(airportCount)")
-                                .font(.body)
-                        }
+            Section("Vatglasses Sector Data") {
+                HStack {
+                    VStack(spacing: 4) {
+                        Text("No. of Sectors")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("\(sectorCount)")
+                            .font(.body)
                     }
-                    LabeledContent("Last Updated", value: lastUpdatedText)
-                    LabeledContent("Data Version", value: dataVersion)
-                    Button {
-                        redownloadData()
-                    } label: {
-                        if isRedownloading {
-                            HStack {
-                                ProgressView()
-                                    .progressViewStyle(.circular)
-                                Text("Redownloading...")
-                            }
-                        } else {
-                            Text("Redownload Vatglasses Sectors")
-                        }
+                    Spacer()
+                    Divider()
+                    Spacer()
+                    VStack(spacing: 4) {
+                        Text("No. of Positions")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("\(positionCount)")
+                            .font(.body)
                     }
-                    .buttonSizing(.flexible)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isRedownloading)
+                    Spacer()
+                    Divider()
+                    Spacer()
+                    VStack(spacing: 4) {
+                        Text("No. of Airports")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("\(airportCount)")
+                            .font(.body)
+                    }
                 }
-                
-                Section {
-                    Link(destination: URL(string: "https://github.com/lennycolton/vatglasses-data")!) {
+                LabeledContent("Last Updated", value: lastUpdatedText)
+                LabeledContent("Data Version", value: dataVersion)
+                Button {
+                    redownloadData()
+                } label: {
+                    if isRedownloading {
                         HStack {
-                            Image("githubLogo")
-                                .resizable()
-                                .foregroundStyle(.primary)
-                                .frame(width: 30, height: 30)
-                            Text("Checkout the Vatglasses GitHub")
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                            Text("Redownloading...")
                         }
+                    } else {
+                        Text("Redownload Vatglasses Sectors")
                     }
-                } footer: {
-                    Text("Thank you to Vatglasses for making their data available to use under the CC BY-NC-SA 4.0 License. See their github for more details about the license and contributing.")
                 }
+                .buttonSizing(.flexible)
+                .buttonStyle(.borderedProminent)
+                .disabled(isRedownloading)
             }
-            .navigationTitle("Vatglasses Sector Data")
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                updateDataInfo()
+            
+            
+            Section {
+                Link(destination: URL(string: "https://github.com/lennycolton/vatglasses-data")!) {
+                    HStack {
+                        Image("githubLogo")
+                            .resizable()
+                            .foregroundStyle(.primary)
+                            .frame(width: 30, height: 30)
+                        Text("Checkout the Vatglasses GitHub")
+                    }
+                }
+            } footer: {
+                Text("Thank you to Vatglasses for making their data available to use under the CC BY-NC-SA 4.0 License. See their github for more details about the license and contributing.")
             }
-            .alert(alertTitle, isPresented: $showingAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(alertMessage)
-            }
+        }
+        .navigationTitle("Vatglasses Sector Data")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            updateDataInfo()
+        }
+        .alert(alertTitle, isPresented: $showingAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(alertMessage)
+        }
     }
     
     private func updateDataInfo() {
@@ -204,5 +205,6 @@ struct AirspaceDataView: View {
 }
 
 #Preview {
-    AirspaceDataView(viewModel: RadarViewModel())
+    VATGlassesDataView()
+        .environmentObject(RadarViewModel())
 }

@@ -20,7 +20,7 @@ struct General: Codable {
     
     private static let utcTimeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.dateFormat = "HH:mm'z'"
+        f.dateFormat = "HH:mm:ss'z'"
         f.timeZone = TimeZone(secondsFromGMT: 0)
         return f
     }()

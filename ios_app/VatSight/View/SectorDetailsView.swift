@@ -75,6 +75,7 @@ struct SectorDetailsView: View {
                         } else {
                             prefsManager.addTrackedCID(controller.cid)
                         }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     } label: {
                         Image(systemName: isTracked ? "star.fill" : "star")
                             .font(.title2)
@@ -119,7 +120,7 @@ struct SectorDetailsView: View {
             Button { dismiss() } label: {
                 Image(systemName: "xmark").font(.title)
             }
-            .foregroundColor(.white)
+            .foregroundColor(.primary)
         }
     }
 

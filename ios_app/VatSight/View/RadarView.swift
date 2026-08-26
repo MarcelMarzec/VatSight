@@ -14,10 +14,12 @@ struct RadarView: View {
     @Environment(PreferencesManager.self) private var prefsManager
     @EnvironmentObject private var viewModel: RadarViewModel
     @Namespace private var glassNamespace
-    @State private var loadingRotation: Double = 0
     @State private var showingLayerMenu = false
     @State private var showingSearch = false
     @State private var showingDebug = false
+    /// Timer used to periodically re-evaluate the stale-data banner.
+    @State private var stalenessCheckTimer: Timer? = nil
+    @State private var staleTick = false // toggled to force SwiftUI re-evaluation
     @State private var pilotDetent: PresentationDetent = .fraction(0.3)
     @State private var airportDetent: PresentationDetent = .fraction(0.3)
     @State private var sectorDetent: PresentationDetent = .height(160)
@@ -123,9 +125,15 @@ struct RadarView: View {
             .onAppear {
                 viewModel.setPreferencesManager(prefsManager)
                 viewModel.startAutoRefresh()
+                // Re-evaluate the stale banner every 15 s while the map is visible.
+                stalenessCheckTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { _ in
+                    staleTick.toggle()
+                }
             }
             .onDisappear {
                 viewModel.stopAutoRefresh()
+                stalenessCheckTimer?.invalidate()
+                stalenessCheckTimer = nil
             }
             .onChange(of: prefsManager.userPrefs.vatsimRefreshRate) { _, _ in
                 viewModel.restartAutoRefresh()
@@ -144,43 +152,25 @@ struct RadarView: View {
                     viewModel.selectSector(id: sector.id)
                 }
             }
-            if viewModel.isLoadingData {
-                VStack {
-                    Image("loadingArrow")
-                        .resizable()
-                        .frame(width: 32, height: 32)
-                        .rotationEffect(.degrees(loadingRotation))
-                        .padding()
-                        .glassEffect()
-                        .clipShape(.circle)
-                        .onAppear {
-                            withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
-                                loadingRotation = 360
-                            }
-                        }
-                    
-                    Text("Loading radar data...")
-                        .font(.caption)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .glassEffect()
-                        .clipShape(.capsule)
-                }
-                .transition(.scale.combined(with: .opacity))
-                .animation(.easeInOut(duration: 0.3), value: viewModel.isLoadingData)
-            }
-            
-        
+        }
+        .overlay(alignment: .top) {
+            StaleBanner()
         }
         .overlay(alignment: .topTrailing) {
-            VStack(spacing: 12) {
-                // Search + layer menu — joined as one pill
-                GlassEffectContainer {
-                    VStack(spacing: 0) {
+            let myCID = prefsManager.userPrefs.vatsimCID
+            let isOnline = myCID > 0 && (
+                viewModel.pilots.contains(where: { $0.cid == myCID }) ||
+                viewModel.airports.contains(where: { $0.activeController?.cid == myCID }) ||
+                viewModel.sectors.contains(where: { $0.activeController?.cid == myCID })
+            )
+            let isSelected = myCID > 0 && viewModel.selectedPilot?.cid == myCID
+            HStack(alignment: .top) {
+                if isOnline {
+                    GlassEffectContainer {
                         Button {
-                            showingSearch = true
+                            locateMe()
                         } label: {
-                            Image(systemName: "magnifyingglass")
+                            Image(systemName: isSelected ? "location.fill" : "location")
                                 .imageScale(.medium)
                                 .padding(12)
                                 .contentShape(.circle)
@@ -188,60 +178,83 @@ struct RadarView: View {
                         .buttonStyle(.plain)
                         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
                         .glassEffectUnion(id: "pill", namespace: glassNamespace)
-
-                        Button {
-                            showingLayerMenu.toggle()
-                        } label: {
-                            Image(systemName: "paperplane")
-                                .imageScale(.medium)
-                                .padding(12)
-                                .contentShape(.circle)
-                        }
-                        .buttonStyle(.plain)
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
-                        .glassEffectUnion(id: "pill", namespace: glassNamespace)
-                        .popover(isPresented: $showingLayerMenu, arrowEdge: .trailing) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                Toggle(isOn: Binding(
-                                    get: { viewModel.showInactiveSectors },
-                                    set: { _ in viewModel.toggleSectors() }
-                                )) {
-                                    Label("Inactive sectors", systemImage: "map")
-                                }
-                                .padding()
-                                Divider()
-                                Toggle(isOn: Binding(
-                                    get: { viewModel.showAirports },
-                                    set: { _ in viewModel.toggleAirports() }
-                                )) {
-                                    Label("All airports", systemImage: "airplane.ticket")
-                                }
-                                .padding()
+                    }
+                }
+                
+                VStack(spacing: 12) {
+                    // Search + locate-me + layer menu — joined as one pill
+                    GlassEffectContainer {
+                        VStack(spacing: 0) {
+                            Button {
+                                showingSearch = true
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } label: {
+                                Image(systemName: "magnifyingglass")
+                                    .imageScale(.medium)
+                                    .padding(12)
+                                    .contentShape(.circle)
                             }
-                            .presentationCompactAdaptation(.popover)
+                            .buttonStyle(.plain)
+                            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
+                            .glassEffectUnion(id: "pill", namespace: glassNamespace)
+
+                            Button {
+                                showingLayerMenu.toggle()
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .rotationEffect(.degrees(90))
+                                    .imageScale(.medium)
+                                    .padding(12)
+                                    .padding(.bottom, 8)
+                                    .contentShape(.circle)
+                            }
+                            .buttonStyle(.plain)
+                            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
+                            .glassEffectUnion(id: "pill", namespace: glassNamespace)
+                            .popover(isPresented: $showingLayerMenu, arrowEdge: .trailing) {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Toggle(isOn: Binding(
+                                        get: { viewModel.showInactiveSectors },
+                                        set: { _ in viewModel.toggleSectors() }
+                                    )) {
+                                        Label("Inactive sectors", systemImage: "map")
+                                    }
+                                    .padding()
+                                    Divider()
+                                    Toggle(isOn: Binding(
+                                        get: { viewModel.showAirports },
+                                        set: { _ in viewModel.toggleAirports() }
+                                    )) {
+                                        Label("All airports", systemImage: "airplane.ticket")
+                                    }
+                                    .padding()
+                                }
+                                .presentationCompactAdaptation(.popover)
+                            }
                         }
                     }
-                }
-
-                // Altitude filter toggle button
-                GlassEffectContainer {
-                    Button {
-                        withAnimation(.spring(duration: 0.3)) {
-                            viewModel.toggleAltitudeFilter()
+                    
+                    GlassEffectContainer {
+                        Button {
+                            withAnimation(.spring(duration: 0.3)) {
+                                viewModel.toggleAltitudeFilter()
+                            }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } label: {
+                            Image(systemName: viewModel.altitudeFilterEnabled
+                                  ? "square.2.layers.3d.fill"
+                                  : "square.2.layers.3d")
+                                .imageScale(.medium)
+                                .foregroundStyle(viewModel.altitudeFilterEnabled ? Color.accentColor : .primary)
+                                .padding(12)
+                                .contentShape(.circle)
                         }
-                    } label: {
-                        Image(systemName: viewModel.altitudeFilterEnabled
-                              ? "square.2.layers.3d.fill"
-                              : "square.2.layers.3d")
-                            .imageScale(.medium)
-                            .foregroundStyle(viewModel.altitudeFilterEnabled ? Color.accentColor : .primary)
-                            .padding(12)
-                            .contentShape(.circle)
+                        .buttonStyle(.plain)
+                        .glassEffect(.regular.interactive(), in: .circle)
                     }
-                    .buttonStyle(.plain)
-                    .glassEffect(.regular.interactive(), in: .circle)
-                }
 
+                }
             }
             .padding()
         }
@@ -273,7 +286,7 @@ struct RadarView: View {
                         VStack(spacing: 6) {
                             // FL600 label at top
                             Text("FL600")
-                                .font(.system(size: 9, weight: .semibold))
+                                .font(.caption)
                                 .monospacedDigit()
                                 .foregroundStyle(.secondary)
 
@@ -282,13 +295,22 @@ struct RadarView: View {
                                 .font(.caption2.bold())
                                 .monospacedDigit()
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.6)
 
                             // Rotated slider filling available height
                             Slider(
                                 value: Binding(
                                     get: { viewModel.selectedAltitudeFt },
-                                    set: { viewModel.selectedAltitudeFt = $0 }
+                                    set: { newValue in
+                                        let previous = viewModel.selectedAltitudeFt
+                                        viewModel.selectedAltitudeFt = newValue
+                                        if newValue == 0 || newValue == 60_000 {
+                                            if previous != newValue {
+                                                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                                            }
+                                        } else if Int(newValue) != Int(previous) {
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.4)
+                                        }
+                                    }
                                 ),
                                 in: 0...60_000,
                                 step: 100
@@ -299,7 +321,7 @@ struct RadarView: View {
 
                             // GND at bottom
                             Text("GND")
-                                .font(.system(size: 9))
+                                .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.vertical, 10)
@@ -315,19 +337,22 @@ struct RadarView: View {
             }
         }
         .overlay(alignment: .topLeading) {
-            GlassEffectContainer {
-                Button {
-                    showingDebug = true
-                } label: {
-                    Image(systemName: "ant")
-                        .imageScale(.medium)
-                        .padding(12)
-                        .contentShape(.circle)
+            if prefsManager.userPrefs.developerModeEnabled {
+                GlassEffectContainer {
+                    Button {
+                        showingDebug = true
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        Image(systemName: "ant")
+                            .imageScale(.medium)
+                            .padding(12)
+                            .contentShape(.circle)
+                    }
+                    .buttonStyle(.plain)
+                    .glassEffect(.regular.interactive(), in: .circle)
                 }
-                .buttonStyle(.plain)
-                .glassEffect(.regular.interactive(), in: .circle)
+                .padding()
             }
-            .padding()
         }
         .sheet(isPresented: $showingDebug) {
             DebugView(viewModel: viewModel)
@@ -362,8 +387,25 @@ struct RadarView: View {
         }
     }
     
-    /// Formats an altitude in feet as a display string.
-    /// 0 → "GND", 1–9999 → "7000 ft", 10000+ → "FL100"
+    /// Flies the camera to the user's own aircraft or, if controlling, their airport/sector.
+    private func locateMe() {
+        let myCID = prefsManager.userPrefs.vatsimCID
+        guard myCID > 0 else { return }
+
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+        if let pilot = viewModel.pilots.first(where: { $0.cid == myCID }) {
+            viewModel.selectPilotAndFly(cid: myCID, coordinate: pilot.coordinate, enableTracking: true)
+        } else if let airport = viewModel.airports.first(where: { $0.activeController?.cid == myCID }) {
+            viewModel.selectAirportAndFly(icao: airport.icao)
+        } else if let sector = viewModel.sectors.first(where: { $0.activeController?.cid == myCID }) {
+            viewModel.selectSector(id: sector.id)
+        } else {
+            // CID exists but not currently online — brief error haptic
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        }
+    }
+    
     private func altitudeLabel(for feet: Double) -> String {
         let rounded = Int(feet)
         if rounded == 0 { return "GND" }
@@ -372,11 +414,33 @@ struct RadarView: View {
     }
 }
 
+private struct StaleBanner: View {
+    @EnvironmentObject private var viewModel: RadarViewModel
+
+    var body: some View {
+        if !viewModel.isLoadingData && viewModel.isDataStale {
+            HStack(spacing: 6) {
+                Image(systemName: viewModel.lastFetchFailed ? "wifi.slash" : "clock")
+                    .imageScale(.small)
+                Text(viewModel.lastFetchFailed ? "No connection — retrying..." : "Data may be out of date")
+                    .font(.caption.weight(.medium))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color.orange.opacity(0.85))
+            .clipShape(Capsule())
+            .transition(.move(edge: .top).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.35), value: viewModel.isDataStale)
+        }
+    }
+}
+
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let context = ModelContext(container)
-    
+
     return RadarView()
         .environment(PreferencesManager(context: context))
         .environmentObject(RadarViewModel())

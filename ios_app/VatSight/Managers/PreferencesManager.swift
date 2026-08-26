@@ -123,6 +123,26 @@ final class PreferencesManager {
         return cids
     }
 
+    func updateDeveloperMode(_ enabled: Bool) {
+        userPrefs.developerModeEnabled = enabled
+        try? context.save()
+    }
+
+    func updateMapStyle(_ style: MapStyle) {
+        userPrefs.mapStyle = style
+        try? context.save()
+    }
+
+    func updateAppTheme(_ theme: AppTheme) {
+        userPrefs.appTheme = theme
+        try? context.save()
+    }
+
+    func markOnboardingComplete() {
+        userPrefs.hasCompletedOnboarding = true
+        try? context.save()
+    }
+
     func incrementAdsWatched(by count: Int = 1) {
         userPrefs.totalAdsWatched += count
         do {

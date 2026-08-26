@@ -59,7 +59,7 @@ struct AirportDetailsView: View {
                             Image(systemName: "xmark")
                                 .font(.title)
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     }
                     if let name = airport.callsign {
                         Text(name)
@@ -100,6 +100,7 @@ struct AirportDetailsView: View {
                         Spacer()
                         Button("More Details >") {
                             withAnimation { showingTraffic = true }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                         .buttonStyle(.borderless)
                         .font(.caption)
@@ -132,26 +133,26 @@ struct AirportDetailsView: View {
             if !atisStations.isEmpty {
                     ForEach(atisStations) { station in
                         VStack(alignment: .leading) {
-                            Text("ATIS Information").font(.caption).foregroundColor(.secondary)
+                            Text(atisPositionLabel(for: station.callsign)).font(.subheadline).foregroundColor(.secondary)
                             HStack {
                                 Text(station.callsign)
-                                    .font(.subheadline.bold())
+                                    .font(.headline)
+                                Spacer()
                                 if let code = station.atis_code {
-                                    Spacer()
                                     Text("Info \(code)")
-                                        .font(.subheadline)
+                                        .font(.headline)
                                 }
                                 Spacer()
                                 Text(station.frequency)
-                                    .font(.subheadline)
+                                    .font(.headline)
                             }
                             Text("\(station.name) (\(String(station.cid)))")
                                 .font(.subheadline)
                                 .foregroundStyle(Color.secondary)
                             if let lines = station.text_atis {
                                 Text(lines.joined(separator: "\n"))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                    .font(.default)
+                                    .foregroundStyle(.primary)
                                     .padding(.top, 1)
                             }
                         }
@@ -163,14 +164,14 @@ struct AirportDetailsView: View {
             Section("METAR") {
                 if metarLoading {
                     Text("Loading...")
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else if let metar {
                     Text(metar)
                         .font(.subheadline.monospaced())
                 } else {
                     Text("No METAR available.")
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -183,6 +184,14 @@ struct AirportDetailsView: View {
     }
 
     // MARK: - Helpers
+
+    private func atisPositionLabel(for callsign: String) -> String {
+        let upper = callsign.uppercased()
+        let icao = airport.icao.uppercased()
+        if upper.hasPrefix(icao + "_D_") { return "Departure Information" }
+        if upper.hasPrefix(icao + "_A_") { return "Arrival Information" }
+        return "Airport Information"
+    }
 
     private func fetchMetar() async {
         guard let url = URL(string: "https://metar.vatsim.net/\(airport.icao)") else {
@@ -250,14 +259,14 @@ private struct ControllerRow: View {
     var body: some View {
             VStack(alignment: .leading) {
                     Text(positionLabel)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 HStack {
                     Text(controller.callsign)
-                        .font(.subheadline)
+                        .font(.headline)
                     Spacer()
                     Text(controller.frequency)
-                        .font(.subheadline)
+                        .font(.headline)
                 }
                 
                 HStack(spacing: 4) {
@@ -271,6 +280,7 @@ private struct ControllerRow: View {
                             } else {
                                 prefsManager.addTrackedCID(controller.cid)
                             }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         } label: {
                             Image(systemName: isTracked ? "star.fill" : "star")
                                 .font(.subheadline)
@@ -280,8 +290,8 @@ private struct ControllerRow: View {
                 
                 if let atis = controller.text_atis, !atis.isEmpty {
                     Text(atis.joined(separator: "\n"))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .font(.default)
+                        .foregroundColor(.primary)
                         .padding(.top, 1)
                 }
             }

@@ -37,6 +37,7 @@ struct VatsimTrackedView: View {
                             prefsManager.updateCID(0)
                         }
                         focusedField = nil
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
                     }
                     .disabled(yourCIDInputText == savedCIDText)
                 }
@@ -56,6 +57,7 @@ struct VatsimTrackedView: View {
                         if let cid = Int(newTrackedCIDText), cid > 0 {
                             prefsManager.addTrackedCID(cid)
                             newTrackedCIDText = ""
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
                         }
                         focusedField = nil
                     }
@@ -77,6 +79,7 @@ struct VatsimTrackedView: View {
                         .contentShape(Rectangle())
                         .onTapGesture {
                             guard isOnline else { return }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             prefsManager.pendingNavigateToCID = cid
                         }
                 }

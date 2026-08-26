@@ -13,6 +13,19 @@ struct RadarViewRepresentable: UIViewRepresentable {
 
     let prefsManager: PreferencesManager
 
+    /// The resolved color scheme — used to determine dark/light when the user has chosen System.
+    @Environment(\.colorScheme) private var systemColorScheme
+
+    /// Returns true when the map layers should render in dark mode,
+    /// accounting for the System option following the device color scheme.
+    private var isDark: Bool {
+        switch prefsManager.userPrefs.appTheme {
+        case .system: return systemColorScheme == .dark
+        case .dark:   return true
+        case .light:  return false
+        }
+    }
+
     func makeCoordinator() -> Coordinator {
 
         Coordinator(
@@ -35,11 +48,10 @@ struct RadarViewRepresentable: UIViewRepresentable {
             zoom: prefsManager.userPrefs.lastZoom
         )
 
+        let resolvedURLStr = prefsManager.userPrefs.mapStyle.resolvedURLString(isDark: isDark) ?? MapStyle.dark.rawValue
         let initOptions = MapInitOptions(
             cameraOptions: cameraOptions,
-            styleURI: StyleURI(
-                rawValue: "mapbox://styles/marcelm005/cmovo48xo002201s30ohu1t9r"
-            )!
+            styleURI: StyleURI(rawValue: resolvedURLStr)!
         )
 
         let mapView = MapView(
@@ -89,6 +101,39 @@ struct RadarViewRepresentable: UIViewRepresentable {
         _ mapView: MapView,
         context: Context
     ) {
+        // Resolve dark/light for this update cycle (accounts for System following the OS).
+        let resolvedIsDark = isDark
+        context.coordinator.currentIsDark = resolvedIsDark
+
+        // Resolve the actual Mapbox style URI for this cycle (System picks dark or light based on OS).
+        let newThemeRaw = prefsManager.userPrefs.appTheme.rawValue
+        guard let resolvedURLStr = prefsManager.userPrefs.mapStyle.resolvedURLString(isDark: resolvedIsDark),
+              let resolvedStyleURI = StyleURI(rawValue: resolvedURLStr) else { return }
+        let resolvedStyleString = resolvedURLStr
+
+        if context.coordinator.lastResolvedStyleURIString != resolvedStyleString {
+            // Map style changed (preference or OS colour-scheme flip) — reload the style.
+            context.coordinator.lastMapStyleRaw = prefsManager.userPrefs.mapStyle.rawValue
+            context.coordinator.lastAppThemeRaw = newThemeRaw
+            context.coordinator.lastResolvedStyleURIString = resolvedStyleString
+            // Reset install flags so layers are re-added after the new style loads
+            context.coordinator.didInstallPilotStyle = false
+            context.coordinator.didInstallSectorStyle = false
+            context.coordinator.didInstallAirportStyle = false
+            context.coordinator.didInstallRouteStyle = false
+            mapView.mapboxMap.loadStyle(resolvedStyleURI) { [weak coordinator = context.coordinator] _ in
+                coordinator?.installSectorStyleIfNeeded()
+                coordinator?.installAirportStyleIfNeeded()
+                coordinator?.installRouteStyleIfNeeded()
+                coordinator?.installPilotStyleIfNeeded()
+                coordinator?.ensureLabelsOnTop()
+            }
+        } else if context.coordinator.lastAppThemeRaw != newThemeRaw {
+            // App theme changed without a map style reload — re-tint layers in place.
+            context.coordinator.lastAppThemeRaw = newThemeRaw
+            context.coordinator.applyTheme(on: mapView, isDark: resolvedIsDark)
+        }
+
         let friendCIDs = prefsManager.allFriendCIDs
         let friendControlledICAOs = viewModel.friendControlledAirportICAOs(friendCIDs: friendCIDs)
 
@@ -138,10 +183,17 @@ struct RadarViewRepresentable: UIViewRepresentable {
         private let sectorStyleManager = SectorStyleManager()
         private let airportStyleManager = AirportStyleManager()
         private let routeStyleManager = FlightRouteStyleManager()
-        private var didInstallPilotStyle = false
-        private var didInstallSectorStyle = false
-        private var didInstallAirportStyle = false
-        private var didInstallRouteStyle = false
+        fileprivate var didInstallPilotStyle = false
+        fileprivate var didInstallSectorStyle = false
+        fileprivate var didInstallAirportStyle = false
+        fileprivate var didInstallRouteStyle = false
+        fileprivate var lastMapStyleRaw: String = ""
+        fileprivate var lastAppThemeRaw: String = ""
+        /// The resolved Mapbox style URI string from the last load — used to detect
+        /// system colour-scheme changes that require a map style swap.
+        fileprivate var lastResolvedStyleURIString: String = ""
+        /// Resolved dark/light value passed in from updateUIView each cycle.
+        fileprivate var currentIsDark: Bool = true
 
         // Last-seen values — used to skip redundant Mapbox source updates.
         private var lastPilots: [Pilot] = []
@@ -183,8 +235,9 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 return
             }
 
+            let isDark = currentIsDark
             do {
-                try pilotStyleManager.configurePilots(on: mapView)
+                try pilotStyleManager.configurePilots(on: mapView, isDark: isDark)
                 didInstallPilotStyle = true
                 pilotStyleManager.updatePilots(
                     on: mapView,
@@ -205,9 +258,10 @@ struct RadarViewRepresentable: UIViewRepresentable {
             guard !didInstallSectorStyle else {
                 return
             }
-            
+
+            let isDark = currentIsDark
             do {
-                try sectorStyleManager.configureSectors(on: mapView)
+                try sectorStyleManager.configureSectors(on: mapView, isDark: isDark)
                 didInstallSectorStyle = true
                 sectorStyleManager.updateSectors(
                     on: mapView,
@@ -229,9 +283,10 @@ struct RadarViewRepresentable: UIViewRepresentable {
             guard !didInstallAirportStyle else {
                 return
             }
-            
+
+            let isDark = currentIsDark
             do {
-                try airportStyleManager.configureAirports(on: mapView)
+                try airportStyleManager.configureAirports(on: mapView, isDark: isDark)
                 didInstallAirportStyle = true
                 let friendCIDs = prefsManager.allFriendCIDs
                 airportStyleManager.updateAirports(
@@ -260,6 +315,18 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 )
             } catch {
                 print("Failed to configure route style:", error)
+            }
+        }
+
+        func applyTheme(on mapView: MapView, isDark: Bool) {
+            if didInstallPilotStyle {
+                pilotStyleManager.applyTheme(on: mapView, isDark: isDark)
+            }
+            if didInstallAirportStyle {
+                airportStyleManager.applyTheme(on: mapView, isDark: isDark)
+            }
+            if didInstallSectorStyle {
+                sectorStyleManager.applyTheme(on: mapView, isDark: isDark)
             }
         }
 

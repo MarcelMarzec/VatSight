@@ -9,9 +9,9 @@ import ZIPFoundation
 internal import _LocationEssentials
 
 final class VatglassesService {
-    
+
     private let commitURL = URL(string: "https://api.github.com/repos/lennycolton/vatglasses-data/commits/main")!
-    private let repoURL = URL(string: "https://api.github.com/repos/lennycolton/vatglasses-data/zipball/main")!
+    private let repoURL   = URL(string: "https://api.github.com/repos/lennycolton/vatglasses-data/zipball/main")!
 
     /// Cache of compiled NSRegularExpression objects keyed by pattern string.
     /// Avoids recompiling the same regex on every resolvePositionLabel call.
