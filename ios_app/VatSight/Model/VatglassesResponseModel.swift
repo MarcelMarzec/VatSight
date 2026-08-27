@@ -42,8 +42,11 @@ struct VatglassesSector: Codable, Identifiable {
     var activeOwnerColorHex: String?  // Color hex from active owner position
     var activeOwnerRef: String?  // The position ID of the active owner (e.g., "YYD")
     var activeController: Controllers?  // The actual controller controlling this sector
+    /// True for sectors sourced from nodata.json — FIRs with no full VATGlasses data.
+    /// These are matched by callsign prefix and displayed with a "Basic Data Only" indicator.
+    var isBasicDataOnly: Bool
     
-    init(id: String, ownerRefs: [String], frequency: String, geometry: SectorGeometry, properties: SectorProperties?, isActive: Bool = false, activeOwnerColorHex: String? = nil, activeOwnerRef: String? = nil, activeController: Controllers? = nil) {
+    init(id: String, ownerRefs: [String], frequency: String, geometry: SectorGeometry, properties: SectorProperties?, isActive: Bool = false, activeOwnerColorHex: String? = nil, activeOwnerRef: String? = nil, activeController: Controllers? = nil, isBasicDataOnly: Bool = false) {
         self.id = id
         self.ownerRefs = ownerRefs
         self.frequency = frequency
@@ -53,6 +56,7 @@ struct VatglassesSector: Codable, Identifiable {
         self.activeOwnerColorHex = activeOwnerColorHex
         self.activeOwnerRef = activeOwnerRef
         self.activeController = activeController
+        self.isBasicDataOnly = isBasicDataOnly
     }
     
     enum CodingKeys: String, CodingKey {
@@ -61,6 +65,7 @@ struct VatglassesSector: Codable, Identifiable {
         case frequency
         case geometry
         case properties
+        case isBasicDataOnly
     }
     
     init(from decoder: Decoder) throws {
@@ -70,6 +75,7 @@ struct VatglassesSector: Codable, Identifiable {
         frequency = try container.decode(String.self, forKey: .frequency)
         geometry = try container.decode(SectorGeometry.self, forKey: .geometry)
         properties = try container.decodeIfPresent(SectorProperties.self, forKey: .properties)
+        isBasicDataOnly = try container.decodeIfPresent(Bool.self, forKey: .isBasicDataOnly) ?? false
         isActive = false // Default value when decoding
         activeOwnerColorHex = nil
         activeOwnerRef = nil
@@ -179,7 +185,7 @@ struct VatglassesAirport: Codable, Identifiable {
 
 struct VatglassesData: Codable {
     /// Increment this whenever the cache schema changes to force a fresh download.
-    static let currentSchemaVersion = 3
+    static let currentSchemaVersion = 4
 
     let schemaVersion: Int
     let sectors: [VatglassesSector]

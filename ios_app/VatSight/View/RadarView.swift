@@ -215,6 +215,14 @@ struct RadarView: View {
                             .popover(isPresented: $showingLayerMenu, arrowEdge: .trailing) {
                                 VStack(alignment: .leading, spacing: 0) {
                                     Toggle(isOn: Binding(
+                                        get: { viewModel.mergeSectors },
+                                        set: { _ in viewModel.toggleMergeSectors() }
+                                    )) {
+                                        Label("Merge sectors", systemImage: "square.on.square")
+                                    }
+                                    .padding()
+                                    Divider()
+                                    Toggle(isOn: Binding(
                                         get: { viewModel.showInactiveSectors },
                                         set: { _ in viewModel.toggleSectors() }
                                     )) {
@@ -416,19 +424,24 @@ struct RadarView: View {
 
 private struct StaleBanner: View {
     @EnvironmentObject private var viewModel: RadarViewModel
+    @State private var isSpinning = false
 
     var body: some View {
         if !viewModel.isLoadingData && viewModel.isDataStale {
             HStack(spacing: 6) {
-                Image(systemName: viewModel.lastFetchFailed ? "wifi.slash" : "clock")
+                Image(systemName: "arrow.trianglehead.2.clockwise")
                     .imageScale(.small)
-                Text(viewModel.lastFetchFailed ? "No connection — retrying..." : "Data may be out of date")
+                    .rotationEffect(.degrees(isSpinning ? 360 : 0))
+                    .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: isSpinning)
+                    .onAppear { isSpinning = true }
+                    .onDisappear { isSpinning = false }
+                Text(viewModel.lastFetchFailed ? "Connection lost · ​Retrying…" : "Downloading live data...")
                     .font(.caption.weight(.medium))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(Color.orange.opacity(0.85))
+            .background(.regularMaterial)
             .clipShape(Capsule())
             .transition(.move(edge: .top).combined(with: .opacity))
             .animation(.easeInOut(duration: 0.35), value: viewModel.isDataStale)

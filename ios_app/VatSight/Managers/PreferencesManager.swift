@@ -100,6 +100,11 @@ final class PreferencesManager {
         try? context.save()
     }
 
+    func updateMergeSectors(_ value: Bool) {
+        userPrefs.mergeSectors = value
+        try? context.save()
+    }
+
     // MARK: - Tracked CIDs
 
     func addTrackedCID(_ cid: Int) {
@@ -126,6 +131,16 @@ final class PreferencesManager {
     func updateDeveloperMode(_ enabled: Bool) {
         userPrefs.developerModeEnabled = enabled
         try? context.save()
+    }
+
+    func updateVatglassesCustomRepo(_ slug: String) {
+        userPrefs.vatglassesCustomRepoSlug = slug.trimmingCharacters(in: .whitespacesAndNewlines)
+        try? context.save()
+    }
+
+    /// True when a custom Vatglasses repo is configured AND developer mode is enabled.
+    var isUsingCustomVatglassesRepo: Bool {
+        userPrefs.developerModeEnabled && !userPrefs.vatglassesCustomRepoSlug.isEmpty
     }
 
     func updateMapStyle(_ style: MapStyle) {

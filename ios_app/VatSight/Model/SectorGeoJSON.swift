@@ -11,6 +11,11 @@ import Turf
 import CoreLocation
 import GEOSwift
 
+// GEOSwift also vends Feature/FeatureCollection for its own GeoJSON support.
+// Pin these names to the Turf/MapboxMaps versions used throughout this module.
+typealias Feature = Turf.Feature
+typealias FeatureCollection = Turf.FeatureCollection
+
 enum SectorGeoJSON {
 
     // MARK: - Label placement helpers
@@ -189,7 +194,8 @@ enum SectorGeoJSON {
             "id": .string(sector.id),
             "frequency": .string(sector.frequency),
             "isActive": .boolean(sector.isActive),
-            "isSelected": .boolean(isSelected)
+            "isSelected": .boolean(isSelected),
+            "isBasicDataOnly": .boolean(sector.isBasicDataOnly)
         ]
 
         if let colorHex = sector.activeOwnerColorHex {
@@ -251,7 +257,8 @@ enum SectorGeoJSON {
                 "controllerFrequency": .string(controller.frequency),
                 "controllerShortCallsign": .string(Self.shortCallsign(from: controller.callsign)),
                 "isSelected": .boolean(selectedControllerCID != nil && sector.activeController?.cid == selectedControllerCID),
-                "isFriend": .boolean(friendCIDs.contains(controller.cid))
+                "isFriend": .boolean(friendCIDs.contains(controller.cid)),
+                "isBasicDataOnly": .boolean(sector.isBasicDataOnly)
             ]
             return feature
         }
@@ -302,32 +309,42 @@ enum SectorGeoJSON {
                 continue
             }
 
-            // Convert each sector's geometry to GEOSwift Polygon<XY> objects.
+            // Convert each sector's geometry to GEOSwift Polygon objects, then repair each
+            // one with buffer(by: 0) before union. buffer(0) is the standard GEOS technique
+            // for fixing self-intersecting rings (TopologyException) without changing shape.
             var geoPolygons: [GEOSwift.Polygon] = []
             for sector in group {
-                geoPolygons.append(contentsOf: sector.geometry.toGEOSwiftPolygons())
+                let raw = sector.geometry.toGEOSwiftPolygons()
+                for poly in raw {
+                    // Attempt topology repair; fall back to the original if buffer fails.
+                    let repaired: GEOSwift.Polygon
+                    if let buffered = try? poly.buffer(by: 0),
+                       case .polygon(let p) = buffered {
+                        repaired = p
+                    } else {
+                        repaired = poly
+                    }
+                    geoPolygons.append(repaired)
+                }
             }
 
             guard !geoPolygons.isEmpty else {
-                merged.append(first)
+                merged.append(syntheticSector(id: first, geometry: .collected(from: group)))
                 continue
             }
 
-            // Perform a true boolean union via GEOSwift / GEOS.
-            // unaryUnion on a MultiPolygon dissolves all shared edges in one pass (O(n log n)).
             let unionedGeometry: SectorGeometry
             do {
                 let multiPoly = GEOSwift.MultiPolygon(polygons: geoPolygons)
                 let result = try multiPoly.unaryUnion()
                 guard let sectorGeom = SectorGeometry(from: result) else {
-                    // Union returned an unexpected geometry type — fall back to coordinate collect.
                     unionedGeometry = SectorGeometry.collected(from: group)
                     merged.append(syntheticSector(id: first, geometry: unionedGeometry))
                     continue
                 }
                 unionedGeometry = sectorGeom
             } catch {
-                // GEOS union failed (e.g. invalid topology) — fall back gracefully.
+                // Union still failed after repair — fall back to coordinate collect.
                 unionedGeometry = SectorGeometry.collected(from: group)
             }
 
@@ -391,7 +408,7 @@ extension SectorGeometry {
 
     /// Converts a raw coordinate array [[lon, lat], ...] into a GEOSwift LinearRing.
     /// Closes the ring automatically if the first and last point differ.
-    /// Returns nil if the ring has fewer than 4 unique points (invalid for GEOS).
+    /// Returns nil if the ring has fewer than 4 points (invalid for GEOS).
     private func makeLinearRing(from raw: [[Double]]) -> GEOSwift.Polygon.LinearRing? {
         var points = raw.compactMap { coord -> GEOSwift.Point? in
             guard coord.count >= 2 else { return nil }

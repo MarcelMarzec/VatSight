@@ -123,30 +123,15 @@ struct SettingsView: View {
                         }.foregroundColor(.primary)
                     }
                 } header: {
-                    Text("Misc")
+                    Text("Miscellaneous")
                 }
 
                 Section {
-                    Toggle(isOn: Binding(
-                        get: { prefsManager.userPrefs.developerModeEnabled },
-                        set: { newValue in
-                            prefsManager.updateDeveloperMode(newValue)
-                        }
-                    )) {
-                        Label("Developer Mode", systemImage: "hammer.fill")
+                    NavigationLink {
+                        DeveloperView()
+                    } label: {
+                        Label("Developers", systemImage: "hammer.fill").foregroundColor(.primary)
                     }
-
-                    if prefsManager.userPrefs.developerModeEnabled {
-                        HStack(spacing: 6) {
-                            Image(systemName: "info.circle")
-                                .foregroundStyle(.secondary)
-                            Text("Sector debug panel enabled on the map.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Developer")
                 }
             }
             .navigationDestination(for: String.self) { destination in

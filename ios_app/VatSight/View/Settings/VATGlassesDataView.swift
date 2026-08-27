@@ -25,6 +25,25 @@ struct VATGlassesDataView: View {
     
     var body: some View {
         List {
+            if viewModel.isUsingCustomVatglassesRepo {
+                Section {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .imageScale(.large)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Custom Repository Active")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Text("Data is being loaded from \"\(viewModel.vatglassesActiveRepoSlug)\" instead of the official Vatglasses repository. This is a developer setting.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
             Section("Vatglasses Sector Data") {
                 HStack {
                     VStack(spacing: 4) {
@@ -55,6 +74,7 @@ struct VATGlassesDataView: View {
                             .font(.body)
                     }
                 }
+                LabeledContent("Github Repo", value: viewModel.isUsingCustomVatglassesRepo ? viewModel.vatglassesActiveRepoSlug : "lennycolton/vatglasses-data")
                 LabeledContent("Last Updated", value: lastUpdatedText)
                 LabeledContent("Data Version", value: dataVersion)
                 Button {

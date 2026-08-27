@@ -1,6 +1,24 @@
 {
-  "originHash" : "dd9f3657ad71c5495b38c97c837eca129a182082e312b871eee956f3f3f5a349",
+  "originHash" : "191d6e79c7c360b1a573fd3666885adca019f941e60136022ea6917bc73747a3",
   "pins" : [
+    {
+      "identity" : "geos",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/GEOSwift/geos.git",
+      "state" : {
+        "revision" : "4d8af495e7507f48f1ae9104102debdd2043917b",
+        "version" : "9.0.0"
+      }
+    },
+    {
+      "identity" : "geoswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/GEOSwift/GEOSwift.git",
+      "state" : {
+        "revision" : "9ddf733b9f72799eb7651d1e0d322f2426b36a06",
+        "version" : "11.2.0"
+      }
+    },
     {
       "identity" : "mapbox-common-ios",
       "kind" : "remoteSourceControl",

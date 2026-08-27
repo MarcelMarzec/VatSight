@@ -405,6 +405,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
             lastActiveSectorCount = activeSectorCount
             lastOwnershipSignature = ownershipSignature
             lastSelectedControllerCID = selectedControllerCID
+            lastFriendCIDs = friendCIDs
 
             sectorStyleManager.updateSectors(
                 on: mapView,
@@ -612,6 +613,14 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
             mapView.mapboxMap.addInteraction(sectorLabelInteraction)
 
+            // Sector long-press — opens sector details even when no label is visible
+            let longPress = UILongPressGestureRecognizer(
+                target: self,
+                action: #selector(Coordinator.handleSectorLongPress(_:))
+            )
+            longPress.minimumPressDuration = 0.5
+            mapView.addGestureRecognizer(longPress)
+
             let mapTapInteraction = TapInteraction { [weak self] context in
                 guard let self else { return false }
                 self.viewModel.dismissPilotSheet()
@@ -620,6 +629,31 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 return true
             }
             mapView.mapboxMap.addInteraction(mapTapInteraction)
+        }
+
+        @objc func handleSectorLongPress(_ recognizer: UILongPressGestureRecognizer) {
+            guard recognizer.state == .began, let mapView else { return }
+
+            let point = recognizer.location(in: mapView)
+            let options = RenderedQueryOptions(
+                layerIds: [SectorStyleManager.sectorFillLayerId],
+                filter: nil
+            )
+            mapView.mapboxMap.queryRenderedFeatures(with: point, options: options) { [weak self] result in
+                guard let self else { return }
+                switch result {
+                case .success(let features):
+                    guard
+                        let feature = features.first,
+                        let jsonValue = feature.queriedFeature.feature.properties?["id"] ?? nil,
+                        case let .string(sectorId) = jsonValue
+                    else { return }
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    DispatchQueue.main.async { self.viewModel.selectSector(id: sectorId) }
+                case .failure:
+                    break
+                }
+            }
         }
     }
 }

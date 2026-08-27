@@ -10,8 +10,25 @@ internal import _LocationEssentials
 
 final class VatglassesService {
 
-    private let commitURL = URL(string: "https://api.github.com/repos/lennycolton/vatglasses-data/commits/main")!
-    private let repoURL   = URL(string: "https://api.github.com/repos/lennycolton/vatglasses-data/zipball/main")!
+    static let defaultRepoSlug = "lennycolton/vatglasses-data"
+
+    private var commitURL: URL {
+        let slug = customRepoSlug.isEmpty ? Self.defaultRepoSlug : customRepoSlug
+        return URL(string: "https://api.github.com/repos/\(slug)/commits/main")!
+    }
+    private var repoURL: URL {
+        let slug = customRepoSlug.isEmpty ? Self.defaultRepoSlug : customRepoSlug
+        return URL(string: "https://api.github.com/repos/\(slug)/zipball/main")!
+    }
+
+    /// Set to a non-empty "owner/repo" string to use a custom GitHub repository.
+    var customRepoSlug: String = ""
+
+    // MARK: - Diagnostics
+    /// Parse errors collected during the most recent data load. Cleared on each new fetch.
+    private(set) var parseErrors: [VatglassesParseError] = []
+    /// Controllers that were online but matched no Vatglasses position. Updated by getActiveSectors.
+    private(set) var unmatchedControllers: [UnmatchedController] = []
 
     /// Cache of compiled NSRegularExpression objects keyed by pattern string.
     /// Avoids recompiling the same regex on every resolvePositionLabel call.
@@ -78,6 +95,7 @@ final class VatglassesService {
     }
     
     /// Returns sectors with active controller status based on online VATSIM controllers.
+    /// Also updates `unmatchedControllers` with any online ATC that couldn't be matched.
     func getActiveSectors(controllers: [Controllers]) -> [VatglassesSector] {
         guard var sectors = cachedData?.sectors,
               let allPositions = cachedData?.allPositions else { return [] }
@@ -85,8 +103,31 @@ final class VatglassesService {
         let frequencyGroupedControllers = buildFrequencyGroupedControllers(from: controllers)
         var positionActiveCache: [String: (isActive: Bool, controller: Controllers?)] = [:]
 
+        // Build a prefix → controller map for nodata.json FIR matching.
+        // Keys are uppercased callsign prefixes (e.g. "KZBW" from "KZBW_FSS").
+        let prefixGroupedControllers = buildPrefixGroupedControllers(from: controllers)
+
+        // Track which controller CIDs have been matched to at least one sector.
+        var matchedCIDs = Set<Int>()
+
         for i in sectors.indices {
-            if let (activeOwnerRef, matchingController) = findActiveOwnerWithController(
+            if sectors[i].isBasicDataOnly {
+                // nodata.json sectors: match by callsign prefix against owner strings.
+                if let (ownerRef, matchingController) = findActiveOwnerForBasicSector(
+                    ownerRefs: sectors[i].ownerRefs,
+                    prefixGroupedControllers: prefixGroupedControllers
+                ) {
+                    sectors[i].isActive = true
+                    sectors[i].activeOwnerRef = ownerRef
+                    sectors[i].activeController = matchingController
+                    sectors[i].activeOwnerColorHex = nil  // no colour data for nodata regions
+                } else {
+                    sectors[i].isActive = false
+                    sectors[i].activeOwnerRef = nil
+                    sectors[i].activeController = nil
+                    sectors[i].activeOwnerColorHex = nil
+                }
+            } else if let (activeOwnerRef, matchingController) = findActiveOwnerWithController(
                 for: sectors[i],
                 allPositions: allPositions,
                 frequencyGroupedControllers: frequencyGroupedControllers,
@@ -105,6 +146,37 @@ final class VatglassesService {
         }
 
         return sectors
+    }
+
+    /// Builds a map of uppercase callsign prefix → controllers for nodata.json FIR matching.
+    /// e.g. "KZBW" → [controller with callsign "KZBW_FSS"]
+    private func buildPrefixGroupedControllers(from controllers: [Controllers]) -> [String: Controllers] {
+        var result: [String: Controllers] = [:]
+        for controller in controllers {
+            let upper = controller.callsign.uppercased()
+            if let underscoreIndex = upper.firstIndex(of: "_") {
+                let prefix = String(upper[upper.startIndex..<underscoreIndex])
+                // Keep the first (most specific) match per prefix.
+                if result[prefix] == nil {
+                    result[prefix] = controller
+                }
+            }
+        }
+        return result
+    }
+
+    /// Finds the first online controller matching any of the nodata.json owner strings by callsign prefix.
+    private func findActiveOwnerForBasicSector(
+        ownerRefs: [String],
+        prefixGroupedControllers: [String: Controllers]
+    ) -> (ownerRef: String, controller: Controllers)? {
+        for ownerRef in ownerRefs {
+            let key = ownerRef.uppercased()
+            if let controller = prefixGroupedControllers[key] {
+                return (ownerRef, controller)
+            }
+        }
+        return nil
     }
     
     // MARK: - Hierarchical Ownership Matching
@@ -290,6 +362,7 @@ final class VatglassesService {
     }
     
     private func downloadAndParseSectors(commitSHA: String, completion: @escaping (Result<VatglassesData, Error>) -> Void) {
+        parseErrors = []   // reset diagnostics for this fetch
         let task = URLSession.shared.dataTask(with: repoURL) { [weak self] data, response, error in
             guard let self = self else { return }
             
@@ -366,11 +439,19 @@ final class VatglassesService {
         // Categorise JSON files: standalone (Type 2: data/ed.json) vs subdirectory (Type 1: data/zoa/airspace.json)
         var dataDirectories: Set<URL> = []
         var standaloneFiles: [URL] = []
+        var nodataFileURL: URL? = nil
 
         while let fileURL = enumerator?.nextObject() as? URL {
             guard fileURL.pathExtension == "json",
                   fileURL.path.contains("/data/"),
                   !fileURL.path.contains("/ownership/") else {
+                continue
+            }
+
+            // nodata.json is handled separately — its "owner" strings are raw FIR
+            // identifiers, not position keys, so it needs its own parsing path.
+            if fileURL.lastPathComponent == "nodata.json" {
+                nodataFileURL = fileURL
                 continue
             }
 
@@ -404,7 +485,9 @@ final class VatglassesService {
                     }
                 }
             } catch {
-                print("Failed to parse directory \(directoryURL.lastPathComponent): \(error.localizedDescription)")
+                let msg = error.localizedDescription
+                print("Failed to parse directory \(directoryURL.lastPathComponent): \(msg)")
+                parseErrors.append(VatglassesParseError(source: directoryURL.lastPathComponent, message: msg, date: Date()))
             }
         }
 
@@ -427,10 +510,19 @@ final class VatglassesService {
                     }
                 }
             } catch {
-                print("Failed to parse file \(fileURL.lastPathComponent): \(error.localizedDescription)")
+                let msg = error.localizedDescription
+                print("Failed to parse file \(fileURL.lastPathComponent): \(msg)")
+                parseErrors.append(VatglassesParseError(source: fileURL.lastPathComponent, message: msg, date: Date()))
             }
         }
         
+        // Process nodata.json — basic-data-only FIR sectors for unimplemented regions.
+        if let nodataURL = nodataFileURL,
+           let nodataData = try? Data(contentsOf: nodataURL) {
+            let nodataSectors = parseNodataFile(data: nodataData)
+            sectors.append(contentsOf: nodataSectors)
+        }
+
         return (sectors, airports, allPositions, mergedCallsignLabels)
     }
     
@@ -613,6 +705,68 @@ final class VatglassesService {
         }
         
         return (sectors, airports, positions, callsignLabels)
+    }
+
+    /// Parses `data/nodata.json`, which lists FIR outlines for regions that have no full
+    /// VATGlasses sector data. Each entry carries a raw owner string (e.g. `"KZBW"` or
+    /// `"PAZA-P, PAZA-D"`) used later to match online controllers by callsign prefix.
+    /// All resulting sectors are tagged `isBasicDataOnly = true`.
+    private func parseNodataFile(data: Data) -> [VatglassesSector] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let airspaceArray = json["airspace"] as? [[String: Any]] else {
+            return []
+        }
+
+        var sectors: [VatglassesSector] = []
+
+        for airspace in airspaceArray {
+            guard let id = airspace["id"] as? String,
+                  let sectorData = airspace["sectors"] as? [[String: Any]] else { continue }
+
+            // Owner may be an array of strings or a single comma-separated string.
+            var ownerRefs: [String] = []
+            if let ownerArray = airspace["owner"] as? [String] {
+                // Split any comma-separated entries (e.g. ["PAZA-P, PAZA-D"])
+                ownerRefs = ownerArray.flatMap { $0.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) } }
+            } else if let ownerString = airspace["owner"] as? String {
+                ownerRefs = ownerString.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            }
+
+            let groupKey = airspace["group"] as? String
+
+            for (index, sector) in sectorData.enumerated() {
+                guard let points = sector["points"] as? [[String]], !points.isEmpty else { continue }
+
+                let coordinates = convertVatglassesCoordinates(points)
+                guard !coordinates.isEmpty else { continue }
+
+                let geometry = SectorGeometry(
+                    type: "Polygon",
+                    coordinates: [[coordinates]]
+                )
+
+                let properties = SectorProperties(
+                    min: sector["min"] as? Int,
+                    max: sector["max"] as? Int,
+                    name: id,
+                    groupName: groupKey,
+                    color: nil
+                )
+
+                let baseSectorId = sectorData.count > 1 ? "\(id)_\(index)" : id
+                sectors.append(VatglassesSector(
+                    id: "nodata/\(baseSectorId)",
+                    ownerRefs: ownerRefs,   // raw FIR identifiers, matched by prefix at activation time
+                    frequency: "Unknown",
+                    geometry: geometry,
+                    properties: properties,
+                    isActive: false,
+                    isBasicDataOnly: true
+                ))
+            }
+        }
+
+        return sectors
     }
 
     private func parsePositionsJSON(data: Data) throws -> ([String: VatglassesPosition], [String: [String: String]]) {

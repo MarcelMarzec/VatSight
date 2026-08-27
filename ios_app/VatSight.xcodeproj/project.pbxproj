@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		950ED6E5301B69010046E1F8 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 950ED6E4301B69010046E1F8 /* Secrets.xcconfig */; };
 		9522F6CE2FCB118000E31BE6 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 9522F6CD2FCB118000E31BE6 /* ZIPFoundation */; };
+		95357BDC304023650041E014 /* GEOSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 95357BDB304023650041E014 /* GEOSwift */; };
 		958325AF2FACEC020078184B /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 958325AE2FACEC020078184B /* MapboxMaps */; };
 /* End PBXBuildFile section */
 
@@ -45,6 +46,7 @@
 			files = (
 				958325AF2FACEC020078184B /* MapboxMaps in Frameworks */,
 				9522F6CE2FCB118000E31BE6 /* ZIPFoundation in Frameworks */,
+				95357BDC304023650041E014 /* GEOSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,6 +92,7 @@
 			packageProductDependencies = (
 				958325AE2FACEC020078184B /* MapboxMaps */,
 				9522F6CD2FCB118000E31BE6 /* ZIPFoundation */,
+				95357BDB304023650041E014 /* GEOSwift */,
 			);
 			productName = VatSight;
 			productReference = 954F0C5E2FABC0AE0036E8EC /* VatSight.app */;
@@ -122,6 +125,7 @@
 			packageReferences = (
 				958325AD2FACEC020078184B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
 				9522F6CC2FCB118000E31BE6 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+				95357BDA304023650041E014 /* XCRemoteSwiftPackageReference "GEOSwift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 954F0C5F2FABC0AE0036E8EC /* Products */;
@@ -378,6 +382,14 @@
 				minimumVersion = 0.9.20;
 			};
 		};
+		95357BDA304023650041E014 /* XCRemoteSwiftPackageReference "GEOSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/GEOSwift/GEOSwift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.2.0;
+			};
+		};
 		958325AD2FACEC020078184B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios.git";
@@ -393,6 +405,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 9522F6CC2FCB118000E31BE6 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
 			productName = ZIPFoundation;
+		};
+		95357BDB304023650041E014 /* GEOSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 95357BDA304023650041E014 /* XCRemoteSwiftPackageReference "GEOSwift" */;
+			productName = GEOSwift;
 		};
 		958325AE2FACEC020078184B /* MapboxMaps */ = {
 			isa = XCSwiftPackageProductDependency;

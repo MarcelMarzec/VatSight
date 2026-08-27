@@ -25,6 +25,14 @@ struct DeveloperView: View {
                     get: { prefsManager.userPrefs.developerModeEnabled },
                     set: { newValue in
                         prefsManager.updateDeveloperMode(newValue)
+                        if newValue {
+                            // Restore saved custom slug (may be empty = default)
+                            let saved = prefsManager.userPrefs.vatglassesCustomRepoSlug
+                            radarViewModel.applyVatglassesCustomRepo(saved)
+                        } else {
+                            // Dev mode off — revert to default repo
+                            radarViewModel.applyVatglassesCustomRepo("")
+                        }
                     }
                 )) {
                     Label("Developer Mode", systemImage: "hammer.fill")

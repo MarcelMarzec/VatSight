@@ -47,6 +47,15 @@ struct SectorDetailsView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
+            if sector.isBasicDataOnly {
+                Text("Basic Data Only")
+                    .font(.caption.bold())
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color(red: 1.0, green: 0.71, blue: 0.0))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
             atisText
         }
         .padding()

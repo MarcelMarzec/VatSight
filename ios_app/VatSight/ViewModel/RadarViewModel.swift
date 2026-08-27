@@ -36,6 +36,15 @@ final class RadarViewModel: ObservableObject {
     @Published var selectedAltitudeFt: Double = 0
     /// When false, altitude filtering is bypassed and all sectors within the inactive-sectors toggle pass through.
     @Published var altitudeFilterEnabled = false
+    /// When true, sectors owned by the same controller are merged into one polygon via Turf union.
+    /// Altitude filtering is automatically disabled while this is active.
+    @Published var mergeSectors = false
+
+    // MARK: - Merge cache
+    /// The ownership signature for which `cachedMergedSectors` was last computed.
+    private var mergedSectorsOwnershipSignature: Int = -1
+    /// Pre-computed merged sectors, invalidated whenever the ownership signature changes.
+    private var cachedMergedSectors: [VatglassesSector] = []
 
     // MARK: - Error / staleness state
     /// Set to true when the most recent VATSIM fetch failed.
@@ -68,6 +77,10 @@ final class RadarViewModel: ObservableObject {
         self.showInactiveSectors = manager.userPrefs.showInactiveSectors
         self.showAirports = manager.userPrefs.showAirports
         self.altitudeFilterEnabled = manager.userPrefs.altitudeFilterEnabled
+        self.mergeSectors = manager.userPrefs.mergeSectors
+        // Only honour a custom slug when developer mode is actually on.
+        let slug = manager.userPrefs.developerModeEnabled ? manager.userPrefs.vatglassesCustomRepoSlug : ""
+        self.vatglassesService.customRepoSlug = slug
     }
     
     func startAutoRefresh() {
@@ -158,6 +171,20 @@ final class RadarViewModel: ObservableObject {
     
     func clearVatglassesCache() {
         vatglassesService.clearCache()
+    }
+
+    /// The repo slug currently active in the Vatglasses service ("" = default).
+    var vatglassesActiveRepoSlug: String { vatglassesService.customRepoSlug }
+
+    /// True when a custom (non-default) Vatglasses repo is in use.
+    var isUsingCustomVatglassesRepo: Bool { !vatglassesService.customRepoSlug.isEmpty }
+
+    /// Applies a new custom Vatglasses repo slug, clears the cache, and reloads sector data.
+    func applyVatglassesCustomRepo(_ slug: String) {
+        vatglassesService.customRepoSlug = slug
+        clearVatglassesCache()
+        sectors = []
+        loadSectorData()
     }
 
     /// All known vatglasses positions keyed by their scoped ID (e.g. "epww/AH"), sorted by key.
@@ -284,7 +311,12 @@ final class RadarViewModel: ObservableObject {
     }
     
     var selectedSector: VatglassesSector? {
-        sectors.first { $0.id == selectedSectorId }
+        // In normal mode, look up by sector ID in the original list.
+        if let found = sectors.first(where: { $0.id == selectedSectorId }) {
+            return found
+        }
+        // In merge mode the selected ID is "merged-{cid}". Check the merged list too.
+        return mergedSectorsToDisplay.first { $0.id == selectedSectorId }
     }
     
     /// The CID of the controller owning the selected sector.
@@ -442,8 +474,25 @@ final class RadarViewModel: ObservableObject {
     }
 
     func toggleAltitudeFilter() {
-        altitudeFilterEnabled.toggle()
+        let turningOn = !altitudeFilterEnabled
+        // If turning altitude filter on while merge sectors is active, turn merge sectors off.
+        if turningOn && mergeSectors {
+            mergeSectors = false
+            prefsManager?.updateMergeSectors(false)
+        }
+        altitudeFilterEnabled = turningOn
         prefsManager?.updateAltitudeFilterEnabled(altitudeFilterEnabled)
+    }
+
+    func toggleMergeSectors() {
+        let turningOn = !mergeSectors
+        // If turning merge sectors on while altitude filter is active, turn altitude filter off.
+        if turningOn && altitudeFilterEnabled {
+            altitudeFilterEnabled = false
+            prefsManager?.updateAltitudeFilterEnabled(false)
+        }
+        mergeSectors = turningOn
+        prefsManager?.updateMergeSectors(mergeSectors)
     }
 
     /// The upper bound for the altitude slider, capped at FL600 (60 000 ft).
@@ -453,6 +502,16 @@ final class RadarViewModel: ObservableObject {
     /// A sector is included when `selectedAltitudeFt` falls within its [min*100, max*100] range.
     /// Sectors with no altitude properties are always shown.
     var sectorsToDisplay: [VatglassesSector] {
+        if mergeSectors {
+            // In merge mode, merged sectors are always active-only (the union only runs on
+            // active sectors). Inactive sectors are shown unmerged alongside if the toggle
+            // is on — append them from the regular (unmerged) list.
+            if showInactiveSectors {
+                let inactive = sectors.filter { !$0.isActive }
+                return mergedSectorsToDisplay + inactive
+            }
+            return mergedSectorsToDisplay
+        }
         let base = showInactiveSectors ? sectors : sectors.filter { $0.isActive }
         guard altitudeFilterEnabled else { return base }
         return base.filter { sector in
@@ -463,6 +522,24 @@ final class RadarViewModel: ObservableObject {
             let maxFt = Double(maxFL) * 100
             return selectedAltitudeFt >= minFt && selectedAltitudeFt <= maxFt
         }
+    }
+
+    /// Returns merged sectors (one dissolved polygon per active controller via GEOSwift union).
+    /// Only active sectors with a matched controller are included — inactive sectors are hidden.
+    /// The result is cached and only recomputed when the active ownership assignment changes.
+    var mergedSectorsToDisplay: [VatglassesSector] {
+        // Signature over active sectors + their controller assignments.
+        // Changes only when controllers log on/off or ownership transfers.
+        let activeSectors = sectors.filter { $0.isActive }
+        let signature = activeSectors.reduce(into: 0) { hash, sector in
+            hash ^= sector.id.hashValue
+            hash ^= (sector.activeController?.cid ?? -1).hashValue
+        }
+        if signature != mergedSectorsOwnershipSignature {
+            mergedSectorsOwnershipSignature = signature
+            cachedMergedSectors = SectorGeoJSON.mergedByController(from: sectors)
+        }
+        return cachedMergedSectors
     }
 
     /// Airports filtered by the show-all-airports toggle.

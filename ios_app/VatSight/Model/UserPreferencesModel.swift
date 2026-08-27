@@ -88,9 +88,12 @@ final class UserPreferencesModel {
     var showInactiveSectors: Bool = false
     var showAirports: Bool = false
     var altitudeFilterEnabled: Bool = false
+    var mergeSectors: Bool = false
     var trackedCIDs: [Int] = []
     var hasCompletedOnboarding: Bool = false
     var developerModeEnabled: Bool = false
+    /// Custom GitHub repo slug (e.g. "owner/repo") for Vatglasses data. Empty string = use default.
+    var vatglassesCustomRepoSlug: String = ""
     /// Raw value of `MapStyle` — stored as String for SwiftData compatibility.
     var mapStyleRaw: String = MapStyle.system.rawValue
     /// Raw value of `AppTheme` — stored as String for SwiftData compatibility.
@@ -116,9 +119,11 @@ final class UserPreferencesModel {
         showInactiveSectors: Bool = false,
         showAirports: Bool = false,
         altitudeFilterEnabled: Bool = false,
+        mergeSectors: Bool = false,
         trackedCIDs: [Int] = [],
         hasCompletedOnboarding: Bool = false,
         developerModeEnabled: Bool = false,
+        vatglassesCustomRepoSlug: String = "",
         mapStyle: MapStyle = .system,
         appTheme: AppTheme = .system
     ) {
@@ -131,9 +136,11 @@ final class UserPreferencesModel {
         self.showInactiveSectors = showInactiveSectors
         self.showAirports = showAirports
         self.altitudeFilterEnabled = altitudeFilterEnabled
+        self.mergeSectors = mergeSectors
         self.trackedCIDs = trackedCIDs
         self.hasCompletedOnboarding = hasCompletedOnboarding
         self.developerModeEnabled = developerModeEnabled
+        self.vatglassesCustomRepoSlug = vatglassesCustomRepoSlug
         self.mapStyleRaw = mapStyle.rawValue
         self.appThemeRaw = appTheme.rawValue
     }
