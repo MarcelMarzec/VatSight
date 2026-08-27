@@ -9,6 +9,7 @@ import Foundation
 import MapboxMaps
 import Turf
 import CoreLocation
+import GEOSwift
 
 enum SectorGeoJSON {
 
@@ -29,7 +30,6 @@ enum SectorGeoJSON {
 
     /// Returns the centroid of the largest ring (outer ring of the largest polygon).
     private static func centroid(of sector: VatglassesSector) -> CLLocationCoordinate2D? {
-        // Collect all outer rings; pick the one with the most coordinates as the "main" polygon.
         var rings: [[CLLocationCoordinate2D]] = []
         let coords = sector.geometry.coordinates
         if sector.geometry.type == "Polygon", let first = coords.first, let ring = first.first {
@@ -58,7 +58,7 @@ enum SectorGeoJSON {
                                       longitude: lonSum / Double(mainRing.count))
     }
 
-    /// Distance in metres between two coordinates (flat-earth approximation — fine for small distances).
+    /// Distance in metres between two coordinates (flat-earth approximation).
     private static func distance(_ a: CLLocationCoordinate2D, _ b: CLLocationCoordinate2D) -> Double {
         let dLat = (a.latitude - b.latitude) * 111_000
         let dLon = (a.longitude - b.longitude) * 111_000 * cos(a.latitude * .pi / 180)
@@ -80,12 +80,11 @@ enum SectorGeoJSON {
 
     /// Candidate offset directions (unit vectors) tried in order: cardinal then diagonal.
     private static let candidateDirections: [(Double, Double)] = [
-        ( 1,  0), (-1,  0), ( 0,  1), ( 0, -1),  // N, S, E, W
-        ( 0.7,  0.7), (-0.7,  0.7), ( 0.7, -0.7), (-0.7, -0.7)  // NE, NW, SE, SW
+        ( 1,  0), (-1,  0), ( 0,  1), ( 0, -1),
+        ( 0.7,  0.7), (-0.7,  0.7), ( 0.7, -0.7), (-0.7, -0.7)
     ]
 
-    /// Finds the best label coordinate for a sector by nudging the centroid away from airports.
-    /// Falls back to the raw centroid if no clear position is found.
+    /// Finds the best label coordinate for a sector, nudging the centroid away from airports.
     /// Results are cached by sector ID to avoid recomputing on every render.
     static func labelCoordinate(
         for sector: VatglassesSector,
@@ -99,13 +98,11 @@ enum SectorGeoJSON {
             return center
         }
 
-        // If the centroid is already clear, use it.
         if isClearOfAirports(center, airports: airports) {
             labelCoordinateCache[sector.id] = center
             return center
         }
 
-        // Try progressively larger offsets in each direction.
         for multiplier in 1...4 {
             let offsetMetres = nudgeStep * Double(multiplier)
             let dDeg = offsetMetres * degreesPerMetre
@@ -121,7 +118,6 @@ enum SectorGeoJSON {
             }
         }
 
-        // No clear position found — fall back to centroid (better than nothing).
         labelCoordinateCache[sector.id] = center
         return center
     }
@@ -134,8 +130,7 @@ enum SectorGeoJSON {
     // MARK: - Callsign Helpers
 
     /// Derives a short callsign from a full controller callsign.
-    /// E.g. "LRBB_S_CTR" → "LRBB_S", "EGTT_CTR" → "EGTT", "LRBB_CTR" → "LRBB"
-    /// Strips the trailing ATC suffix (_CTR, _APP, _DEP, _TWR, _GND, _DEL, _ATIS, _FSS, _OBS).
+    /// E.g. "LRBB_S_CTR" → "LRBB_S", "EGTT_CTR" → "EGTT".
     static func shortCallsign(from callsign: String) -> String {
         let atcSuffixes = ["_CTR", "_APP", "_DEP", "_TWR", "_GND", "_DEL", "_ATIS", "_FSS", "_OBS"]
         let upper = callsign.uppercased()
@@ -150,31 +145,23 @@ enum SectorGeoJSON {
     // MARK: - FeatureCollections
 
     /// Creates a FeatureCollection for all sectors with controller information.
-    /// For active sectors with the same controller, only the first sector will have label data.
-    /// All sectors owned by the selected controller CID are highlighted.
     static func featureCollection(
         from sectors: [VatglassesSector],
         controllers: [Controllers] = [],
         activeOnly: Bool = false,
         selectedControllerCID: Int? = nil
     ) -> FeatureCollection {
-        
+
         let filteredSectors = activeOnly ? sectors.filter { $0.isActive } : sectors
-        
-        // Track which controllers already have a label assigned
-        var controllersWithLabels = Set<Int>()  // Use CID instead of callsign
-        
+        var controllersWithLabels = Set<Int>()
+
         let features = filteredSectors.compactMap { sector -> Feature? in
-            // Use the pre-matched controller from VatGlasses matching
             let controller = sector.activeController
-            
-            // Determine if this sector should show the label
+
             let shouldShowLabel: Bool
             if let controller = controller {
-                // Never show labels for tower, ground, or ATIS positions
                 let suppressedSuffixes = ["_TWR", "_GND", "_DEL", "_ATIS"]
                 let isSuppressed = suppressedSuffixes.contains(where: { controller.callsign.uppercased().hasSuffix($0) })
-                // Only show label if this controller hasn't been labeled yet and is not suppressed
                 shouldShowLabel = !isSuppressed && !controllersWithLabels.contains(controller.cid)
                 if shouldShowLabel {
                     controllersWithLabels.insert(controller.cid)
@@ -182,70 +169,64 @@ enum SectorGeoJSON {
             } else {
                 shouldShowLabel = false
             }
-            
-            // Highlight all sectors owned by the selected controller
+
             let isSelected = selectedControllerCID != nil && sector.activeController?.cid == selectedControllerCID
             return feature(from: sector, shouldShowLabel: shouldShowLabel, isSelected: isSelected)
         }
-        
+
         return FeatureCollection(features: features)
     }
-    
-    /// Creates a Feature from a single sector with active controller information
+
+    /// Creates a Feature from a single sector with active controller information.
     static func feature(from sector: VatglassesSector, shouldShowLabel: Bool = true, isSelected: Bool = false) -> Feature? {
         guard let geometry = sector.geometry.turfGeometry else {
             return nil
         }
-        
+
         var feature = Feature(geometry: geometry)
-        
+
         feature.properties = [
             "id": .string(sector.id),
             "frequency": .string(sector.frequency),
             "isActive": .boolean(sector.isActive),
             "isSelected": .boolean(isSelected)
         ]
-        
-        // Add color hex if available (for active sectors with position colors)
+
         if let colorHex = sector.activeOwnerColorHex {
             feature.properties?["colorHex"] = .string(colorHex)
         }
-        
-        // Add the active owner reference (the position that's actually controlling)
+
         if let activeOwnerRef = sector.activeOwnerRef {
             feature.properties?["activeOwner"] = .string(activeOwnerRef)
         }
-        
-        // If sector is active and should show label, use the pre-matched controller
+
         if sector.isActive && shouldShowLabel, let controller = sector.activeController {
             feature.properties?["controllerCallsign"] = .string(controller.callsign)
             feature.properties?["controllerFrequency"] = .string(controller.frequency)
             feature.properties?["controllerName"] = .string(controller.name)
             feature.properties?["controllerCID"] = .number(Double(controller.cid))
         }
-        
-        // Add altitude properties if available
+
         if let min = sector.properties?.min {
             feature.properties?["minAltitude"] = .number(Double(min))
         }
-        
+
         if let max = sector.properties?.max {
             feature.properties?["maxAltitude"] = .number(Double(max))
         }
-        
+
         if let name = sector.properties?.name {
             feature.properties?["name"] = .string(name)
         }
-        
+
         if let color = sector.properties?.color {
             feature.properties?["color"] = .string(color)
         }
-        
+
         return feature
     }
-    
+
     /// Creates a FeatureCollection of Point features used exclusively for sector label placement.
-    /// Each active sector with a controller gets one point, positioned to avoid nearby airports.
     static func labelPointFeatureCollection(
         from sectors: [VatglassesSector],
         airports: [VatglassesAirport],
@@ -278,14 +259,205 @@ enum SectorGeoJSON {
         return FeatureCollection(features: features)
     }
 
-    /// Creates separate FeatureCollections for active and inactive sectors
+    /// Creates separate FeatureCollections for active and inactive sectors.
     static func separateActiveInactive(from sectors: [VatglassesSector], controllers: [Controllers] = []) -> (active: FeatureCollection, inactive: FeatureCollection) {
         let activeSectors = sectors.filter { $0.isActive }
         let inactiveSectors = sectors.filter { !$0.isActive }
-        
+
         return (
             active: featureCollection(from: activeSectors, controllers: controllers),
             inactive: featureCollection(from: inactiveSectors, controllers: controllers)
         )
+    }
+
+    // MARK: - Sector Merging (GEOSwift boolean union)
+
+    /// Groups active sectors by controller CID and performs a true boolean polygon union
+    /// using GEOSwift (backed by GEOS) to produce one dissolved polygon per controller.
+    ///
+    /// Adjacent or overlapping sector polygons are merged into a single outer ring with
+    /// all shared interior edges removed. Disjoint sectors for the same controller produce
+    /// a MultiPolygon — each piece is still one feature, so the fill and outline both apply.
+    ///
+    /// The result is cached in RadarViewModel and only recomputed when the active ownership
+    /// assignment changes, not on every VATSIM refresh tick.
+    static func mergedByController(from sectors: [VatglassesSector]) -> [VatglassesSector] {
+        let activeSectors = sectors.filter { $0.isActive }
+
+        // Group active sectors by controller CID.
+        var groups: [Int: [VatglassesSector]] = [:]
+        for sector in activeSectors {
+            guard let cid = sector.activeController?.cid else { continue }
+            groups[cid, default: []].append(sector)
+        }
+
+        var merged: [VatglassesSector] = []
+
+        for (_, group) in groups {
+            guard let first = group.first else { continue }
+
+            // Single sector — no union needed, pass through unchanged.
+            if group.count == 1 {
+                merged.append(first)
+                continue
+            }
+
+            // Convert each sector's geometry to GEOSwift Polygon<XY> objects.
+            var geoPolygons: [GEOSwift.Polygon] = []
+            for sector in group {
+                geoPolygons.append(contentsOf: sector.geometry.toGEOSwiftPolygons())
+            }
+
+            guard !geoPolygons.isEmpty else {
+                merged.append(first)
+                continue
+            }
+
+            // Perform a true boolean union via GEOSwift / GEOS.
+            // unaryUnion on a MultiPolygon dissolves all shared edges in one pass (O(n log n)).
+            let unionedGeometry: SectorGeometry
+            do {
+                let multiPoly = GEOSwift.MultiPolygon(polygons: geoPolygons)
+                let result = try multiPoly.unaryUnion()
+                guard let sectorGeom = SectorGeometry(from: result) else {
+                    // Union returned an unexpected geometry type — fall back to coordinate collect.
+                    unionedGeometry = SectorGeometry.collected(from: group)
+                    merged.append(syntheticSector(id: first, geometry: unionedGeometry))
+                    continue
+                }
+                unionedGeometry = sectorGeom
+            } catch {
+                // GEOS union failed (e.g. invalid topology) — fall back gracefully.
+                unionedGeometry = SectorGeometry.collected(from: group)
+            }
+
+            merged.append(syntheticSector(id: first, geometry: unionedGeometry))
+        }
+
+        return merged
+    }
+
+    /// Builds a synthetic merged VatglassesSector from a representative first sector and
+    /// the pre-computed merged geometry.
+    private static func syntheticSector(id first: VatglassesSector, geometry: SectorGeometry) -> VatglassesSector {
+        VatglassesSector(
+            id: "merged-\(first.activeController?.cid ?? 0)",
+            ownerRefs: first.ownerRefs,
+            frequency: first.frequency,
+            geometry: geometry,
+            properties: first.properties,
+            isActive: true,
+            activeOwnerColorHex: first.activeOwnerColorHex,
+            activeOwnerRef: first.activeOwnerRef,
+            activeController: first.activeController
+        )
+    }
+}
+
+// MARK: - GEOSwift ↔ SectorGeometry Conversion
+
+extension SectorGeometry {
+
+    // MARK: SectorGeometry → GEOSwift
+
+    /// Converts this sector's geometry into an array of GEOSwift Polygons.
+    /// A Polygon sector yields one polygon; a MultiPolygon sector yields one per sub-polygon.
+    /// Invalid rings (fewer than 4 points, or unclosed) are skipped.
+    func toGEOSwiftPolygons() -> [GEOSwift.Polygon] {
+        switch type {
+        case "Polygon":
+            guard let rings = coordinates.first else { return [] }
+            if let poly = makeGEOSwiftPolygon(from: rings) { return [poly] }
+            return []
+        case "MultiPolygon":
+            return coordinates.compactMap { makeGEOSwiftPolygon(from: $0) }
+        default:
+            return []
+        }
+    }
+
+    /// Builds one GEOSwift Polygon from a ring array: [[lon, lat], ...].
+    /// The first ring is the exterior; subsequent rings are interior holes.
+    private func makeGEOSwiftPolygon(from rings: [[[Double]]]) -> GEOSwift.Polygon? {
+        guard let exteriorRaw = rings.first else { return nil }
+        guard let exterior = makeLinearRing(from: exteriorRaw) else { return nil }
+
+        let holes: [GEOSwift.Polygon.LinearRing] = rings.dropFirst().compactMap {
+            makeLinearRing(from: $0)
+        }
+
+        return try? GEOSwift.Polygon(exterior: exterior, holes: holes)
+    }
+
+    /// Converts a raw coordinate array [[lon, lat], ...] into a GEOSwift LinearRing.
+    /// Closes the ring automatically if the first and last point differ.
+    /// Returns nil if the ring has fewer than 4 unique points (invalid for GEOS).
+    private func makeLinearRing(from raw: [[Double]]) -> GEOSwift.Polygon.LinearRing? {
+        var points = raw.compactMap { coord -> GEOSwift.Point? in
+            guard coord.count >= 2 else { return nil }
+            return GEOSwift.Point(x: coord[0], y: coord[1])
+        }
+        guard !points.isEmpty else { return nil }
+
+        // Ensure the ring is closed.
+        if points.first != points.last {
+            points.append(points[0])
+        }
+
+        // GEOS requires at least 4 points for a valid ring (3 unique + closing point).
+        guard points.count >= 4 else { return nil }
+
+        return try? GEOSwift.Polygon.LinearRing(points: points)
+    }
+
+    // MARK: GEOSwift → SectorGeometry
+
+    /// Converts a GEOSwift Geometry result back into a SectorGeometry.
+    /// Returns nil only if the geometry type is not a polygon or multipolygon.
+    init?(from geometry: GEOSwift.Geometry) {
+        switch geometry {
+        case .polygon(let poly):
+            self.init(type: "Polygon", coordinates: [Self.rawRings(from: poly)])
+        case .multiPolygon(let multi):
+            let polys = multi.polygons.map { Self.rawRings(from: $0) }
+            self.init(type: "MultiPolygon", coordinates: polys)
+        default:
+            return nil
+        }
+    }
+
+    /// Converts a GEOSwift Polygon into the [[[[Double]]]] ring format used by SectorGeometry.
+    private static func rawRings(from polygon: GEOSwift.Polygon) -> [[[Double]]] {
+        var rings: [[[Double]]] = []
+        rings.append(rawPoints(from: polygon.exterior))
+        for hole in polygon.holes {
+            rings.append(rawPoints(from: hole))
+        }
+        return rings
+    }
+
+    /// Converts a LinearRing into [[lon, lat], ...] Double arrays.
+    private static func rawPoints(from ring: GEOSwift.Polygon.LinearRing) -> [[Double]] {
+        ring.points.map { [$0.x, $0.y] }
+    }
+
+    // MARK: Fallback
+
+    /// Coordinate-collection fallback: packs all polygons from all sectors into a single
+    /// MultiPolygon without dissolving. Used when the GEOS union fails.
+    static func collected(from group: [VatglassesSector]) -> SectorGeometry {
+        var allPolygons: [[[[Double]]]] = []
+        for sector in group {
+            let raw = sector.geometry.coordinates
+            switch sector.geometry.type {
+            case "Polygon":
+                if let rings = raw.first { allPolygons.append(rings) }
+            case "MultiPolygon":
+                allPolygons.append(contentsOf: raw)
+            default:
+                break
+            }
+        }
+        return SectorGeometry(type: "MultiPolygon", coordinates: allPolygons)
     }
 }
