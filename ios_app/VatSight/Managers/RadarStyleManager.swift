@@ -12,6 +12,7 @@ final class RadarStyleManager {
     static let pilotIconImageId = "pilot"
     static let selectedPilotIconImageId = "selectedPilot"
     static let friendPilotIconImageId = "friendPilot"
+    static let selfPilotIconImageId = "selfPilot"
     static let pilotIconLayerId = "pilot-icon-layer"
     static let pilotLabelLayerId = "pilot-label-layer"
     static let pilotGroundIconLayerId = "pilot-ground-icon-layer"
@@ -63,13 +64,15 @@ final class RadarStyleManager {
         on mapView: MapView,
         pilots: [Pilot],
         selectedCID: Int?,
-        friendCIDs: Set<Int> = []
+        friendCIDs: Set<Int> = [],
+        myCID: Int = 0
     ) {
 
         let collection = PilotGeoJSON.featureCollection(
             from: pilots,
             selectedCID: selectedCID,
-            friendCIDs: friendCIDs
+            friendCIDs: friendCIDs,
+            myCID: myCID
         )
 
         mapView.mapboxMap.updateGeoJSONSource(
@@ -92,6 +95,8 @@ final class RadarStyleManager {
         try mapView.mapboxMap.addImage(pilot,    id: "pilot",         sdf: true)
         try mapView.mapboxMap.addImage(selected, id: "selectedPilot", sdf: true)
         try mapView.mapboxMap.addImage(friend,   id: "friendPilot",   sdf: true)
+        // "selfPilot" reuses the same sprite as "pilot" — the gold colour is applied via iconColor.
+        try mapView.mapboxMap.addImage(pilot,    id: "selfPilot",     sdf: true)
     }
 
     // MARK: - Add Source
@@ -124,9 +129,13 @@ final class RadarStyleManager {
             source: Self.pilotSourceId
         )
 
-        // All three images are registered as SDF, so iconColor tints them at runtime.
+        // All images are registered as SDF, so iconColor tints them at runtime.
+        // isSelf is checked first (highest priority) so the user's own aircraft always
+        // renders in gold regardless of selected/friend state.
         layer.iconImage = .expression(
             Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelf" }; true }
+                "selfPilot"
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 "selectedPilot"
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
@@ -178,8 +187,12 @@ final class RadarStyleManager {
         layer.textSize = .constant(12)
         layer.textAnchor = .constant(.left)
         layer.textOffset = .constant([0.8, 0])
+        // textAllowOverlap: false  → hide this label if it overlaps another aircraft label
+        // textIgnorePlacement: false → register this label's footprint so other aircraft
+        //                              labels avoid it. Does NOT block sector/airport labels
+        //                              because those layers run their own placement passes.
         layer.textAllowOverlap = .constant(false)
-        layer.textIgnorePlacement = .constant(true)
+        layer.textIgnorePlacement = .constant(false)
         layer.textColor = .expression(pilotLabelColorExpression())
         layer.textHaloColor = .constant(pilotLabelHaloColor())
         layer.textHaloWidth = .constant(1.0)
@@ -211,6 +224,8 @@ final class RadarStyleManager {
 
         layer.iconImage = .expression(
             Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelf" }; true }
+                "selfPilot"
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 "selectedPilot"
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
@@ -251,8 +266,9 @@ final class RadarStyleManager {
         layer.textSize = .constant(12)
         layer.textAnchor = .constant(.left)
         layer.textOffset = .constant([0.8, 0])
+        // Same collision policy as the airborne label layer — aircraft-vs-aircraft only.
         layer.textAllowOverlap = .constant(false)
-        layer.textIgnorePlacement = .constant(true)
+        layer.textIgnorePlacement = .constant(false)
         layer.textColor = .expression(pilotLabelColorExpression())
         layer.textHaloColor = .constant(pilotLabelHaloColor())
         layer.textHaloWidth = .constant(1.0)
@@ -268,9 +284,12 @@ final class RadarStyleManager {
     // MARK: - Helpers
 
     /// Returns a switchCase Exp that tints the SDF pilot icon by state and theme.
+    /// Priority order: isSelf (gold) > isSelected (red) > isFriend (green) > default.
     private func pilotIconColorExpression() -> Exp {
         if isDarkTheme {
             return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelf" }; true }
+                Exp(.rgba) { 255; 200; 0; 1.0 }    // gold
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 Exp(.rgba) { 255; 59; 48; 1.0 }    // red
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
@@ -279,11 +298,13 @@ final class RadarStyleManager {
             }
         } else {
             return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelf" }; true }
+                Exp(.rgba) { 200; 150; 0; 1.0 }    // deeper gold — readable on light map
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 Exp(.rgba) { 255; 59; 48; 1.0 }    // red
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green — reads well on light map
-                Exp(.rgba) { 75; 80; 95; 1.0 }     // medium slate-grey
+                Exp(.rgba) { 26; 38; 68; 1.0 }     // dark navy
             }
         }
     }
@@ -291,15 +312,19 @@ final class RadarStyleManager {
     private func pilotLabelColorExpression() -> Exp {
         if isDarkTheme {
             return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelf" }; true }
+                Exp(.rgba) { 255; 200; 0; 1.0 }    // gold — matches icon
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
                 Exp(.rgba) { 48; 230; 110; 1.0 }   // matches icon
                 Exp(.rgba) { 255; 255; 255; 1.0 }
             }
         } else {
             return Exp(.switchCase) {
+                Exp(.eq) { Exp(.get) { "isSelf" }; true }
+                Exp(.rgba) { 200; 150; 0; 1.0 }    // deeper gold — matches icon
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // matches icon
-                Exp(.rgba) { 75; 80; 95; 1.0 }
+                Exp(.rgba) { 26; 38; 68; 1.0 }
             }
         }
     }

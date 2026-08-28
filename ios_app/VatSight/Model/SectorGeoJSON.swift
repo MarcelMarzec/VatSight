@@ -237,7 +237,8 @@ enum SectorGeoJSON {
         from sectors: [VatglassesSector],
         airports: [VatglassesAirport],
         selectedControllerCID: Int? = nil,
-        friendCIDs: Set<Int> = []
+        friendCIDs: Set<Int> = [],
+        myCID: Int = 0
     ) -> FeatureCollection {
         var controllersWithLabels = Set<Int>()
 
@@ -250,6 +251,8 @@ enum SectorGeoJSON {
 
             guard let coord = labelCoordinate(for: sector, airports: airports) else { return nil }
 
+            let isSelf = myCID > 0 && controller.cid == myCID
+
             var feature = Feature(geometry: .point(Point(coord)))
             feature.properties = [
                 "id": .string(sector.id),
@@ -258,6 +261,7 @@ enum SectorGeoJSON {
                 "controllerShortCallsign": .string(Self.shortCallsign(from: controller.callsign)),
                 "isSelected": .boolean(selectedControllerCID != nil && sector.activeController?.cid == selectedControllerCID),
                 "isFriend": .boolean(friendCIDs.contains(controller.cid)),
+                "isSelf": .boolean(isSelf),
                 "isBasicDataOnly": .boolean(sector.isBasicDataOnly)
             ]
             return feature

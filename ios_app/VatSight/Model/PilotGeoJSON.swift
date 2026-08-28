@@ -13,12 +13,13 @@ enum PilotGeoJSON {
     static func featureCollection(
         from pilots: [Pilot],
         selectedCID: Int?,
-        friendCIDs: Set<Int> = []
+        friendCIDs: Set<Int> = [],
+        myCID: Int = 0
     ) -> FeatureCollection {
 
         FeatureCollection(
             features: pilots.map {
-                feature(from: $0, selectedCID: selectedCID, friendCIDs: friendCIDs)
+                feature(from: $0, selectedCID: selectedCID, friendCIDs: friendCIDs, myCID: myCID)
             }
         )
     }
@@ -26,7 +27,8 @@ enum PilotGeoJSON {
     static func feature(
         from pilot: Pilot,
         selectedCID: Int?,
-        friendCIDs: Set<Int> = []
+        friendCIDs: Set<Int> = [],
+        myCID: Int = 0
     ) -> Feature {
 
         var feature = Feature(
@@ -43,6 +45,7 @@ enum PilotGeoJSON {
         let isSelected = pilot.cid == selectedCID
         let isOnGround = pilot.groundspeed < 40
         let isFriend = friendCIDs.contains(pilot.cid)
+        let isSelf = myCID > 0 && pilot.cid == myCID
 
         feature.properties = [
             "cid": .number(Double(pilot.cid)),
@@ -50,7 +53,8 @@ enum PilotGeoJSON {
             "heading": .number(Double(pilot.heading)),
             "isSelected": .boolean(isSelected),
             "isOnGround": .boolean(isOnGround),
-            "isFriend": .boolean(isFriend)
+            "isFriend": .boolean(isFriend),
+            "isSelf": .boolean(isSelf)
         ]
 
         return feature

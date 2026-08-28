@@ -56,6 +56,9 @@ final class RadarViewModel: ObservableObject {
     /// When non-empty, these controllers are injected on top of the live data for testing.
     @Published var debugControllers: [Controllers] = []
 
+    /// Live diagnostics snapshot — updated after every sector-matching pass and after each data load.
+    @Published var vatglassesDiagnostics = VatglassesDiagnostics()
+
     /// ICAOs from active pilot flight plans, used to determine airport visibility.
     var activeFlightPlanICAOs: Set<String> = []
     
@@ -147,6 +150,14 @@ final class RadarViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self?.sectors = data.sectors
                     self?.airports = data.airports
+                    // Capture any parse errors from this load immediately.
+                    if let service = self?.vatglassesService {
+                        self?.vatglassesDiagnostics = VatglassesDiagnostics(
+                            parseErrors: service.parseErrors,
+                            unmatchedControllers: [],
+                            lastUpdated: Date()
+                        )
+                    }
                     self?.updateSectorActiveStatus()
                     self?.objectWillChange.send()
                     self?.sectorFetchDone = true
@@ -246,6 +257,11 @@ final class RadarViewModel: ObservableObject {
 
         if !sectors.isEmpty {
             sectors = vatglassesService.getActiveSectors(controllers: mergedControllers)
+            vatglassesDiagnostics = VatglassesDiagnostics(
+                parseErrors: vatglassesService.parseErrors,
+                unmatchedControllers: vatglassesService.unmatchedControllers,
+                lastUpdated: Date()
+            )
         }
     }
 

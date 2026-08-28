@@ -137,10 +137,13 @@ struct RadarViewRepresentable: UIViewRepresentable {
         let friendCIDs = prefsManager.allFriendCIDs
         let friendControlledICAOs = viewModel.friendControlledAirportICAOs(friendCIDs: friendCIDs)
 
+        let myCID = prefsManager.myCID
+
         context.coordinator.updatePilots(
             viewModel.pilots,
             selectedCID: viewModel.selectedCID,
-            friendCIDs: friendCIDs
+            friendCIDs: friendCIDs,
+            myCID: myCID
         )
         
         context.coordinator.updateSectors(
@@ -148,7 +151,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
             controllers: viewModel.effectiveControllers,
             airports: viewModel.airportsToDisplay,
             selectedControllerCID: viewModel.selectedSectorControllerCID,
-            friendCIDs: friendCIDs
+            friendCIDs: friendCIDs,
+            myCID: myCID
         )
         
         context.coordinator.updateAirports(
@@ -199,6 +203,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
         private var lastPilots: [Pilot] = []
         private var lastSelectedCID: Int? = nil
         private var lastFriendCIDs: Set<Int> = []
+        private var lastMyCID: Int = 0
         private var lastSectors: [VatglassesSector] = []
         private var lastActiveSectorCount: Int = -1
         private var lastOwnershipSignature: Int = 0
@@ -243,7 +248,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
                     on: mapView,
                     pilots: viewModel.pilots,
                     selectedCID: viewModel.selectedCID,
-                    friendCIDs: prefsManager.allFriendCIDs
+                    friendCIDs: prefsManager.allFriendCIDs,
+                    myCID: prefsManager.myCID
                 )
             } catch {
                 print("Failed to configure pilot style:", error)
@@ -268,7 +274,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
                     sectors: viewModel.sectorsToDisplay,
                     controllers: viewModel.effectiveControllers,
                     airports: viewModel.airportsToDisplay,
-                    friendCIDs: prefsManager.allFriendCIDs
+                    friendCIDs: prefsManager.allFriendCIDs,
+                    myCID: prefsManager.myCID
                 )
             } catch {
                 print("Failed to configure sector style:", error)
@@ -330,13 +337,54 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
         }
 
+        /// Enforces the complete layer draw order after every style load or style swap.
+        ///
+        /// Desired stack, bottom → top:
+        ///   Sector polygons (fill / outline / basic-outline)  — installed first, never moved
+        ///   Airport icons
+        ///   Aircraft icons  (airborne + ground)
+        ///   Aircraft labels (airborne + ground)
+        ///   Airport labels
+        ///   Sector dot indicator
+        ///   Sector pill labels  ← topmost
+        ///
+        /// Layers are moved by remove-then-add-at-nil-position (appends to top of stack).
+        /// We move them in bottom-to-top order so the final position is correct.
         func ensureLabelsOnTop() {
             guard let mapView else { return }
-            if didInstallSectorStyle {
-                sectorStyleManager.ensureSectorLabelIsOnTop(on: mapView)
-            }
-            if didInstallAirportStyle {
-                airportStyleManager.ensureAirportLabelIsOnTop(on: mapView)
+
+            // Ordered list of layer IDs that need to sit above everything else, bottom first.
+            let orderedIds: [String] = [
+                AirportStyleManager.airportLayerId,
+                RadarStyleManager.pilotGroundIconLayerId,
+                RadarStyleManager.pilotIconLayerId,
+                RadarStyleManager.pilotGroundLabelLayerId,
+                RadarStyleManager.pilotLabelLayerId,
+                AirportStyleManager.airportLabelLayerId,
+                SectorStyleManager.sectorDotLayerId,
+                SectorStyleManager.sectorLabelLayerId,
+            ]
+
+            for layerId in orderedIds {
+                guard mapView.mapboxMap.layerExists(withId: layerId) else { continue }
+                // Check if already at the correct relative position to avoid unnecessary moves:
+                // we always re-insert in order, so appending each in sequence is sufficient.
+                do {
+                    // Generic layer fetch isn't available in the public API — we must use typed
+                    // fetch. Determine the type from the known layer ID.
+                    switch layerId {
+                    case AirportStyleManager.airportLayerId:
+                        let l = try mapView.mapboxMap.layer(withId: layerId, type: CircleLayer.self)
+                        try mapView.mapboxMap.removeLayer(withId: layerId)
+                        try mapView.mapboxMap.addLayer(l, layerPosition: nil)
+                    default:
+                        let l = try mapView.mapboxMap.layer(withId: layerId, type: SymbolLayer.self)
+                        try mapView.mapboxMap.removeLayer(withId: layerId)
+                        try mapView.mapboxMap.addLayer(l, layerPosition: nil)
+                    }
+                } catch {
+                    print("ensureLabelsOnTop: failed to reorder \(layerId): \(error)")
+                }
             }
         }
 
@@ -364,20 +412,23 @@ struct RadarViewRepresentable: UIViewRepresentable {
         func updatePilots(
             _ pilots: [Pilot],
             selectedCID: Int?,
-            friendCIDs: Set<Int> = []
+            friendCIDs: Set<Int> = [],
+            myCID: Int = 0
         ) {
             guard let mapView, didInstallPilotStyle else { return }
-            guard pilots.count != lastPilots.count || selectedCID != lastSelectedCID || friendCIDs != lastFriendCIDs else { return }
+            guard pilots.count != lastPilots.count || selectedCID != lastSelectedCID || friendCIDs != lastFriendCIDs || myCID != lastMyCID else { return }
             lastPilots = pilots
             lastSelectedCID = selectedCID
             lastFriendCIDs = friendCIDs
+            lastMyCID = myCID
             pilotsVersion += 1
 
             pilotStyleManager.updatePilots(
                 on: mapView,
                 pilots: pilots,
                 selectedCID: selectedCID,
-                friendCIDs: friendCIDs
+                friendCIDs: friendCIDs,
+                myCID: myCID
             )
         }
         
@@ -386,7 +437,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
             controllers: [Controllers],
             airports: [VatglassesAirport] = [],
             selectedControllerCID: Int? = nil,
-            friendCIDs: Set<Int> = []
+            friendCIDs: Set<Int> = [],
+            myCID: Int = 0
         ) {
             guard let mapView, didInstallSectorStyle else { return }
             let activeSectorCount = sectors.filter { $0.isActive }.count
@@ -400,12 +452,14 @@ struct RadarViewRepresentable: UIViewRepresentable {
                     || activeSectorCount != lastActiveSectorCount
                     || ownershipSignature != lastOwnershipSignature
                     || selectedControllerCID != lastSelectedControllerCID
-                    || friendCIDs != lastFriendCIDs else { return }
+                    || friendCIDs != lastFriendCIDs
+                    || myCID != lastMyCID else { return }
             lastSectors = sectors
             lastActiveSectorCount = activeSectorCount
             lastOwnershipSignature = ownershipSignature
             lastSelectedControllerCID = selectedControllerCID
             lastFriendCIDs = friendCIDs
+            lastMyCID = myCID
 
             sectorStyleManager.updateSectors(
                 on: mapView,
@@ -413,7 +467,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 controllers: controllers,
                 airports: airports,
                 selectedControllerCID: selectedControllerCID,
-                friendCIDs: friendCIDs
+                friendCIDs: friendCIDs,
+                myCID: myCID
             )
         }
         
@@ -612,6 +667,20 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 return true
             }
             mapView.mapboxMap.addInteraction(sectorLabelInteraction)
+
+            // Sector dot tap — same behaviour as tapping the pill label
+            let sectorDotInteraction = TapInteraction(
+                .layer(SectorStyleManager.sectorDotLayerId)
+            ) { [weak self] feature, context in
+                guard let self else { return false }
+                guard
+                    let jsonValue = feature.properties["id"] ?? nil,
+                    case let .string(sectorId) = jsonValue
+                else { return false }
+                DispatchQueue.main.async { self.viewModel.selectSector(id: sectorId) }
+                return true
+            }
+            mapView.mapboxMap.addInteraction(sectorDotInteraction)
 
             // Sector long-press — opens sector details even when no label is visible
             let longPress = UILongPressGestureRecognizer(

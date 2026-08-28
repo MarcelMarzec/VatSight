@@ -118,14 +118,14 @@ final class PreferencesManager {
         try? context.save()
     }
 
+    /// The user's own VATSIM CID (0 if not set).
+    var myCID: Int { userPrefs.vatsimCID }
+
     /// All CIDs that should be treated as "friends" on the map:
-    /// the user's own CID plus all explicitly tracked CIDs.
+    /// explicitly tracked CIDs only. The user's own CID is handled separately
+    /// as the "self" state so it renders in gold rather than green.
     var allFriendCIDs: Set<Int> {
-        var cids = Set(userPrefs.trackedCIDs)
-        if userPrefs.vatsimCID > 0 {
-            cids.insert(userPrefs.vatsimCID)
-        }
-        return cids
+        Set(userPrefs.trackedCIDs)
     }
 
     func updateDeveloperMode(_ enabled: Bool) {

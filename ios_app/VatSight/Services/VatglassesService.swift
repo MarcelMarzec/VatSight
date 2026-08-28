@@ -121,6 +121,7 @@ final class VatglassesService {
                     sectors[i].activeOwnerRef = ownerRef
                     sectors[i].activeController = matchingController
                     sectors[i].activeOwnerColorHex = nil  // no colour data for nodata regions
+                    matchedCIDs.insert(matchingController.cid)
                 } else {
                     sectors[i].isActive = false
                     sectors[i].activeOwnerRef = nil
@@ -137,6 +138,7 @@ final class VatglassesService {
                 sectors[i].activeOwnerRef = activeOwnerRef
                 sectors[i].activeController = matchingController
                 sectors[i].activeOwnerColorHex = allPositions[activeOwnerRef]?.primaryColorHex
+                matchedCIDs.insert(matchingController.cid)
             } else {
                 sectors[i].isActive = false
                 sectors[i].activeOwnerRef = nil
@@ -144,6 +146,12 @@ final class VatglassesService {
                 sectors[i].activeOwnerColorHex = nil
             }
         }
+
+        // Build the unmatched controller list: online ATC not accounted for by any sector.
+        // No filtering here — filtering is done in the UI so the user can toggle categories.
+        unmatchedControllers = controllers
+            .filter { !matchedCIDs.contains($0.cid) }
+            .map { UnmatchedController(callsign: $0.callsign, frequency: $0.frequency, cid: $0.cid, name: $0.name) }
 
         return sectors
     }

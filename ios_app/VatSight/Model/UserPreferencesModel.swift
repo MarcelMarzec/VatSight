@@ -12,33 +12,35 @@ import CoreLocation
 
 /// Available Mapbox map styles.
 enum MapStyle: String, CaseIterable, Codable {
-    /// Follows the device Dark/Light Mode setting automatically.
+    /// Follows the device Dark/Light Mode setting automatically (Night for dark OS, Day for light OS).
     case system = "system"
-    case dark   = "mapbox://styles/marcelm005/cmovo48xo002201s30ohu1t9r"
-    case light  = "mapbox://styles/marcelm005/cmsqqh36z015101pd5ugz3r6a"
+    case night  = "mapbox://styles/marcelm005/cmtcmn6pd001c01s103yaa658"
+    case dark   = "mapbox://styles/marcelm005/cmtbcipzx000n01qs9hurffuj"
+    case day    = "mapbox://styles/marcelm005/cmsqqh36z015101pd5ugz3r6a"
 
     var displayName: String {
         switch self {
         case .system: return "System"
+        case .night:  return "Night"
         case .dark:   return "Dark"
-        case .light:  return "Light"
+        case .day:    return "Day"
         }
     }
 
-    /// The Mapbox style URL string for the concrete dark or light style,
-    /// or nil for system (which must be resolved at the call site with `resolvedURL(isDark:)`).
+    /// The Mapbox style URL string for the concrete style,
+    /// or nil for system (which must be resolved at the call site with `resolvedURLString(isDark:)`).
     var concreteURLString: String? {
         switch self {
         case .system: return nil
-        case .dark, .light: return rawValue
+        case .night, .dark, .day: return rawValue
         }
     }
 
-    /// Returns the URL string for the resolved style, picking dark or light when System is selected.
+    /// Returns the URL string for the resolved style, picking Night or Day when System is selected.
     func resolvedURLString(isDark: Bool) -> String? {
         switch self {
-        case .system: return isDark ? MapStyle.dark.rawValue : MapStyle.light.rawValue
-        case .dark, .light: return rawValue
+        case .system: return isDark ? MapStyle.night.rawValue : MapStyle.day.rawValue
+        case .night, .dark, .day: return rawValue
         }
     }
 
@@ -46,8 +48,9 @@ enum MapStyle: String, CaseIterable, Codable {
     var preferredAppTheme: AppTheme {
         switch self {
         case .system: return .system
+        case .night:  return .dark
         case .dark:   return .dark
-        case .light:  return .light
+        case .day:    return .light
         }
     }
 }

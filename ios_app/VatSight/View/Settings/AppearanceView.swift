@@ -37,7 +37,7 @@ struct AppearanceView: View {
             } header: {
                 Label("Map", systemImage: "map")
             } footer: {
-                Text("System automatically uses the dark or light map to match your device appearance.")
+                Text("System uses Night for Dark Mode and Day for Light Mode to match your device appearance.")
             }
 
             // MARK: - App Theme

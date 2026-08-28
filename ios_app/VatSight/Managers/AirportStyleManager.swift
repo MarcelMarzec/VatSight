@@ -82,15 +82,9 @@ final class AirportStyleManager {
 
     // MARK: - Ensure Layer Order
 
-    func ensureAirportLabelIsOnTop(on mapView: MapView) {
-        guard mapView.mapboxMap.layerExists(withId: Self.airportLabelLayerId) else { return }
-        let allLayers = mapView.mapboxMap.allLayerIdentifiers
-        guard allLayers.last?.id != Self.airportLabelLayerId else { return }
-        if let layer = try? mapView.mapboxMap.layer(withId: Self.airportLabelLayerId, type: SymbolLayer.self) {
-            try? mapView.mapboxMap.removeLayer(withId: Self.airportLabelLayerId)
-            try? mapView.mapboxMap.addLayer(layer, layerPosition: nil)
-        }
-    }
+    /// Layer ordering is now managed centrally by `ensureLabelsOnTop()` in the Coordinator.
+    /// This stub is kept so existing call-sites compile without changes.
+    func ensureAirportLabelIsOnTop(on mapView: MapView) {}
 
     // MARK: - Remove Layers
 
@@ -291,7 +285,7 @@ final class AirportStyleManager {
                 Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green
                 Exp(.eq) { Exp(.get) { "isFilled" }; true }
-                Exp(.rgba) { 75; 80; 95; 1.0 }
+                Exp(.rgba) { 26; 38; 68; 1.0 }     // dark navy
                 Exp(.rgba) { 0; 0; 0; 0.0 }
             }
         }
@@ -312,7 +306,7 @@ final class AirportStyleManager {
                 Exp(.rgba) { 255; 59; 48; 1.0 }
                 Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green
-                Exp(.rgba) { 75; 80; 95; 1.0 }
+                Exp(.rgba) { 26; 38; 68; 1.0 }     // dark navy
             }
         }
     }
@@ -332,7 +326,7 @@ final class AirportStyleManager {
                 Exp(.rgba) { 255; 59; 48; 1.0 }
                 Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green
-                Exp(.rgba) { 75; 80; 95; 1.0 }
+                Exp(.rgba) { 26; 38; 68; 1.0 }     // dark navy
             }
         }
     }
