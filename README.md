@@ -7,11 +7,21 @@ Track your own flight, check for ATC coverage, and visualise airspace in real ti
 Feature list coming soon...
 
 ### Screenshots
-Here's a sneak peak at what I've been working on and hasn't been pushed to the repo! Everything is subject to change and be refined!
+I've continued work on the UI and some features! Here is a preview, you can now merge controllers areas and filter by altitude!
+There are also quite a few features that I haven't talked about, more on them soon!
 
-<img width="300" alt="Simulator Screenshot - iPhone 17 - 2026-08-04 at 13 16 32" src="https://github.com/user-attachments/assets/a55d86dc-ad90-4244-a68e-d0f7691355a4" />
-<img width="300" alt="Simulator Screenshot - iPhone 17 - 2026-08-04 at 13 17 15" src="https://github.com/user-attachments/assets/026cd37e-0548-4496-8fed-968f3a45399b" />
-<img width="300" alt="Simulator Screenshot - iPhone 17 - 2026-08-04 at 13 18 00" src="https://github.com/user-attachments/assets/3c382d4b-3a35-41c1-b637-aaedd002e2eb" /> 
+<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 22 02" src="https://github.com/user-attachments/assets/16a1a16e-b88b-4e3f-97e9-8ac548b38dff" />
+<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 21 54" src="https://github.com/user-attachments/assets/18a0e5dc-f59b-42c6-9439-b8b5ba1578bc" />
+<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 21 11" src="https://github.com/user-attachments/assets/5abf454b-1bbf-47f4-a57b-296588af61f7" />
+<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 54" src="https://github.com/user-attachments/assets/4ee117a3-5607-4d70-8a3b-4fcb78e0c272" />
+<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 35" src="https://github.com/user-attachments/assets/bcf01ccc-b9a9-43e8-b410-638c8299cc2a" />
+<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 10" src="https://github.com/user-attachments/assets/972f9179-8bf8-4ae7-95cf-5042b811cd3a" />
+<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 15" src="https://github.com/user-attachments/assets/ea64e07e-87d0-4ab8-b5f7-f49372f0e699" />
+<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 02" src="https://github.com/user-attachments/assets/c2e41903-afb5-4e95-8286-7dd57d34c5f8" />
+
+Light mode - Needs more work with the colour scheme
+
+<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 28 59" src="https://github.com/user-attachments/assets/a1d2f6a2-96e4-4a67-a3f6-b5b76d077c08" />
 
 
 ### Open Source!
