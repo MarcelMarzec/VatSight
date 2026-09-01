@@ -370,7 +370,8 @@ enum SectorGeoJSON {
             isActive: true,
             activeOwnerColorHex: first.activeOwnerColorHex,
             activeOwnerRef: first.activeOwnerRef,
-            activeController: first.activeController
+            activeController: first.activeController,
+            isBasicDataOnly: first.isBasicDataOnly
         )
     }
 }

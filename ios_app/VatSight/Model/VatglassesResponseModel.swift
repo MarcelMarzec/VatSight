@@ -185,7 +185,7 @@ struct VatglassesAirport: Codable, Identifiable {
 
 struct VatglassesData: Codable {
     /// Increment this whenever the cache schema changes to force a fresh download.
-    static let currentSchemaVersion = 4
+    static let currentSchemaVersion = 6
 
     let schemaVersion: Int
     let sectors: [VatglassesSector]

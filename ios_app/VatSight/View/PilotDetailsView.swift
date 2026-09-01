@@ -21,41 +21,48 @@ struct PilotDetailsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 8) {
+                    VStack(alignment: .leading) {
+                        HStack(alignment: .center, spacing: 12) {
+                            HStack(alignment: .center, spacing: 12) {
                                 Text(pilot.callsign)
                                     .font(.largeTitle.bold())
                                 
-                                Button {
-                                    if isTracked {
-                                        prefsManager.removeTrackedCID(pilot.cid)
-                                    } else {
-                                        prefsManager.addTrackedCID(pilot.cid)
-                                    }
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                } label: {
-                                    Image(systemName: isTracked ? "star.fill" : "star")
-                                        .font(.title2)
-                                }
-                                .foregroundColor(isTracked ? .green : .primary)
+                                Divider()
+                                    .frame(height: 28)
                                 
-                                Spacer()
-
-                                Button {
-                                    dismiss()
-                                } label: {
-                                    Image(systemName: "xmark")
-                                        .font(.title)
-                                }.foregroundColor(.primary)
+                                Text(pilot.flight_plan?.aircraft_short ?? "")
+                                    .font(.title2)
+                                    .foregroundColor(.secondary)
                             }
                             
+                            Spacer()
+                            
+                            Button {
+                                dismiss()
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.title)
+                            }
+                            .foregroundColor(.primary)
+                        }
+                        Button {
+                            if isTracked {
+                                prefsManager.removeTrackedCID(pilot.cid)
+                            } else {
+                                prefsManager.addTrackedCID(pilot.cid)
+                            }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } label: {
                             Text(verbatim: "\(pilot.name) (\(pilot.cid))")
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundColor(.secondary)
+                            
+                            Image(systemName: isTracked ? "star.fill" : "star")
+                                .font(.subheadline)
+                                .foregroundColor(isTracked ? .green : .primary)
+                            
                         }
                         
-                        Spacer()
                     }
                     
                     MetricContainer(metrics: [
@@ -66,7 +73,7 @@ struct PilotDetailsView: View {
                     ])
                     
                     if let fp = pilot.flight_plan {
-                        sectionTitle("Flight Plan")
+                        sectionTitle(fp.flight_rules == "V" ? "VFR Flight Plan" : fp.flight_rules == "I" ? "IFR Flight Plan" : "Flight Plan")
                         
                         HStack {
                             ICAOChip(
@@ -107,6 +114,14 @@ struct PilotDetailsView: View {
                             ("Fuel Time", fp.fuel_timeFormatted, false)
                         ])
                         
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Aircraft Type")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(fp.aircraft)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Route")
                                 .font(.caption)

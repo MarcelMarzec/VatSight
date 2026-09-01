@@ -304,7 +304,7 @@ final class RadarStyleManager {
                 Exp(.rgba) { 255; 59; 48; 1.0 }    // red
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green — reads well on light map
-                Exp(.rgba) { 26; 38; 68; 1.0 }     // dark navy
+                Exp(.rgba) { 51; 64; 102; 1.0 }    // matches sector label stroke
             }
         }
     }
@@ -324,7 +324,7 @@ final class RadarStyleManager {
                 Exp(.rgba) { 200; 150; 0; 1.0 }    // deeper gold — matches icon
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // matches icon
-                Exp(.rgba) { 26; 38; 68; 1.0 }
+                Exp(.rgba) { 51; 64; 102; 1.0 }    // matches sector label stroke
             }
         }
     }

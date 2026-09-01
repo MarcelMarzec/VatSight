@@ -107,11 +107,11 @@ final class SectorStyleManager {
     // Each state has a fill and a stroke. Stroke is always a darker shade of the fill
     // so the 1pt outline reads crisply against both light and dark basemaps.
 
-    // Default — dark mode: dark navy; light mode: near-white with navy tint
+    // Default — dark mode: dark navy; light mode: navy fill with near-white stroke
     private static let darkDefaultFill   = UIColor(red: 0.05, green: 0.15, blue: 0.40, alpha: 0.92)
     private static let darkDefaultStroke = UIColor.black
-    private static let lightDefaultFill   = UIColor(red: 0.93, green: 0.95, blue: 1.00, alpha: 0.95)
-    private static let lightDefaultStroke = UIColor(red: 0.20, green: 0.25, blue: 0.40, alpha: 1.00)
+    private static let lightDefaultFill   = UIColor(red: 0.20, green: 0.25, blue: 0.40, alpha: 0.95)
+    private static let lightDefaultStroke = UIColor(red: 0.93, green: 0.95, blue: 1.00, alpha: 1.00)
 
     // Selected — red. Dark mode: vivid red; light mode: slightly deeper red for contrast.
     private static let darkSelectedFill   = UIColor(red: 0.82, green: 0.10, blue: 0.08, alpha: 0.95)
@@ -569,7 +569,7 @@ final class SectorStyleManager {
     private static func textColorExpression(isDark: Bool) -> Exp {
         // In light mode the default pill is near-white, so default text must be dark-navy.
         // Selected, friend, and self pills are dark enough that white works in both themes.
-        let defaultTextColor = isDark ? "#FFFFFF" : StyleColor(lightDefaultStroke).rawValue
+        let defaultTextColor = "#FFFFFF"
         return Exp(.switchCase) {
             Exp(.eq) { Exp(.get) { "isSelf" }; true }
             "#FFFFFF"

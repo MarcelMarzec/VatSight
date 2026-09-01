@@ -227,6 +227,53 @@ struct DeveloperView: View {
                         Text("Errors from files or directories that failed to decode during the last Vatglasses data load.")
                     }
                 }
+
+                // MARK: Diagnostics — Invalid Airports
+                Section {
+                    let invalid = radarViewModel.vatglassesDiagnostics.invalidAirports
+                    if invalid.isEmpty {
+                        Label("All airport coordinates valid", systemImage: "checkmark.circle")
+                            .foregroundStyle(.secondary)
+                            .font(.subheadline)
+                    } else {
+                        ForEach(invalid) { airport in
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(airport.icao)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(.orange)
+                                    if !airport.name.isEmpty {
+                                        Text(airport.name)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.primary)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                Text(airport.reason)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Text("Invalid Airport Coordinates")
+                        Spacer()
+                        let count = radarViewModel.vatglassesDiagnostics.invalidAirports.count
+                        if count > 0 {
+                            Text("\(count)")
+                                .font(.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.2))
+                                .foregroundStyle(.orange)
+                                .clipShape(Capsule())
+                        }
+                    }
+                } footer: {
+                    Text("Airports whose latitude or longitude fell outside valid WGS-84 ranges after parsing. These may render incorrectly on the map.")
+                }
             }
         }
         .navigationTitle("Developer")

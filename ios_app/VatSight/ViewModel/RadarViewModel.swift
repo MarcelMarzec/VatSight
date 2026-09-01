@@ -39,6 +39,9 @@ final class RadarViewModel: ObservableObject {
     /// When true, sectors owned by the same controller are merged into one polygon via Turf union.
     /// Altitude filtering is automatically disabled while this is active.
     @Published var mergeSectors = false
+    /// Remembers the merge-sectors state captured just before altitude filtering was turned on,
+    /// so it can be restored when altitude filtering is turned back off.
+    private var mergeSectorsStateBeforeAltitudeFilter: Bool? = nil
 
     // MARK: - Merge cache
     /// The ownership signature for which `cachedMergedSectors` was last computed.
@@ -155,6 +158,7 @@ final class RadarViewModel: ObservableObject {
                         self?.vatglassesDiagnostics = VatglassesDiagnostics(
                             parseErrors: service.parseErrors,
                             unmatchedControllers: [],
+                            invalidAirports: Self.detectInvalidAirports(data.airports),
                             lastUpdated: Date()
                         )
                     }
@@ -260,8 +264,17 @@ final class RadarViewModel: ObservableObject {
             vatglassesDiagnostics = VatglassesDiagnostics(
                 parseErrors: vatglassesService.parseErrors,
                 unmatchedControllers: vatglassesService.unmatchedControllers,
+                invalidAirports: Self.detectInvalidAirports(airports),
                 lastUpdated: Date()
             )
+        }
+    }
+
+    /// Returns airports whose lat/lon fall outside valid WGS-84 ranges.
+    private static func detectInvalidAirports(_ airports: [VatglassesAirport]) -> [InvalidAirport] {
+        airports.compactMap { a in
+            guard abs(a.latitude) > 90 || abs(a.longitude) > 180 else { return nil }
+            return InvalidAirport(icao: a.icao, name: a.callsign ?? "", latitude: a.latitude, longitude: a.longitude)
         }
     }
 
@@ -491,10 +504,20 @@ final class RadarViewModel: ObservableObject {
 
     func toggleAltitudeFilter() {
         let turningOn = !altitudeFilterEnabled
-        // If turning altitude filter on while merge sectors is active, turn merge sectors off.
-        if turningOn && mergeSectors {
-            mergeSectors = false
-            prefsManager?.updateMergeSectors(false)
+        if turningOn {
+            // Remember the current merge-sectors state before potentially disabling it.
+            mergeSectorsStateBeforeAltitudeFilter = mergeSectors
+            if mergeSectors {
+                mergeSectors = false
+                prefsManager?.updateMergeSectors(false)
+            }
+        } else {
+            // Restore the remembered merge-sectors state when turning altitude filtering off.
+            if let remembered = mergeSectorsStateBeforeAltitudeFilter {
+                mergeSectors = remembered
+                prefsManager?.updateMergeSectors(remembered)
+                mergeSectorsStateBeforeAltitudeFilter = nil
+            }
         }
         altitudeFilterEnabled = turningOn
         prefsManager?.updateAltitudeFilterEnabled(altitudeFilterEnabled)

@@ -118,7 +118,11 @@ struct RadarView: View {
                         .presentationDetents([.height(sectorHeaderHeight), .fraction(0.8), .large], selection: $sectorDetent)
                         .presentationBackgroundInteraction(.enabled)
                         .onChange(of: sectorHeaderHeight) { _, newHeight in
-                            sectorDetent = .height(newHeight)
+                            // Only snap to the measured height when the sheet is still at the
+                            // collapsed detent — prevents fighting the user if they've swiped up.
+                            if sectorDetent == .height(sectorHeaderHeight) || sectorDetent == .height(160) {
+                                sectorDetent = .height(newHeight)
+                            }
                         }
                 }
             }
@@ -155,6 +159,7 @@ struct RadarView: View {
         }
         .overlay(alignment: .top) {
             StaleBanner()
+                .padding(.top, 8)
         }
         .overlay(alignment: .topTrailing) {
             let myCID = prefsManager.userPrefs.vatsimCID
@@ -426,25 +431,37 @@ private struct StaleBanner: View {
     @EnvironmentObject private var viewModel: RadarViewModel
     @State private var isSpinning = false
 
+    private var isFailed: Bool { viewModel.lastFetchFailed }
+
     var body: some View {
         if !viewModel.isLoadingData && viewModel.isDataStale {
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.trianglehead.2.clockwise")
-                    .imageScale(.small)
-                    .rotationEffect(.degrees(isSpinning ? 360 : 0))
-                    .animation(.linear(duration: 1).repeatForever(autoreverses: false), value: isSpinning)
-                    .onAppear { isSpinning = true }
-                    .onDisappear { isSpinning = false }
-                Text(viewModel.lastFetchFailed ? "Connection lost · ​Retrying…" : "Downloading live data...")
-                    .font(.caption.weight(.medium))
+            GlassEffectContainer {
+                HStack(spacing: 6) {
+                    Image(systemName: isFailed ? "wifi.slash" : "arrow.trianglehead.2.clockwise")
+                        .imageScale(.small)
+                        .rotationEffect(.degrees(!isFailed && isSpinning ? 360 : 0))
+                        .animation(
+                            !isFailed
+                                ? .linear(duration: 1).repeatForever(autoreverses: false)
+                                : .default,
+                            value: isSpinning
+                        )
+                        .onAppear { isSpinning = true }
+                        .onDisappear { isSpinning = false }
+                    Text(isFailed ? "Connection lost · Retrying…" : "Stale data · Downloading…")
+                        .font(.caption.weight(.medium))
+                }
+                .foregroundStyle(isFailed ? Color.red : .primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .glassEffect(
+                    isFailed ? .regular.tint(Color.red.opacity(0.25)) : .regular,
+                    in: .capsule
+                )
             }
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(.regularMaterial)
-            .clipShape(Capsule())
             .transition(.move(edge: .top).combined(with: .opacity))
             .animation(.easeInOut(duration: 0.35), value: viewModel.isDataStale)
+            .animation(.easeInOut(duration: 0.2), value: isFailed)
         }
     }
 }

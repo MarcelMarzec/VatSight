@@ -63,12 +63,19 @@ struct Pilot: Codable, Identifiable {
     }
 
     var logon_timeFormatted: String {
-        Self.utcTimeFormatter.string(from: logon_time)
+        Self.logonTimeFormatter.string(from: logon_time)
     }
     
     var last_updatedFormatted: String {
         Self.utcTimeFormatter.string(from: last_updated)
     }
+    
+    private static let logonTimeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm'z'"
+        f.timeZone = TimeZone(secondsFromGMT: 0)
+        return f
+    }()
     
     private static let utcTimeFormatter: DateFormatter = {
         let f = DateFormatter()

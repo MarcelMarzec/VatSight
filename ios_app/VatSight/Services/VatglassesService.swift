@@ -104,7 +104,7 @@ final class VatglassesService {
         var positionActiveCache: [String: (isActive: Bool, controller: Controllers?)] = [:]
 
         // Build a prefix → controller map for nodata.json FIR matching.
-        // Keys are uppercased callsign prefixes (e.g. "KZBW" from "KZBW_FSS").
+        // Keys are uppercased callsign prefixes (e.g. "MSP" from "MSP_11_CTR").
         let prefixGroupedControllers = buildPrefixGroupedControllers(from: controllers)
 
         // Track which controller CIDs have been matched to at least one sector.
@@ -112,15 +112,18 @@ final class VatglassesService {
 
         for i in sectors.indices {
             if sectors[i].isBasicDataOnly {
-                // nodata.json sectors: match by callsign prefix against owner strings.
+                // nodata.json sectors: ownerRefs are position IDs (e.g. "KZMP").
+                // Look up the parsed nodata position to get its "pre" prefixes, then
+                // match the controller callsign against those prefixes + type.
                 if let (ownerRef, matchingController) = findActiveOwnerForBasicSector(
                     ownerRefs: sectors[i].ownerRefs,
+                    allPositions: allPositions,
                     prefixGroupedControllers: prefixGroupedControllers
                 ) {
                     sectors[i].isActive = true
                     sectors[i].activeOwnerRef = ownerRef
                     sectors[i].activeController = matchingController
-                    sectors[i].activeOwnerColorHex = nil  // no colour data for nodata regions
+                    sectors[i].activeOwnerColorHex = allPositions["nodata/\(ownerRef)"]?.primaryColorHex
                     matchedCIDs.insert(matchingController.cid)
                 } else {
                     sectors[i].isActive = false
@@ -156,32 +159,54 @@ final class VatglassesService {
         return sectors
     }
 
-    /// Builds a map of uppercase callsign prefix → controllers for nodata.json FIR matching.
-    /// e.g. "KZBW" → [controller with callsign "KZBW_FSS"]
-    private func buildPrefixGroupedControllers(from controllers: [Controllers]) -> [String: Controllers] {
-        var result: [String: Controllers] = [:]
+    /// Builds a map of uppercase callsign prefix → all controllers that share that prefix.
+    /// e.g. "MSP" → [controllers with callsigns "MSP_11_CTR", "MSP_CTR", …]
+    private func buildPrefixGroupedControllers(from controllers: [Controllers]) -> [String: [Controllers]] {
+        var result: [String: [Controllers]] = [:]
         for controller in controllers {
             let upper = controller.callsign.uppercased()
             if let underscoreIndex = upper.firstIndex(of: "_") {
                 let prefix = String(upper[upper.startIndex..<underscoreIndex])
-                // Keep the first (most specific) match per prefix.
-                if result[prefix] == nil {
-                    result[prefix] = controller
-                }
+                result[prefix, default: []].append(controller)
             }
         }
         return result
     }
 
-    /// Finds the first online controller matching any of the nodata.json owner strings by callsign prefix.
+    /// Finds the first online controller for a nodata.json sector.
+    ///
+    /// For each ownerRef (a position ID like "KZMP"), looks up the parsed nodata position
+    /// under "nodata/{ownerRef}" to obtain its `pre` prefixes and `type`. Controllers whose
+    /// callsign prefix matches any of those prefixes and whose callsign ends with the type
+    /// (allowing an optional middle component, e.g. MSP_11_CTR) are considered a match.
+    ///
+    /// Falls back to a direct prefix match against the ownerRef itself for legacy entries
+    /// (e.g. regions where the ownerRef IS the callsign prefix and no position was parsed).
     private func findActiveOwnerForBasicSector(
         ownerRefs: [String],
-        prefixGroupedControllers: [String: Controllers]
+        allPositions: [String: VatglassesPosition],
+        prefixGroupedControllers: [String: [Controllers]]
     ) -> (ownerRef: String, controller: Controllers)? {
         for ownerRef in ownerRefs {
+            // Primary path: look up the position stored under "nodata/{ownerRef}" and match
+            // controllers using its pre-prefixes and type (handles MSP_11_CTR → KZMP).
+            if let position = allPositions["nodata/\(ownerRef)"] {
+                for pre in position.facilityPrefixes {
+                    let key = pre.uppercased()
+                    if let candidates = prefixGroupedControllers[key] {
+                        if let match = candidates.first(where: { matchesCallsignPattern(controller: $0, position: position) }) {
+                            return (ownerRef, match)
+                        }
+                    }
+                }
+            }
+
+            // Fallback: ownerRef itself is used as a callsign prefix (legacy / non-US regions
+            // where the sector owner string doubles as the prefix, e.g. "KZBW" → "KZBW_FSS").
             let key = ownerRef.uppercased()
-            if let controller = prefixGroupedControllers[key] {
-                return (ownerRef, controller)
+            if let candidates = prefixGroupedControllers[key],
+               let match = candidates.first {
+                return (ownerRef, match)
             }
         }
         return nil
@@ -525,10 +550,22 @@ final class VatglassesService {
         }
         
         // Process nodata.json — basic-data-only FIR sectors for unimplemented regions.
+        // Also extracts positions, airports, and callsign labels from the full schema.
         if let nodataURL = nodataFileURL,
            let nodataData = try? Data(contentsOf: nodataURL) {
-            let nodataSectors = parseNodataFile(data: nodataData)
+            let (nodataSectors, nodataAirports, nodataPositions, nodataCallsigns) = parseNodataFile(data: nodataData)
             sectors.append(contentsOf: nodataSectors)
+            airports.append(contentsOf: nodataAirports)
+            // Scope nodata positions under "nodata/" prefix to avoid collisions.
+            for (posKey, position) in nodataPositions {
+                allPositions["nodata/\(posKey)"] = position
+            }
+            // Merge callsign labels from nodata.json.
+            for (type, middleMap) in nodataCallsigns {
+                for (middle, label) in middleMap {
+                    mergedCallsignLabels[type, default: [:]][middle] = label
+                }
+            }
         }
 
         return (sectors, airports, allPositions, mergedCallsignLabels)
@@ -599,12 +636,12 @@ final class VatglassesService {
         // Parse top-level "callsigns" key if present.
         let callsignLabels = json["callsigns"] as? [String: [String: String]] ?? [:]
 
-        // Parse groups map (key -> human name)
+        // Parse groups map (key -> human name), stripping any HTML tags (e.g. <br/>).
         var groupNames: [String: String] = [:]
         if let groupsJSON = json["groups"] as? [String: [String: Any]] {
             for (key, value) in groupsJSON {
                 if let name = value["name"] as? String {
-                    groupNames[key] = name
+                    groupNames[key] = stripHTML(name)
                 }
             }
         }
@@ -715,14 +752,89 @@ final class VatglassesService {
         return (sectors, airports, positions, callsignLabels)
     }
 
-    /// Parses `data/nodata.json`, which lists FIR outlines for regions that have no full
-    /// VATGlasses sector data. Each entry carries a raw owner string (e.g. `"KZBW"` or
-    /// `"PAZA-P, PAZA-D"`) used later to match online controllers by callsign prefix.
-    /// All resulting sectors are tagged `isBasicDataOnly = true`.
-    private func parseNodataFile(data: Data) -> [VatglassesSector] {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let airspaceArray = json["airspace"] as? [[String: Any]] else {
-            return []
+    /// Parses `data/nodata.json` according to the full schema:
+    /// - `airspace`: FIR outlines tagged `isBasicDataOnly = true`; owners are ICAO facility IDs.
+    /// - `positions`: controller position definitions keyed by facility ID (e.g. `"KZBW"`).
+    /// - `airports`: airport reference data with decimal-degree coords.
+    /// - `callsigns`: position-type → middle-component → label lookup table.
+    /// - `groups`: group key → display name, resolved into sector `groupName` properties.
+    ///
+    /// Returns `(sectors, airports, positions, callsignLabels)` using `"nodata"` as the
+    /// region prefix so all keys are globally unique.
+    private func parseNodataFile(data: Data) -> ([VatglassesSector], [VatglassesAirport], [String: VatglassesPosition], [String: [String: String]]) {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return ([], [], [:], [:])
+        }
+
+        // MARK: groups — strip HTML tags (e.g. <br/>) from display names.
+        var groupNames: [String: String] = [:]
+        if let groupsJSON = json["groups"] as? [String: [String: Any]] {
+            for (key, value) in groupsJSON {
+                if let name = value["name"] as? String {
+                    groupNames[key] = stripHTML(name)
+                }
+            }
+        }
+
+        // MARK: callsigns
+        let callsignLabels = json["callsigns"] as? [String: [String: String]] ?? [:]
+
+        // MARK: positions
+        var positions: [String: VatglassesPosition] = [:]
+        if let positionsJSON = json["positions"] as? [String: [String: Any]] {
+            for (posKey, posData) in positionsJSON {
+                guard let callsign = posData["callsign"] as? String,
+                      let type = posData["type"] as? String else { continue }
+
+                let facilityPrefixes = parseFacilityPrefixes(posData["pre"])
+
+                var colors: [String]? = nil
+                if let coloursArray = posData["colours"] as? [[String: Any]] {
+                    colors = coloursArray.compactMap { $0["hex"] as? String }
+                }
+
+                // frequency is optional in nodata positions per the schema
+                let frequency = posData["frequency"] as? String ?? "Unknown"
+
+                positions[posKey] = VatglassesPosition(
+                    callsign: callsign,
+                    frequency: frequency,
+                    type: type,
+                    facilityPrefixes: facilityPrefixes,
+                    colors: colors
+                )
+            }
+        }
+
+        // MARK: airports
+        var airports: [VatglassesAirport] = []
+        if let airportsJSON = json["airports"] as? [String: [String: Any]] {
+            for (icao, airportData) in airportsJSON {
+                guard let coordRaw = airportData["coord"],
+                      let (lat, lon) = parseCoord(coordRaw) else { continue }
+
+                // topdown refs in nodata.json are facility IDs — scope them under "nodata/"
+                let rawTopdown: [String]
+                if let td = airportData["topdown"] as? [String] {
+                    rawTopdown = td
+                } else {
+                    rawTopdown = parseFacilityPrefixes(airportData["pre"])
+                }
+                let ownerRefs = rawTopdown.map { "nodata/\($0)" }
+
+                airports.append(VatglassesAirport(
+                    icao: icao,
+                    latitude: lat,
+                    longitude: lon,
+                    callsign: airportData["callsign"] as? String,
+                    ownerRefs: ownerRefs
+                ))
+            }
+        }
+
+        // MARK: airspace / sectors
+        guard let airspaceArray = json["airspace"] as? [[String: Any]] else {
+            return ([], airports, positions, callsignLabels)
         }
 
         var sectors: [VatglassesSector] = []
@@ -731,10 +843,10 @@ final class VatglassesService {
             guard let id = airspace["id"] as? String,
                   let sectorData = airspace["sectors"] as? [[String: Any]] else { continue }
 
-            // Owner may be an array of strings or a single comma-separated string.
+            // owner is an array of facility-ID strings per the schema.
             var ownerRefs: [String] = []
             if let ownerArray = airspace["owner"] as? [String] {
-                // Split any comma-separated entries (e.g. ["PAZA-P, PAZA-D"])
+                // Split any comma-separated entries (legacy format)
                 ownerRefs = ownerArray.flatMap { $0.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) } }
             } else if let ownerString = airspace["owner"] as? String {
                 ownerRefs = ownerString.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
@@ -757,7 +869,7 @@ final class VatglassesService {
                     min: sector["min"] as? Int,
                     max: sector["max"] as? Int,
                     name: id,
-                    groupName: groupKey,
+                    groupName: groupKey.flatMap { groupNames[$0] } ?? groupKey,
                     color: nil
                 )
 
@@ -774,7 +886,7 @@ final class VatglassesService {
             }
         }
 
-        return sectors
+        return (sectors, airports, positions, callsignLabels)
     }
 
     private func parsePositionsJSON(data: Data) throws -> ([String: VatglassesPosition], [String: [String: String]]) {
@@ -833,7 +945,14 @@ final class VatglassesService {
     private func parseGroupNames(from data: Data) -> [String: String] {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let groupsJSON = json["groups"] as? [String: [String: Any]] else { return [:] }
-        return groupsJSON.compactMapValues { $0["name"] as? String }
+        return groupsJSON.compactMapValues { ($0["name"] as? String).map { stripHTML($0) } }
+    }
+
+    /// Replaces HTML line-break tags with ". " and strips any remaining HTML tags.
+    private func stripHTML(_ raw: String) -> String {
+        raw.replacingOccurrences(of: "<br\\s*/?>", with: ". ", options: .regularExpression)
+           .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+           .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Parses the "pre" field from a position entry, which may be a bare String or an [String] array.
@@ -933,9 +1052,14 @@ final class VatglassesService {
     }
     
     /// Parses a coordinate pair that may contain either `Double` or `String` values.
+    /// Some data sources (e.g. US/FAA airports) store coords as integers scaled by 1e6
+    /// (e.g. 41979594 instead of 41.979594). Values outside ±360 are normalised by ÷1e6.
     private func parseCoord(_ raw: Any) -> (latitude: Double, longitude: Double)? {
+        func normalise(_ v: Double) -> Double {
+            return abs(v) > 360 ? v / 1_000_000 : v
+        }
         if let doubles = raw as? [Double], doubles.count == 2 {
-            return (doubles[0], doubles[1])
+            return (normalise(doubles[0]), normalise(doubles[1]))
         }
         if let mixed = raw as? [Any], mixed.count == 2 {
             let vals = mixed.compactMap { v -> Double? in
@@ -943,7 +1067,7 @@ final class VatglassesService {
                 if let s = v as? String { return Double(s) }
                 return nil
             }
-            if vals.count == 2 { return (vals[0], vals[1]) }
+            if vals.count == 2 { return (normalise(vals[0]), normalise(vals[1])) }
         }
         return nil
     }
@@ -1181,8 +1305,12 @@ final class VatglassesService {
                 }
             }
 
+            // An ATIS-only airport has no direct or topdown controller match, but should
+            // still be shown as active since ATC is present.
+            let hasAtis = prefixes.contains { atisByPrefix[$0] == true }
+
             if directMatch == nil {
-                airports[i].isActive = topdownMatch != nil
+                airports[i].isActive = topdownMatch != nil || hasAtis
                 airports[i].activeController = topdownMatch
             }
 

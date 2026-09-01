@@ -285,7 +285,7 @@ final class AirportStyleManager {
                 Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green
                 Exp(.eq) { Exp(.get) { "isFilled" }; true }
-                Exp(.rgba) { 26; 38; 68; 1.0 }     // dark navy
+                Exp(.rgba) { 51; 64; 102; 1.0 }    // matches sector label stroke
                 Exp(.rgba) { 0; 0; 0; 0.0 }
             }
         }
@@ -306,7 +306,7 @@ final class AirportStyleManager {
                 Exp(.rgba) { 255; 59; 48; 1.0 }
                 Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green
-                Exp(.rgba) { 26; 38; 68; 1.0 }     // dark navy
+                Exp(.rgba) { 51; 64; 102; 1.0 }    // matches sector label stroke
             }
         }
     }
@@ -326,7 +326,7 @@ final class AirportStyleManager {
                 Exp(.rgba) { 255; 59; 48; 1.0 }
                 Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
                 Exp(.rgba) { 20; 155; 65; 1.0 }    // deep forest green
-                Exp(.rgba) { 26; 38; 68; 1.0 }     // dark navy
+                Exp(.rgba) { 51; 64; 102; 1.0 }    // matches sector label stroke
             }
         }
     }
