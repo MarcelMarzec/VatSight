@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VatSight – Privacy Policy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="style/style.css" />
+  <link rel="icon" type="image/png" href="/images/favicon/favicon-96x96.png?v=20260509" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon/favicon.svg?v=20260509" />
+  <link rel="shortcut icon" href="/images/favicon/favicon.ico?v=20260509" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/apple-touch-icon.png?v=20260509" />
+  <link rel="manifest" href="/images/favicon/site.webmanifest?v=20260509" />
+</head>
+<body class="page-doc">
+  <div class="card-doc">
+        <div class="cardWelcome">
+            <p>Welcome to</p>
+        </div>
+        <div class="cardTittle">
+            <img src="images/Vatsightlogo.png" alt="" width="100px">
+            <h1>VatSight </h1>
+        </div>
+        <p>An Open Source moblie Vatsim Tracker.</p>
+        <a href="index.html">Home</a><br>
+        <a href="https://github.com/MarcelMarzec/VatSight">Github Repository</a>
+        <a href="https://marcelmarzec.com/contact-me">Get in Contact</a>
+
+    <hr class="divider" />
+
+    <div class="highlight-box">
+      <p><strong>Short version:</strong> VatSight does not collect, store, or share any personal data. Everything you enter stays on your device. No accounts. No analytics. No ads.</p>
+    </div>
+
+    <h2>1. Overview</h2>
+    <p>VatSight is a live radar application for the <a href="https://www.vatsim.net" target="_blank" class="link-text">VATSIM</a> virtual air traffic network. It displays publicly available flight data on an interactive map. This privacy policy explains what information the app uses, where it comes from, and how it is handled.</p>
+    <p>VatSight is developed and maintained by Marcel Marzec. By using VatSight you agree to this policy.</p>
+
+    <h2>2. Information VatSight Does NOT Collect</h2>
+    <p>VatSight does not collect, transmit, or share any of the following:</p>
+    <ul>
+      <li>Your name, email address, or any contact information</li>
+      <li>Your device's location (GPS or network-based)</li>
+      <li>Device identifiers (IDFA, IDFV, or similar)</li>
+      <li>Usage analytics or behavioural telemetry</li>
+      <li>Crash reports (no third-party crash reporting SDK is integrated)</li>
+      <li>Advertising identifiers</li>
+      <li>Health, financial, biometric, or sensitive personal data</li>
+      <li>Contacts, photos, microphone, or camera data</li>
+    </ul>
+
+    <h2>3. Information Stored On-Device Only</h2>
+    <p>VatSight stores a small amount of data locally on your device using SwiftData (Apple's encrypted, on-device database). This data never leaves your device and is never transmitted to any server.</p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Purpose</th>
+          <th>Sent off-device?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Your VATSIM CID (optional)</td>
+          <td>Highlights your own aircraft on the map in gold</td>
+          <td><span class="pill-no">Never</span></td>
+        </tr>
+        <tr>
+          <td>Tracked CIDs (optional)</td>
+          <td>Highlights aircraft belonging to friends on the map</td>
+          <td><span class="pill-no">Never</span></td>
+        </tr>
+        <tr>
+          <td>Last map position &amp; zoom level</td>
+          <td>Restores your map view when you reopen the app</td>
+          <td><span class="pill-no">Never</span></td>
+        </tr>
+        <tr>
+          <td>App preferences (theme, refresh rate, icon sizes, layer toggles)</td>
+          <td>Persists your display settings between sessions</td>
+          <td><span class="pill-no">Never</span></td>
+        </tr>
+        <tr>
+          <td>VATGlasses sector data cache</td>
+          <td>Avoids re-downloading unchanged airspace data on each launch</td>
+          <td><span class="pill-no">Never</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Your VATSIM CID is a publicly visible network identifier — it is not a password or secret credential. VatSight treats it as a reference to look up publicly available data, not as personal information.</p>
+
+    <h2>4. Network Requests</h2>
+    <p>VatSight makes outbound network requests solely to fetch publicly available data needed to power the radar. No user data is included in any of these requests.</p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Purpose</th>
+          <th>User data sent?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>data.vatsim.net</code></td>
+          <td>Live VATSIM network data (pilots, controllers, ATIS). Public API with no authentication.</td>
+          <td><span class="pill-no">None</span></td>
+        </tr>
+        <tr>
+          <td><code>api.github.com</code></td>
+          <td>VATGlasses airspace sector data downloaded from a public GitHub repository.</td>
+          <td><span class="pill-no">None</span></td>
+        </tr>
+        <tr>
+          <td><code>*.mapbox.com</code> / <code>*.mapbox.cn</code></td>
+          <td>Map tile rendering via the Mapbox Maps iOS SDK. Mapbox may process standard network metadata (IP address) as described in the <a href="https://www.mapbox.com/legal/privacy" target="_blank" class="link-text">Mapbox Privacy Policy</a>.</td>
+          <td><span class="pill-no">No user data from VatSight</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Third-Party SDKs</h2>
+    <p>VatSight uses the following third-party libraries:</p>
+
+    <h3>Mapbox Maps iOS SDK</h3>
+    <p>Used to render the interactive map. Mapbox may collect anonymised usage telemetry (such as map events and SDK diagnostics) as described in their privacy policy. VatSight does not pass any user identifiers to Mapbox. You can review Mapbox's data practices at <a href="https://www.mapbox.com/legal/privacy" target="_blank" class="link-text">mapbox.com/legal/privacy</a>.</p>
+
+    <h3>ZIPFoundation</h3>
+    <p>An open-source Swift library used to decompress VATGlasses sector data downloaded from GitHub. It operates entirely on-device and makes no network requests.</p>
+
+    <h3>GEOSwift</h3>
+    <p>An open-source Swift library used for geographic polygon operations (merging airspace sectors). It operates entirely on-device and makes no network requests.</p>
+
+    <h2>6. Location Services</h2>
+    <p>VatSight does <strong>not</strong> request access to your device's location. The app does not use <code>CLLocationManager</code> or any GPS / network location API. The map is centred based on your previously saved map position, which is stored only on-device.</p>
+
+    <h2>7. Children's Privacy</h2>
+    <p>VatSight is not directed at children under 13. The app collects no personal information from any user, including children.</p>
+
+    <h2>8. Data Retention and Deletion</h2>
+    <p>All on-device data (preferences, CIDs, cache) is stored only on your device. You can delete all stored data at any time by uninstalling VatSight. The app contains no server-side user accounts, so there is no data to delete from any server.</p>
+    <p>The VATGlasses sector data cache can also be cleared from within the app via Settings → VATGlasses Sector Data → Redownload.</p>
+
+    <h2>9. iCloud Backup</h2>
+    <p>Your VatSight preferences (stored via SwiftData) may be included in iCloud backups if you have iCloud Backup enabled on your device. This is handled entirely by iOS and subject to Apple's privacy policy. The VATGlasses cache file is stored in the Documents directory and may be included in iCloud backups; it contains only public airspace data (no personal information).</p>
+
+    <h2>10. Security</h2>
+    <p>VatSight's on-device data is stored by SwiftData, which uses the standard iOS data protection mechanisms. All network requests use HTTPS (TLS). VatSight does not store or transmit any authentication credentials.</p>
+
+    <h2>11. Changes to This Policy</h2>
+    <p>If VatSight's data practices change in a future update, this policy will be updated and the "Last updated" date at the top will be revised. Continued use of the app after a policy change constitutes acceptance of the updated policy.</p>
+
+    <h2>12. Contact</h2>
+    <p>If you have any questions about this privacy policy or VatSight's data practices, please contact:</p>
+    <p><strong>Marcel Marzec</strong><br>
+    <a href="mailto:contact@marcelmarzec.com" class="link-text">contact@marcelmarzec.com</a></p>
+
+    <footer>
+      <p>VatSight is an independent application and is not affiliated with, endorsed by, or sponsored by VATSIM, Mapbox, or VATGlasses.</p>
+      <p>© 2026 Marcel Marzec. All rights reserved.</p>
+    </footer>
+
+  </div>
+
+</body>
+</html>
