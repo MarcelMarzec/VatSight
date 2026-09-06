@@ -27,8 +27,6 @@ struct RadarView: View {
     @State private var sectorHeaderHeight: CGFloat = 160
     
     var body: some View {
-        let backgroundColor = Color.Resolved(red: 0.2, green: 0.2, blue: 0.2)
-        
         ZStack {
             RadarViewRepresentable(viewModel: viewModel,
                                    prefsManager: prefsManager)
@@ -148,10 +146,10 @@ struct RadarView: View {
 
                 if let pilot = viewModel.pilots.first(where: { $0.cid == cid }) {
                     viewModel.selectPilotAndFly(cid: cid, coordinate: pilot.coordinate)
-                } else if let controller = viewModel.controllers.first(where: { $0.cid == cid }),
+                } else if viewModel.controllers.contains(where: { $0.cid == cid }),
                           let airport = viewModel.airports.first(where: { $0.activeController?.cid == cid }) {
                     viewModel.selectAirportAndFly(icao: airport.icao)
-                } else if let controller = viewModel.controllers.first(where: { $0.cid == cid }),
+                } else if viewModel.controllers.contains(where: { $0.cid == cid }),
                           let sector = viewModel.sectors.first(where: { $0.activeController?.cid == cid }) {
                     viewModel.selectSector(id: sector.id)
                 }
@@ -242,6 +240,41 @@ struct RadarView: View {
                                         Label("All airports", systemImage: "airplane.ticket")
                                     }
                                     .padding()
+                                    Divider()
+                                    HStack {
+                                        Spacer()
+                                        Button {
+                                            viewModel.togglePilots()
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        } label: {
+                                            Image(systemName: "airplane")
+                                                .foregroundStyle(viewModel.showPilotsLayer ? Color.primary : Color.red)
+                                                .animation(.default, value: viewModel.showPilotsLayer)
+                                        }
+                                        Spacer()
+                                        Divider()
+                                        Spacer()
+                                        Button {
+                                            viewModel.toggleShowSectors()
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        } label: {
+                                            Image(systemName: "square.fill.on.circle.fill")
+                                                .foregroundStyle(viewModel.showSectorsLayer ? Color.primary : Color.red)
+                                                .animation(.default, value: viewModel.showSectorsLayer)
+                                        }
+                                        Spacer()
+                                        Divider()
+                                        Spacer()
+                                        Button {
+                                            viewModel.toggleAirportLayer()
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        } label: {
+                                            Image(systemName: "headphones")
+                                                .foregroundStyle(viewModel.showAirportLayer ? Color.primary : Color.red)
+                                                .animation(.default, value: viewModel.showAirportLayer)
+                                        }
+                                        Spacer()
+                                    }.padding()
                                 }
                                 .presentationCompactAdaptation(.popover)
                             }

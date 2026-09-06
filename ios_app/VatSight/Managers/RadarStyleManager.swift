@@ -26,13 +26,13 @@ final class RadarStyleManager {
 
     // MARK: - Configure
 
-    func configurePilots(on mapView: MapView, isDark: Bool = true) throws {
+    func configurePilots(on mapView: MapView, isDark: Bool = true, planeIconMultiplier: Double = 1.0) throws {
         isDarkTheme = isDark
         try addPilotImage(to: mapView)
         try addPilotSource(to: mapView)
-        try addPilotIconLayer(to: mapView)
+        try addPilotIconLayer(to: mapView, planeIconMultiplier: planeIconMultiplier)
         try addPilotLabelLayer(to: mapView)
-        try addPilotGroundIconLayer(to: mapView)
+        try addPilotGroundIconLayer(to: mapView, planeIconMultiplier: planeIconMultiplier)
         try addPilotGroundLabelLayer(to: mapView)
     }
 
@@ -54,6 +54,16 @@ final class RadarStyleManager {
             try? mapView.mapboxMap.updateLayer(withId: layerId, type: SymbolLayer.self) { layer in
                 layer.textColor = .expression(labelExp)
                 layer.textHaloColor = .constant(haloColor)
+            }
+        }
+    }
+
+    /// Updates the pilot icon size on all existing pilot icon layers without a full reload.
+    func applyPlaneIconSize(on mapView: MapView, multiplier: Double) {
+        let scale = 0.65 * multiplier
+        for layerId in [Self.pilotIconLayerId, Self.pilotGroundIconLayerId] {
+            try? mapView.mapboxMap.updateLayer(withId: layerId, type: SymbolLayer.self) { layer in
+                layer.iconSize = .constant(scale)
             }
         }
     }
@@ -121,7 +131,8 @@ final class RadarStyleManager {
     // MARK: - Icon Layer
 
     private func addPilotIconLayer(
-        to mapView: MapView
+        to mapView: MapView,
+        planeIconMultiplier: Double = 1.0
     ) throws {
 
         var layer = SymbolLayer(
@@ -146,7 +157,7 @@ final class RadarStyleManager {
 
         layer.iconColor = .expression(pilotIconColorExpression())
 
-        layer.iconSize = .constant(0.65)
+        layer.iconSize = .constant(0.65 * planeIconMultiplier)
 
         layer.iconRotate = .expression(
             Exp(.get) { "heading" }
@@ -214,7 +225,7 @@ final class RadarStyleManager {
 
     // MARK: - On-Ground Icon Layer (shown only when zoomed in)
 
-    private func addPilotGroundIconLayer(to mapView: MapView) throws {
+    private func addPilotGroundIconLayer(to mapView: MapView, planeIconMultiplier: Double = 1.0) throws {
         var layer = SymbolLayer(
             id: Self.pilotGroundIconLayerId,
             source: Self.pilotSourceId
@@ -236,7 +247,7 @@ final class RadarStyleManager {
 
         layer.iconColor = .expression(pilotIconColorExpression())
 
-        layer.iconSize = .constant(0.65)
+        layer.iconSize = .constant(0.65 * planeIconMultiplier)
 
         layer.iconRotate = .expression(
             Exp(.get) { "heading" }

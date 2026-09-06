@@ -269,11 +269,26 @@ private struct OnboardingLegendPageView: View {
                         }
                     }
 
+                    LegendSection(title: "Layer Toggles") {
+                        LegendRow(label: "Pilots", description: "Show or hide all aircraft on the map — green when on") {
+                            Image(systemName: "airplane")
+                                .foregroundStyle(Color.green)
+                        }
+                        LegendRow(label: "Sectors", description: "Show or hide active VATGlasses airspace sectors — turning this off reveals inactive sector outlines") {
+                            Image(systemName: "square.fill.on.circle.fill")
+                                .foregroundStyle(Color.green)
+                        }
+                        LegendRow(label: "Airports", description: "Show or hide airport icons and labels on the map") {
+                            Image(systemName: "headphones")
+                                .foregroundStyle(Color.green)
+                        }
+                    }
+
                     LegendSection(title: "Toolbar Buttons") {
                         LegendRow(label: "Search", description: "Find any pilot, airport or controller") {
                             Image(systemName: "magnifyingglass")
                         }
-                        LegendRow(label: "Layer menu", description: "Toggle sectors, airports and sector merging") {
+                        LegendRow(label: "Layer menu", description: "Toggle sectors, airports, sector merging and layer visibility") {
                             Image(systemName: "ellipsis").rotationEffect(.degrees(90))
                         }
                         LegendRow(label: "Altitude filter", description: "Show only aircraft below a chosen altitude") {

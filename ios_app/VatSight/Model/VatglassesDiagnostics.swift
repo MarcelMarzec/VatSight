@@ -38,6 +38,18 @@ struct InvalidAirport: Identifiable {
     }
 }
 
+/// A dynamically generated sector: a TWR or APP/DEP controller was online but had no real
+/// VATGlasses sector. A circle approximation was drawn around the airport instead.
+struct SyntheticSector: Identifiable {
+    let id = UUID()
+    let icao: String          // Airport ICAO (e.g. "LSZH")
+    let callsign: String      // Controller callsign (e.g. "LSZH_TWR")
+    let frequency: String
+    let radiusNm: Double      // 5 for TWR, 20 for APP/DEP
+    let cid: Int
+    let name: String
+}
+
 /// Snapshot of all developer diagnostics produced during the last data load / active-sector pass.
 struct VatglassesDiagnostics {
     /// Errors from parsing individual files or directories.
@@ -46,6 +58,8 @@ struct VatglassesDiagnostics {
     var unmatchedControllers: [UnmatchedController] = []
     /// Airports whose coordinates were outside valid WGS-84 ranges after parsing.
     var invalidAirports: [InvalidAirport] = []
+    /// Sectors that were synthetically generated because no real sector data existed.
+    var syntheticSectors: [SyntheticSector] = []
     /// Timestamp of when this snapshot was last updated.
     var lastUpdated: Date = .distantPast
 }

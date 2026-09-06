@@ -21,48 +21,32 @@ final class RadarViewModel: ObservableObject {
     @Published var isShowingPilotSheet = false
     @Published var selectedAirportICAO: String?
     @Published var isShowingAirportSheet = false
-    /// Cached result of the last controller lookup for the selected airport.
-    /// Updated when an airport is selected or when live data refreshes.
     @Published var controllersAtSelectedAirport: [Controllers] = []
     @Published var selectedSectorId: String?
     @Published var isShowingSectorSheet = false
     @Published var showInactiveSectors = false
     @Published var showAirports = false
+    @Published var showPilotsLayer = true
+    @Published var showSectorsLayer = true
+    @Published var showAirportLayer = true
     @Published var isLoadingData = true
-    /// Set to a coordinate to request the map camera to fly there; cleared by the Representable after consuming.
     @Published var pendingCameraFlyTo: CLLocationCoordinate2D? = nil
-    /// Currently selected altitude filter in feet (0 = GND). Sectors whose [min*100, max*100] range
-    /// does not contain this value are hidden. Only active when `altitudeFilterEnabled` is true.
     @Published var selectedAltitudeFt: Double = 0
-    /// When false, altitude filtering is bypassed and all sectors within the inactive-sectors toggle pass through.
     @Published var altitudeFilterEnabled = false
-    /// When true, sectors owned by the same controller are merged into one polygon via Turf union.
-    /// Altitude filtering is automatically disabled while this is active.
     @Published var mergeSectors = false
-    /// Remembers the merge-sectors state captured just before altitude filtering was turned on,
-    /// so it can be restored when altitude filtering is turned back off.
     private var mergeSectorsStateBeforeAltitudeFilter: Bool? = nil
 
     // MARK: - Merge cache
-    /// The ownership signature for which `cachedMergedSectors` was last computed.
     private var mergedSectorsOwnershipSignature: Int = -1
-    /// Pre-computed merged sectors, invalidated whenever the ownership signature changes.
     private var cachedMergedSectors: [VatglassesSector] = []
 
-    // MARK: - Error / staleness state
-    /// Set to true when the most recent VATSIM fetch failed.
     @Published var lastFetchFailed = false
-    /// Timestamp of the last successful VATSIM data fetch.
     @Published var lastSuccessfulFetch: Date? = nil
 
     // MARK: - Debug overrides
-    /// When non-empty, these controllers are injected on top of the live data for testing.
     @Published var debugControllers: [Controllers] = []
-
-    /// Live diagnostics snapshot — updated after every sector-matching pass and after each data load.
     @Published var vatglassesDiagnostics = VatglassesDiagnostics()
 
-    /// ICAOs from active pilot flight plans, used to determine airport visibility.
     var activeFlightPlanICAOs: Set<String> = []
     
     private let vatsimService = VatsimService()
@@ -70,7 +54,6 @@ final class RadarViewModel: ObservableObject {
     private var timer: Timer?
     private var prefsManager: PreferencesManager?
     
-    /// Tracks whether each of the two initial fetches has completed (success or failure).
     private var vatsimFetchDone = false
     private var sectorFetchDone = false
     
@@ -82,6 +65,9 @@ final class RadarViewModel: ObservableObject {
         self.prefsManager = manager
         self.showInactiveSectors = manager.userPrefs.showInactiveSectors
         self.showAirports = manager.userPrefs.showAirports
+        self.showPilotsLayer = manager.userPrefs.showPilotsLayer
+        self.showSectorsLayer = manager.userPrefs.showSectorsLayer
+        self.showAirportLayer = manager.userPrefs.showAirportLayer
         self.altitudeFilterEnabled = manager.userPrefs.altitudeFilterEnabled
         self.mergeSectors = manager.userPrefs.mergeSectors
         // Only honour a custom slug when developer mode is actually on.
@@ -92,7 +78,6 @@ final class RadarViewModel: ObservableObject {
     func startAutoRefresh() {
         guard timer == nil else { return }
         
-        // Only show the loading indicator on first launch (no data yet)
         let hasData = !pilots.isEmpty || !sectors.isEmpty
         if !hasData {
             isLoadingData = true
@@ -153,7 +138,6 @@ final class RadarViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self?.sectors = data.sectors
                     self?.airports = data.airports
-                    // Capture any parse errors from this load immediately.
                     if let service = self?.vatglassesService {
                         self?.vatglassesDiagnostics = VatglassesDiagnostics(
                             parseErrors: service.parseErrors,
@@ -168,7 +152,6 @@ final class RadarViewModel: ObservableObject {
                     self?.dismissLoadingIfReady()
                 }
             case .failure:
-                // Fall back to cached data if available
                 DispatchQueue.main.async {
                     let cachedSectors = self?.vatglassesService.getCachedSectors() ?? []
                     let cachedAirports = self?.vatglassesService.getCachedAirports() ?? []
@@ -188,13 +171,9 @@ final class RadarViewModel: ObservableObject {
         vatglassesService.clearCache()
     }
 
-    /// The repo slug currently active in the Vatglasses service ("" = default).
     var vatglassesActiveRepoSlug: String { vatglassesService.customRepoSlug }
-
-    /// True when a custom (non-default) Vatglasses repo is in use.
     var isUsingCustomVatglassesRepo: Bool { !vatglassesService.customRepoSlug.isEmpty }
 
-    /// Applies a new custom Vatglasses repo slug, clears the cache, and reloads sector data.
     func applyVatglassesCustomRepo(_ slug: String) {
         vatglassesService.customRepoSlug = slug
         clearVatglassesCache()
@@ -202,43 +181,31 @@ final class RadarViewModel: ObservableObject {
         loadSectorData()
     }
 
-    /// All known vatglasses positions keyed by their scoped ID (e.g. "epww/AH"), sorted by key.
-    /// The key is needed to build a matchable VATSIM callsign and to distinguish positions
-    /// that share the same human-readable name (e.g. two "EPWW Radar" entries).
     var allVatglassesPositions: [(key: String, position: VatglassesPosition)] {
         vatglassesService.getCachedPositions()
             .map { (key: $0.key, position: $0.value) }
             .sorted { $0.key < $1.key }
     }
 
-    /// Live controllers merged with any active debug overrides — ready for map rendering.
     var effectiveControllers: [Controllers] {
         mergedWithDebugControllers(controllers)
     }
 
-    /// Resolves a human-readable position label for a VATSIM callsign using the vatglasses
-    /// callsigns definitions (e.g. "EGLL_TWR" → "Tower", "EPWA_P_DEL" → "Planner").
-    /// Returns nil when no matching definition exists.
     func resolvePositionLabel(for callsign: String) -> String? {
         vatglassesService.resolvePositionLabel(for: callsign)
     }
     
-    /// Dismisses the loading screen once both initial fetches have completed,
-    /// regardless of whether they succeeded or failed.
     private func dismissLoadingIfReady() {
         if vatsimFetchDone && sectorFetchDone {
             isLoadingData = false
         }
     }
 
-    /// Returns true if data is more than 2× the refresh interval old (i.e. at least one refresh was missed).
     var isDataStale: Bool {
         guard let last = lastSuccessfulFetch else { return false }
         return Date().timeIntervalSince(last) > (refreshInterval * 2)
     }
 
-    /// When altitude filtering is on and a pilot is selected, keeps `selectedAltitudeFt`
-    /// in sync with that pilot's latest reported altitude after each data refresh.
     private func syncAltitudeFilterToSelectedPilot() {
         guard altitudeFilterEnabled, let cid = selectedCID,
               let pilot = pilots.first(where: { $0.cid == cid }) else { return }
@@ -260,17 +227,17 @@ final class RadarViewModel: ObservableObject {
         updateControllersAtSelectedAirport()
 
         if !sectors.isEmpty {
-            sectors = vatglassesService.getActiveSectors(controllers: mergedControllers)
+            sectors = vatglassesService.getActiveSectors(controllers: mergedControllers, airports: airports)
             vatglassesDiagnostics = VatglassesDiagnostics(
                 parseErrors: vatglassesService.parseErrors,
                 unmatchedControllers: vatglassesService.unmatchedControllers,
                 invalidAirports: Self.detectInvalidAirports(airports),
+                syntheticSectors: vatglassesService.syntheticSectors,
                 lastUpdated: Date()
             )
         }
     }
 
-    /// Returns airports whose lat/lon fall outside valid WGS-84 ranges.
     private static func detectInvalidAirports(_ airports: [VatglassesAirport]) -> [InvalidAirport] {
         airports.compactMap { a in
             guard abs(a.latitude) > 90 || abs(a.longitude) > 180 else { return nil }
@@ -278,15 +245,12 @@ final class RadarViewModel: ObservableObject {
         }
     }
 
-    /// Returns live controllers merged with any active debug overrides (debug entries take precedence by CID).
     private func mergedWithDebugControllers(_ live: [Controllers]) -> [Controllers] {
         guard !debugControllers.isEmpty else { return live }
         let debugCIDs = Set(debugControllers.map { $0.cid })
         return live.filter { !debugCIDs.contains($0.cid) } + debugControllers
     }
 
-    /// Adds or removes a debug controller by its unique position key.
-    /// The key is embedded in the controller name so we can match it back on toggle-off.
     func toggleDebugController(_ controller: Controllers) {
         if let idx = debugControllers.firstIndex(where: { $0.name == controller.name }) {
             debugControllers.remove(at: idx)
@@ -297,7 +261,6 @@ final class RadarViewModel: ObservableObject {
         objectWillChange.send()
     }
 
-    /// Returns true if a debug controller with the given position key is currently active.
     func isDebugControllerActive(positionKey: String) -> Bool {
         debugControllers.contains { $0.name == positionKey }
     }
@@ -310,8 +273,6 @@ final class RadarViewModel: ObservableObject {
         airports.first { $0.icao == selectedAirportICAO }
     }
     
-    /// Recomputes `controllersAtSelectedAirport` for the given airport.
-    /// Call this whenever the selected airport or the live controller data changes.
     private func updateControllersAtSelectedAirport() {
         guard let icao = selectedAirportICAO else {
             controllersAtSelectedAirport = []
@@ -319,7 +280,6 @@ final class RadarViewModel: ObservableObject {
         }
 
         let mergedControllers = mergedWithDebugControllers(controllers)
-        // Direct controllers: try both the full ICAO and the shortened 3-letter variant
         let prefixes = vatglassesService.callsignPrefixes(for: icao)
         let directControllers = mergedControllers.filter { ctrl in
             let upper = ctrl.callsign.uppercased()
@@ -327,7 +287,6 @@ final class RadarViewModel: ObservableObject {
             return prefixes.contains { upper.hasPrefix($0 + "_") }
         }
 
-        // Topdown controllers covering the airport via the ownership chain
         var topdownControllers: [Controllers] = []
         if let airport = selectedAirport {
             let allTopdown = vatglassesService.getTopdownControllers(for: airport, controllers: mergedControllers)
@@ -340,21 +299,14 @@ final class RadarViewModel: ObservableObject {
     }
     
     var selectedSector: VatglassesSector? {
-        // In normal mode, look up by sector ID in the original list.
-        if let found = sectors.first(where: { $0.id == selectedSectorId }) {
-            return found
-        }
-        // In merge mode the selected ID is "merged-{cid}". Check the merged list too.
-        return mergedSectorsToDisplay.first { $0.id == selectedSectorId }
+        sectors.first(where: { $0.id == selectedSectorId })
+            ?? mergedSectorsToDisplay.first { $0.id == selectedSectorId }
     }
-    
-    /// The CID of the controller owning the selected sector.
-    /// Used to highlight all sectors that the same controller is responsible for.
+
     var selectedSectorControllerCID: Int? {
         selectedSector?.activeController?.cid
     }
     
-    /// Sort order for controller positions (higher value = displayed first): CTR > APP > TWR > ATIS > GND > DEL
     private func positionOrder(_ callsign: String) -> Int {
         let upper = callsign.uppercased()
         if upper.hasSuffix("_DEL") { return 0 }
@@ -370,38 +322,25 @@ final class RadarViewModel: ObservableObject {
         sectors.filter { $0.isActive }
     }
     
-    /// Selects a pilot from a map tap (no camera fly-to).
-    /// If tracking is already active, transfers it to the new pilot.
     func selectPilot(cid: Int) {
         openPilotSheet(cid: cid, flyTo: nil, enableTracking: false)
     }
 
-    /// Selects a pilot, pans the camera, and opens the pilot sheet.
     func selectPilotAndFly(cid: Int, coordinate: CLLocationCoordinate2D, enableTracking: Bool = false) {
         openPilotSheet(cid: cid, flyTo: coordinate, enableTracking: enableTracking)
     }
 
-    /// Shared implementation for all pilot selection paths.
-    ///
-    /// - If another sheet is open it is dismissed first; the pilot sheet stays open when
-    ///   switching between pilots so the content updates without a flicker.
-    /// - Tracking transfers automatically when it was already active, or when explicitly requested.
-    /// - The altitude filter snaps to the selected aircraft's current altitude.
     private func openPilotSheet(cid: Int, flyTo coordinate: CLLocationCoordinate2D?, enableTracking: Bool) {
-        // Dismiss non-pilot sheets.
         isShowingAirportSheet = false
         selectedAirportICAO = nil
         controllersAtSelectedAirport = []
         isShowingSectorSheet = false
         selectedSectorId = nil
 
-        // Snap altitude filter to the selected aircraft's current altitude.
         if altitudeFilterEnabled, let pilot = pilots.first(where: { $0.cid == cid }) {
             selectedAltitudeFt = Double(pilot.altitude)
         }
 
-        // Update selection — the sheet observes selectedPilot live, so it updates in-place
-        // without needing a dismiss/re-present cycle.
         selectedCID = cid
         isShowingPilotSheet = true
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -411,7 +350,6 @@ final class RadarViewModel: ObservableObject {
         }
     }
 
-    /// Dismisses all sheets, selects the airport, pans the camera, and opens the airport sheet.
     func selectAirportAndFly(icao: String) {
         isShowingPilotSheet = false
         selectedCID = nil
@@ -429,7 +367,6 @@ final class RadarViewModel: ObservableObject {
         }
     }
 
-    /// Returns the human-readable name for an airport ICAO, or nil if unknown.
     func airportName(for icao: String) -> String? {
         airports.first { $0.icao.uppercased() == icao.uppercased() }?.callsign
     }
@@ -439,8 +376,6 @@ final class RadarViewModel: ObservableObject {
         selectedCID = nil
     }
 
-    /// Called by the sheet's onDismiss handler (user swipe-dismiss).
-    /// Clears selection.
     func onPilotSheetDismissed() {
         selectedCID = nil
     }
@@ -486,6 +421,25 @@ final class RadarViewModel: ObservableObject {
             isShowingSectorSheet = true
         }
     }
+
+    /// Selects a sector by ID, flies the camera to the given coordinate, and opens the sector sheet.
+    func selectSectorAndFly(id: String, coordinate: CLLocationCoordinate2D) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        isShowingPilotSheet = false
+        selectedCID = nil
+        isShowingAirportSheet = false
+        selectedAirportICAO = nil
+        pendingCameraFlyTo = coordinate
+        if isShowingSectorSheet {
+            // Sheet already open — update selection in place.
+            selectedSectorId = id
+        } else {
+            selectedSectorId = id
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+                self?.isShowingSectorSheet = true
+            }
+        }
+    }
     
     func dismissSectorSheet() {
         isShowingSectorSheet = false
@@ -495,24 +449,45 @@ final class RadarViewModel: ObservableObject {
     func toggleSectors() {
         showInactiveSectors.toggle()
         prefsManager?.updateShowInactiveSectors(showInactiveSectors)
+        if showInactiveSectors && !showSectorsLayer {
+            showSectorsLayer = true
+            prefsManager?.updateShowSectorsLayer(true)
+        }
     }
 
     func toggleAirports() {
         showAirports.toggle()
         prefsManager?.updateShowAirports(showAirports)
+        if showAirports && !showAirportLayer {
+            showAirportLayer = true
+            prefsManager?.updateShowAirportLayer(true)
+        }
+    }
+
+    func togglePilots() {
+        showPilotsLayer.toggle()
+        prefsManager?.updateShowPilotsLayer(showPilotsLayer)
+    }
+
+    func toggleAirportLayer() {
+        showAirportLayer.toggle()
+        prefsManager?.updateShowAirportLayer(showAirportLayer)
+    }
+
+    func toggleShowSectors() {
+        showSectorsLayer.toggle()
+        prefsManager?.updateShowSectorsLayer(showSectorsLayer)
     }
 
     func toggleAltitudeFilter() {
         let turningOn = !altitudeFilterEnabled
         if turningOn {
-            // Remember the current merge-sectors state before potentially disabling it.
             mergeSectorsStateBeforeAltitudeFilter = mergeSectors
             if mergeSectors {
                 mergeSectors = false
                 prefsManager?.updateMergeSectors(false)
             }
         } else {
-            // Restore the remembered merge-sectors state when turning altitude filtering off.
             if let remembered = mergeSectorsStateBeforeAltitudeFilter {
                 mergeSectors = remembered
                 prefsManager?.updateMergeSectors(remembered)
@@ -525,7 +500,6 @@ final class RadarViewModel: ObservableObject {
 
     func toggleMergeSectors() {
         let turningOn = !mergeSectors
-        // If turning merge sectors on while altitude filter is active, turn altitude filter off.
         if turningOn && altitudeFilterEnabled {
             altitudeFilterEnabled = false
             prefsManager?.updateAltitudeFilterEnabled(false)
@@ -537,10 +511,20 @@ final class RadarViewModel: ObservableObject {
     /// The upper bound for the altitude slider, capped at FL600 (60 000 ft).
     var maxSectorAltitudeFt: Double { 60_000 }
 
+    /// Pilots to render on the map — empty when the pilots layer is toggled off.
+    var pilotsToDisplay: [Pilot] {
+        showPilotsLayer ? pilots : []
+    }
+
     /// Sectors filtered by the inactive-sectors toggle and, when `altitudeFilterEnabled`, the selected altitude.
     /// A sector is included when `selectedAltitudeFt` falls within its [min*100, max*100] range.
     /// Sectors with no altitude properties are always shown.
+    /// When `showSectors` is off, only inactive sector outlines are returned (so boundaries remain visible).
     var sectorsToDisplay: [VatglassesSector] {
+        if !showSectorsLayer {
+            // Active sectors hidden — only show inactive outlines if that toggle is also on.
+            return showInactiveSectors ? sectors.filter { !$0.isActive } : []
+        }
         if mergeSectors {
             // In merge mode, merged sectors are always active-only (the union only runs on
             // active sectors). Inactive sectors are shown unmerged alongside if the toggle
@@ -581,9 +565,11 @@ final class RadarViewModel: ObservableObject {
         return cachedMergedSectors
     }
 
-    /// Airports filtered by the show-all-airports toggle.
-    /// When off, only airports with an active controller or appearing in a flight plan are shown.
+    /// Airports filtered by the show-all-airports and show-airport-layer toggles.
+    /// When `showAirportLayer` is off, no airports are displayed at all.
+    /// When `showAirports` is off, only airports with an active controller or in a flight plan are shown.
     var airportsToDisplay: [VatglassesAirport] {
+        guard showAirportLayer else { return [] }
         if showAirports {
             return airports
         }

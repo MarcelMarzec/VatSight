@@ -91,6 +91,9 @@ enum SectorGeoJSON {
 
     /// Finds the best label coordinate for a sector, nudging the centroid away from airports.
     /// Results are cached by sector ID to avoid recomputing on every render.
+    ///
+    /// Synthetic APP/DEP circle sectors get a fixed NW offset so the label sits at the
+    /// top-left of the ring rather than over the airport symbol at the centre.
     static func labelCoordinate(
         for sector: VatglassesSector,
         airports: [VatglassesAirport]
@@ -98,6 +101,26 @@ enum SectorGeoJSON {
         if let cached = labelCoordinateCache[sector.id] { return cached }
 
         guard let center = centroid(of: sector) else { return nil }
+
+        // Synthetic APP/DEP circles: offset label to NW (~315°) at 65% of the 20 nm radius
+        // so it sits inside the ring but well away from the airport at the centre.
+        if sector.isSynthetic,
+           let callsign = sector.activeController?.callsign.uppercased(),
+           callsign.hasSuffix("_APP") || callsign.hasSuffix("_DEP") {
+            let offsetM: Double = 20.0 * 1852.0 * 0.65   // 65% × 20 nm in metres
+            let earthR: Double = 6_371_000
+            let bearing: Double = -45 * .pi / 180         // 315° = NW
+            let lat1 = center.latitude  * .pi / 180
+            let lon1 = center.longitude * .pi / 180
+            let d    = offsetM / earthR
+            let lat2 = asin(sin(lat1) * cos(d) + cos(lat1) * sin(d) * cos(bearing))
+            let lon2 = lon1 + atan2(sin(bearing) * sin(d) * cos(lat1),
+                                    cos(d) - sin(lat1) * sin(lat2))
+            let coord = CLLocationCoordinate2D(latitude:  lat2 * 180 / .pi,
+                                               longitude: lon2 * 180 / .pi)
+            labelCoordinateCache[sector.id] = coord
+            return coord
+        }
         guard !airports.isEmpty else {
             labelCoordinateCache[sector.id] = center
             return center
@@ -167,7 +190,9 @@ enum SectorGeoJSON {
             if let controller = controller {
                 let suppressedSuffixes = ["_TWR", "_GND", "_DEL", "_ATIS"]
                 let isSuppressed = suppressedSuffixes.contains(where: { controller.callsign.uppercased().hasSuffix($0) })
-                shouldShowLabel = !isSuppressed && !controllersWithLabels.contains(controller.cid)
+                // Synthetic APP/DEP circles get a label; synthetic TWR circles do not (too small).
+                let syntheticOverride = sector.isSynthetic && !isSuppressed
+                shouldShowLabel = (syntheticOverride || !isSuppressed) && !controllersWithLabels.contains(controller.cid)
                 if shouldShowLabel {
                     controllersWithLabels.insert(controller.cid)
                 }
@@ -244,8 +269,10 @@ enum SectorGeoJSON {
 
         let features: [Feature] = sectors.compactMap { sector in
             guard sector.isActive, let controller = sector.activeController else { return nil }
+            // Synthetic APP/DEP circles always get a label. Synthetic TWR circles do not (too small).
             let suppressedSuffixes = ["_TWR", "_GND", "_DEL", "_ATIS"]
-            guard !suppressedSuffixes.contains(where: { controller.callsign.uppercased().hasSuffix($0) }) else { return nil }
+            let isSuppressed = suppressedSuffixes.contains(where: { controller.callsign.uppercased().hasSuffix($0) })
+            guard !isSuppressed || (sector.isSynthetic && !controller.callsign.uppercased().hasSuffix("_TWR")) else { return nil }
             guard !controllersWithLabels.contains(controller.cid) else { return nil }
             controllersWithLabels.insert(controller.cid)
 
@@ -408,7 +435,7 @@ extension SectorGeometry {
             makeLinearRing(from: $0)
         }
 
-        return try? GEOSwift.Polygon(exterior: exterior, holes: holes)
+        return GEOSwift.Polygon(exterior: exterior, holes: holes)
     }
 
     /// Converts a raw coordinate array [[lon, lat], ...] into a GEOSwift LinearRing.
@@ -481,5 +508,54 @@ extension SectorGeometry {
             }
         }
         return SectorGeometry(type: "MultiPolygon", coordinates: allPolygons)
+    }
+
+    // MARK: - Synthetic circle geometry
+
+    /// Nautical miles → metres conversion factor.
+    private static let metresPerNm: Double = 1852.0
+
+    /// Generates a GeoJSON Polygon ring approximating a circle on the Earth's surface.
+    ///
+    /// Uses the haversine-inverse formula for accurate placement at any latitude.
+    /// 64 vertices give a smooth visual result while remaining lightweight for Mapbox.
+    ///
+    /// - Parameters:
+    ///   - centre: WGS-84 centre coordinate.
+    ///   - radiusNm: Radius in nautical miles.
+    ///   - steps: Number of polygon vertices (default 64).
+    /// - Returns: A `SectorGeometry` with type "Polygon" forming the circle.
+    static func circleGeometry(
+        centre: CLLocationCoordinate2D,
+        radiusNm: Double,
+        steps: Int = 64
+    ) -> SectorGeometry {
+        let radiusM = radiusNm * metresPerNm
+        let latRad = centre.latitude * .pi / 180
+        let lonRad = centre.longitude * .pi / 180
+        // Earth radius in metres
+        let earthRadius: Double = 6_371_000
+
+        var ring: [[Double]] = []
+        ring.reserveCapacity(steps + 1)
+
+        for i in 0...steps {
+            let bearing = (Double(i % steps) / Double(steps)) * 2 * .pi
+            let angularDist = radiusM / earthRadius
+
+            let lat2 = asin(sin(latRad) * cos(angularDist) +
+                            cos(latRad) * sin(angularDist) * cos(bearing))
+            let lon2 = lonRad + atan2(
+                sin(bearing) * sin(angularDist) * cos(latRad),
+                cos(angularDist) - sin(latRad) * sin(lat2)
+            )
+
+            let lat2Deg = lat2 * 180 / .pi
+            let lon2Deg = lon2 * 180 / .pi
+            ring.append([lon2Deg, lat2Deg])
+        }
+
+        // GeoJSON Polygon: [[outerRing]] → [[[[Double]]]]
+        return SectorGeometry(type: "Polygon", coordinates: [[ring]])
     }
 }

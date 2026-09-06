@@ -64,9 +64,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
         context.coordinator.mapView = mapView
         context.coordinator.configureOrnaments(for: mapView)
 
-        // STYLE LOADED
-
-        // Layer order from bottom to top: sectors → airports → routes → pilots → sector labels
         mapView.mapboxMap.onMapLoaded.observeNext { [weak coordinator = context.coordinator] _ in
             coordinator?.installSectorStyleIfNeeded()
             coordinator?.installAirportStyleIfNeeded()
@@ -76,13 +73,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
         }
         .store(in: &context.coordinator.cancelables)
 
-        // CAMERA CHANGES
-
         mapView.mapboxMap.onCameraChanged.observe { [weak coordinator = context.coordinator] event in
-            guard let coordinator else {
-                return
-            }
-
+            guard let coordinator else { return }
             let camera = event.cameraState
 
             coordinator.prefsManager.userPrefs.lastZoom = camera.zoom
@@ -101,22 +93,18 @@ struct RadarViewRepresentable: UIViewRepresentable {
         _ mapView: MapView,
         context: Context
     ) {
-        // Resolve dark/light for this update cycle (accounts for System following the OS).
         let resolvedIsDark = isDark
         context.coordinator.currentIsDark = resolvedIsDark
 
-        // Resolve the actual Mapbox style URI for this cycle (System picks dark or light based on OS).
         let newThemeRaw = prefsManager.userPrefs.appTheme.rawValue
         guard let resolvedURLStr = prefsManager.userPrefs.mapStyle.resolvedURLString(isDark: resolvedIsDark),
               let resolvedStyleURI = StyleURI(rawValue: resolvedURLStr) else { return }
         let resolvedStyleString = resolvedURLStr
 
         if context.coordinator.lastResolvedStyleURIString != resolvedStyleString {
-            // Map style changed (preference or OS colour-scheme flip) — reload the style.
             context.coordinator.lastMapStyleRaw = prefsManager.userPrefs.mapStyle.rawValue
             context.coordinator.lastAppThemeRaw = newThemeRaw
             context.coordinator.lastResolvedStyleURIString = resolvedStyleString
-            // Reset install flags so layers are re-added after the new style loads
             context.coordinator.didInstallPilotStyle = false
             context.coordinator.didInstallSectorStyle = false
             context.coordinator.didInstallAirportStyle = false
@@ -129,9 +117,20 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 coordinator?.ensureLabelsOnTop()
             }
         } else if context.coordinator.lastAppThemeRaw != newThemeRaw {
-            // App theme changed without a map style reload — re-tint layers in place.
             context.coordinator.lastAppThemeRaw = newThemeRaw
             context.coordinator.applyTheme(on: mapView, isDark: resolvedIsDark)
+        }
+
+        let newPlaneMultiplier = prefsManager.userPrefs.planeIconMultiplier
+        if context.coordinator.lastPlaneIconMultiplier != newPlaneMultiplier {
+            context.coordinator.lastPlaneIconMultiplier = newPlaneMultiplier
+            context.coordinator.applyPlaneIconSize(on: mapView, multiplier: newPlaneMultiplier)
+        }
+
+        let newAirportMultiplier = prefsManager.userPrefs.airportIconMultiplier
+        if context.coordinator.lastAirportIconMultiplier != newAirportMultiplier {
+            context.coordinator.lastAirportIconMultiplier = newAirportMultiplier
+            context.coordinator.applyAirportIconSize(on: mapView, multiplier: newAirportMultiplier)
         }
 
         let friendCIDs = prefsManager.allFriendCIDs
@@ -140,7 +139,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
         let myCID = prefsManager.myCID
 
         context.coordinator.updatePilots(
-            viewModel.pilots,
+            viewModel.pilotsToDisplay,
             selectedCID: viewModel.selectedCID,
             friendCIDs: friendCIDs,
             myCID: myCID
@@ -193,13 +192,11 @@ struct RadarViewRepresentable: UIViewRepresentable {
         fileprivate var didInstallRouteStyle = false
         fileprivate var lastMapStyleRaw: String = ""
         fileprivate var lastAppThemeRaw: String = ""
-        /// The resolved Mapbox style URI string from the last load — used to detect
-        /// system colour-scheme changes that require a map style swap.
+        fileprivate var lastPlaneIconMultiplier: Double = -1
+        fileprivate var lastAirportIconMultiplier: Double = -1
         fileprivate var lastResolvedStyleURIString: String = ""
-        /// Resolved dark/light value passed in from updateUIView each cycle.
         fileprivate var currentIsDark: Bool = true
 
-        // Last-seen values — used to skip redundant Mapbox source updates.
         private var lastPilots: [Pilot] = []
         private var lastSelectedCID: Int? = nil
         private var lastFriendCIDs: Set<Int> = []
@@ -214,8 +211,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
         private var lastFriendControlledICAOs: Set<String> = []
         private var lastRoutePilotCID: Int? = nil
         private var lastRouteAirportICAO: String? = nil
-        /// Incremented each time pilots data is pushed to the map; used to trigger
-        /// route redraws when aircraft positions change while the same selection is active.
         private var pilotsVersion: Int = 0
         private var lastRoutePilotsVersion: Int = -1
         // MARK: - Init
@@ -231,40 +226,24 @@ struct RadarViewRepresentable: UIViewRepresentable {
         // MARK: - Install Style
 
         func installPilotStyleIfNeeded() {
-
-            guard let mapView else {
-                return
-            }
-
-            guard !didInstallPilotStyle else {
-                return
-            }
-
+            guard let mapView, !didInstallPilotStyle else { return }
             let isDark = currentIsDark
+            let planeIconMultiplier = prefsManager.userPrefs.planeIconMultiplier
             do {
-                try pilotStyleManager.configurePilots(on: mapView, isDark: isDark)
+                try pilotStyleManager.configurePilots(on: mapView, isDark: isDark, planeIconMultiplier: planeIconMultiplier)
                 didInstallPilotStyle = true
                 pilotStyleManager.updatePilots(
                     on: mapView,
-                    pilots: viewModel.pilots,
+                    pilots: viewModel.pilotsToDisplay,
                     selectedCID: viewModel.selectedCID,
                     friendCIDs: prefsManager.allFriendCIDs,
                     myCID: prefsManager.myCID
                 )
-            } catch {
-                print("Failed to configure pilot style:", error)
-            }
+            } catch { }
         }
         
         func installSectorStyleIfNeeded() {
-            guard let mapView else {
-                return
-            }
-            
-            guard !didInstallSectorStyle else {
-                return
-            }
-
+            guard let mapView, !didInstallSectorStyle else { return }
             let isDark = currentIsDark
             do {
                 try sectorStyleManager.configureSectors(on: mapView, isDark: isDark)
@@ -277,23 +256,15 @@ struct RadarViewRepresentable: UIViewRepresentable {
                     friendCIDs: prefsManager.allFriendCIDs,
                     myCID: prefsManager.myCID
                 )
-            } catch {
-                print("Failed to configure sector style:", error)
-            }
+            } catch { }
         }
         
         func installAirportStyleIfNeeded() {
-            guard let mapView else {
-                return
-            }
-            
-            guard !didInstallAirportStyle else {
-                return
-            }
-
+            guard let mapView, !didInstallAirportStyle else { return }
             let isDark = currentIsDark
+            let airportIconMultiplier = prefsManager.userPrefs.airportIconMultiplier
             do {
-                try airportStyleManager.configureAirports(on: mapView, isDark: isDark)
+                try airportStyleManager.configureAirports(on: mapView, isDark: isDark, airportIconMultiplier: airportIconMultiplier)
                 didInstallAirportStyle = true
                 let friendCIDs = prefsManager.allFriendCIDs
                 airportStyleManager.updateAirports(
@@ -302,9 +273,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
                     filledICAOs: viewModel.filledAirportICAOs,
                     friendControlledICAOs: viewModel.friendControlledAirportICAOs(friendCIDs: friendCIDs)
                 )
-            } catch {
-                print("Failed to configure airport style:", error)
-            }
+            } catch { }
         }
         
         func installRouteStyleIfNeeded() {
@@ -320,9 +289,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
                     selectedAirportICAO: viewModel.selectedAirportICAO,
                     airportTraffic: viewModel.selectedAirportTraffic
                 )
-            } catch {
-                print("Failed to configure route style:", error)
-            }
+            } catch { }
         }
 
         func applyTheme(on mapView: MapView, isDark: Bool) {
@@ -334,6 +301,18 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
             if didInstallSectorStyle {
                 sectorStyleManager.applyTheme(on: mapView, isDark: isDark)
+            }
+        }
+
+        func applyPlaneIconSize(on mapView: MapView, multiplier: Double) {
+            if didInstallPilotStyle {
+                pilotStyleManager.applyPlaneIconSize(on: mapView, multiplier: multiplier)
+            }
+        }
+
+        func applyAirportIconSize(on mapView: MapView, multiplier: Double) {
+            if didInstallAirportStyle {
+                airportStyleManager.applyAirportIconSize(on: mapView, multiplier: multiplier)
             }
         }
 
@@ -367,11 +346,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
 
             for layerId in orderedIds {
                 guard mapView.mapboxMap.layerExists(withId: layerId) else { continue }
-                // Check if already at the correct relative position to avoid unnecessary moves:
-                // we always re-insert in order, so appending each in sequence is sufficient.
                 do {
-                    // Generic layer fetch isn't available in the public API — we must use typed
-                    // fetch. Determine the type from the known layer ID.
                     switch layerId {
                     case AirportStyleManager.airportLayerId:
                         let l = try mapView.mapboxMap.layer(withId: layerId, type: CircleLayer.self)
@@ -382,9 +357,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
                         try mapView.mapboxMap.removeLayer(withId: layerId)
                         try mapView.mapboxMap.addLayer(l, layerPosition: nil)
                     }
-                } catch {
-                    print("ensureLabelsOnTop: failed to reorder \(layerId): \(error)")
-                }
+                } catch { }
             }
         }
 
@@ -442,8 +415,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
         ) {
             guard let mapView, didInstallSectorStyle else { return }
             let activeSectorCount = sectors.filter { $0.isActive }.count
-            // Hash the active owner assignment per sector so that ownership transfers
-            // (same count, different controllers) are also detected.
             let ownershipSignature = sectors.reduce(into: 0) { hash, sector in
                 hash ^= sector.id.hashValue
                 hash ^= (sector.activeController?.cid ?? -1).hashValue

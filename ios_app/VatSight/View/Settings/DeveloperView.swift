@@ -7,10 +7,12 @@
 
 import SwiftUI
 import SwiftData
+import CoreLocation
 
 struct DeveloperView: View {
     @Environment(PreferencesManager.self) private var prefsManager
     @EnvironmentObject private var radarViewModel: RadarViewModel
+    @Environment(\.dismiss) private var dismiss
 
     // Local draft of the repo slug while the user is typing
     @State private var repoSlugDraft: String = ""
@@ -124,7 +126,7 @@ struct DeveloperView: View {
 
             // MARK: - Diagnostics (dev mode only)
             if prefsManager.userPrefs.developerModeEnabled {
-                // MARK: Diagnostics — Unmatched Controllers
+                // MARK: Diagnostics — Unmatched / Synthetic Controllers (combined)
                 Section {
                     // Filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -138,22 +140,63 @@ struct DeveloperView: View {
                         .padding(.vertical, 4)
                     }
 
+                    // Synthetic sectors — tappable, flies camera to the circle on the map.
+                    let synthetic = radarViewModel.vatglassesDiagnostics.syntheticSectors
+                    ForEach(synthetic) { sector in
+                        Button {
+                            navigateToSynthetic(sector)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    HStack(spacing: 12) {
+                                        Text(sector.callsign)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(.yellow)
+                                        Text("Synthetic — \(Int(sector.radiusNm)) nm circle")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    HStack(spacing: 12) {
+                                        Text(sector.frequency)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        Text("CID \(String(sector.cid))")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        if !sector.name.isEmpty {
+                                            Text(sector.name)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Truly unmatched controllers (no real sector and no synthetic circle).
                     let unmatched = filteredUnmatched
-                    if unmatched.isEmpty {
+                    if synthetic.isEmpty && unmatched.isEmpty {
                         Label("All controllers matched", systemImage: "checkmark.circle")
                             .foregroundStyle(.secondary)
                             .font(.subheadline)
                     } else {
                         ForEach(unmatched) { controller in
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading) {
                                 Text(controller.callsign)
                                     .font(.subheadline)
                                     .fontWeight(.medium)
-                                HStack(spacing: 8) {
+                                HStack(spacing: 12) {
                                     Text(controller.frequency)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
-                                    Text("CID \(controller.cid)")
+                                    Text("CID \(String(controller.cid))")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                     if !controller.name.isEmpty {
@@ -169,19 +212,29 @@ struct DeveloperView: View {
                     HStack {
                         Text("Unmatched Controllers")
                         Spacer()
-                        let count = filteredUnmatched.count
-                        if count > 0 {
-                            Text("\(count)")
-                                .font(.caption)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.orange.opacity(0.2))
-                                .foregroundStyle(.orange)
-                                .clipShape(Capsule())
+                        let synCount = radarViewModel.vatglassesDiagnostics.syntheticSectors.count
+                        let unmCount = filteredUnmatched.count
+                        HStack(spacing: 4) {
+                            if synCount > 0 {
+                                Text("\(synCount) synthetic")
+                                    .font(.caption)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.yellow.opacity(0.2))
+                                    .foregroundStyle(.yellow)
+                                    .clipShape(Capsule())
+                            }
+                            if unmCount > 0 {
+                                Text("\(unmCount)")
+                                    .font(.caption)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.orange.opacity(0.2))
+                                    .foregroundStyle(.orange)
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
-                } footer: {
-                    Text("Controllers online on VATSIM that could not be matched to any Vatglasses sector or position.")
                 }
                 
                 // MARK: Diagnostics — Parse Errors
@@ -320,6 +373,23 @@ struct DeveloperView: View {
         prefsManager.updateVatglassesCustomRepo("")
         radarViewModel.applyVatglassesCustomRepo("")
     }
+
+    /// Selects the synthetic sector on the radar map and switches to the Map tab.
+    /// Looks up the airport coordinate from the live airports list; falls back to centre-of-screen.
+    private func navigateToSynthetic(_ sector: SyntheticSector) {
+        let sectorId = "synthetic/\(sector.callsign.uppercased())"
+        // Find the airport coordinate to fly the camera to.
+        if let airport = radarViewModel.airports.first(where: { $0.icao.uppercased() == sector.icao.uppercased() }) {
+            let coord = CLLocationCoordinate2D(latitude: airport.latitude, longitude: airport.longitude)
+            prefsManager.pendingNavigateToSectorId = sectorId
+            prefsManager.pendingNavigateToSectorCoordinate = coord
+        } else {
+            // Airport not in list — select the sector without flying.
+            prefsManager.pendingNavigateToSectorId = sectorId
+            prefsManager.pendingNavigateToSectorCoordinate = nil
+        }
+        dismiss()
+    }
 }
 
 private struct FilterPill: View {
@@ -352,9 +422,40 @@ private struct FilterPill: View {
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let context = ModelContext(container)
 
+    let prefs = PreferencesManager(context: context)
+    prefs.updateDeveloperMode(true)
+
+    let vm = RadarViewModel()
+    vm.vatglassesDiagnostics = VatglassesDiagnostics(
+        parseErrors: [
+            VatglassesParseError(
+                source: "ed",
+                message: "Key 'positions' not found: DecodingError.keyNotFound",
+                date: Date()
+            ),
+            VatglassesParseError(
+                source: "lf.json",
+                message: "Expected to decode Array<Any> but found a dictionary instead.",
+                date: Date().addingTimeInterval(-120)
+            )
+        ],
+        unmatchedControllers: [
+            UnmatchedController(callsign: "EGLL_R_CTR", frequency: "133.175", cid: 1234567, name: "Joe Bloggs"),
+            UnmatchedController(callsign: "EGKK_GND",  frequency: "121.800", cid: 8901234, name: "Jane Smith")
+        ],
+        invalidAirports: [
+            InvalidAirport(icao: "ZZZZ", name: "Unknown Aerodrome", latitude: 999.0, longitude: -181.5)
+        ],
+        syntheticSectors: [
+            SyntheticSector(icao: "EDDW", callsign: "EDDW_TWR", frequency: "121.800", radiusNm: 5, cid: 1111111, name: "Alice Example"),
+            SyntheticSector(icao: "EDDH", callsign: "EDDH_APP", frequency: "123.125", radiusNm: 20, cid: 2222222, name: "Bob Example")
+        ],
+        lastUpdated: Date()
+    )
+
     return NavigationStack {
         DeveloperView()
-            .environment(PreferencesManager(context: context))
-            .environmentObject(RadarViewModel())
+            .environment(prefs)
+            .environmentObject(vm)
     }
 }

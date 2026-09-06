@@ -90,6 +90,9 @@ final class UserPreferencesModel {
     var totalAdsWatched: Int
     var showInactiveSectors: Bool = false
     var showAirports: Bool = false
+    var showPilotsLayer: Bool = true
+    var showSectorsLayer: Bool = true
+    var showAirportLayer: Bool = true
     var altitudeFilterEnabled: Bool = false
     var mergeSectors: Bool = false
     var trackedCIDs: [Int] = []
@@ -101,6 +104,10 @@ final class UserPreferencesModel {
     var mapStyleRaw: String = MapStyle.system.rawValue
     /// Raw value of `AppTheme` — stored as String for SwiftData compatibility.
     var appThemeRaw: String = AppTheme.system.rawValue
+    /// Plane icon size multiplier — 1.0 is the default size.
+    var planeIconMultiplier: Double = 1.0
+    /// Airport icon size multiplier — 1.0 is the default size.
+    var airportIconMultiplier: Double = 1.0
 
     var mapStyle: MapStyle {
         get { MapStyle(rawValue: mapStyleRaw) ?? .system }
@@ -121,6 +128,9 @@ final class UserPreferencesModel {
         totalAdsWatched: Int = 0,
         showInactiveSectors: Bool = false,
         showAirports: Bool = false,
+        showPilotsLayer: Bool = true,
+        showSectorsLayer: Bool = true,
+        showAirportLayer: Bool = true,
         altitudeFilterEnabled: Bool = false,
         mergeSectors: Bool = false,
         trackedCIDs: [Int] = [],
@@ -128,7 +138,9 @@ final class UserPreferencesModel {
         developerModeEnabled: Bool = false,
         vatglassesCustomRepoSlug: String = "",
         mapStyle: MapStyle = .system,
-        appTheme: AppTheme = .system
+        appTheme: AppTheme = .system,
+        planeIconMultiplier: Double = 1.0,
+        airportIconMultiplier: Double = 1.0
     ) {
         self.vatsimCID = vatsimCID
         self.lastLatitude = lastLatitude
@@ -138,6 +150,9 @@ final class UserPreferencesModel {
         self.totalAdsWatched = totalAdsWatched
         self.showInactiveSectors = showInactiveSectors
         self.showAirports = showAirports
+        self.showPilotsLayer = showPilotsLayer
+        self.showSectorsLayer = showSectorsLayer
+        self.showAirportLayer = showAirportLayer
         self.altitudeFilterEnabled = altitudeFilterEnabled
         self.mergeSectors = mergeSectors
         self.trackedCIDs = trackedCIDs
@@ -146,6 +161,8 @@ final class UserPreferencesModel {
         self.vatglassesCustomRepoSlug = vatglassesCustomRepoSlug
         self.mapStyleRaw = mapStyle.rawValue
         self.appThemeRaw = appTheme.rawValue
+        self.planeIconMultiplier = planeIconMultiplier
+        self.airportIconMultiplier = airportIconMultiplier
     }
 
     convenience init() {

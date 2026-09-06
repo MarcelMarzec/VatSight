@@ -47,7 +47,7 @@ final class VatsimService {
     }()
     
     func fetchAllData(completion: @escaping (Result<VatsimResponseModel, Error>) -> Void) {
-        
+        let decoder = self.decoder
         URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             
             if let error = error {
@@ -60,11 +60,9 @@ final class VatsimService {
             }
             
             do {
-                guard let self = self else { return }
+                let decoded = try decoder.decode(VatsimResponseModel.self, from: data)
                 
-                let decoded = try self.decoder.decode(VatsimResponseModel.self, from: data)
-                
-                self.cachedResponse = decoded
+                self?.cachedResponse = decoded
                 
                 completion(.success(decoded))
                 

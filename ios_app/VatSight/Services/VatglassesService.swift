@@ -6,6 +6,7 @@
 //
 import Foundation
 import ZIPFoundation
+import CoreLocation
 internal import _LocationEssentials
 
 final class VatglassesService {
@@ -29,6 +30,8 @@ final class VatglassesService {
     private(set) var parseErrors: [VatglassesParseError] = []
     /// Controllers that were online but matched no Vatglasses position. Updated by getActiveSectors.
     private(set) var unmatchedControllers: [UnmatchedController] = []
+    /// Synthetic sectors generated for TWR/APP controllers with no real VATGlasses sector.
+    private(set) var syntheticSectors: [SyntheticSector] = []
 
     /// Cache of compiled NSRegularExpression objects keyed by pattern string.
     /// Avoids recompiling the same regex on every resolvePositionLabel call.
@@ -95,17 +98,15 @@ final class VatglassesService {
     }
     
     /// Returns sectors with active controller status based on online VATSIM controllers.
-    /// Also updates `unmatchedControllers` with any online ATC that couldn't be matched.
-    func getActiveSectors(controllers: [Controllers]) -> [VatglassesSector] {
+    /// Also generates synthetic circle sectors for TWR/APP controllers that have no real
+    /// VATGlasses sector, and updates `unmatchedControllers` and `syntheticSectors`.
+    func getActiveSectors(controllers: [Controllers], airports: [VatglassesAirport]) -> [VatglassesSector] {
         guard var sectors = cachedData?.sectors,
               let allPositions = cachedData?.allPositions else { return [] }
 
         let frequencyGroupedControllers = buildFrequencyGroupedControllers(from: controllers)
+        let prefixGroupedControllers = buildCallsignPrefixGroupedControllers(from: controllers)
         var positionActiveCache: [String: (isActive: Bool, controller: Controllers?)] = [:]
-
-        // Build a prefix → controller map for nodata.json FIR matching.
-        // Keys are uppercased callsign prefixes (e.g. "MSP" from "MSP_11_CTR").
-        let prefixGroupedControllers = buildPrefixGroupedControllers(from: controllers)
 
         // Track which controller CIDs have been matched to at least one sector.
         var matchedCIDs = Set<Int>()
@@ -135,6 +136,7 @@ final class VatglassesService {
                 for: sectors[i],
                 allPositions: allPositions,
                 frequencyGroupedControllers: frequencyGroupedControllers,
+                prefixGroupedControllers: prefixGroupedControllers,
                 positionActiveCache: &positionActiveCache
             ) {
                 sectors[i].isActive = true
@@ -150,35 +152,120 @@ final class VatglassesService {
             }
         }
 
+        // Generate synthetic circle sectors for TWR/APP/DEP controllers that had no real sector.
+        let synthetic = generateSyntheticSectors(
+            unmatchedCIDs: controllers.filter { !matchedCIDs.contains($0.cid) },
+            airports: airports
+        )
+        // Mark synthetic controllers as matched so they don't appear in the unmatched list.
+        var syntheticCIDs = Set<Int>()
+        for s in synthetic {
+            if let cid = s.activeController?.cid { syntheticCIDs.insert(cid) }
+        }
+        sectors.append(contentsOf: synthetic)
+
         // Build the unmatched controller list: online ATC not accounted for by any sector.
         // No filtering here — filtering is done in the UI so the user can toggle categories.
         unmatchedControllers = controllers
-            .filter { !matchedCIDs.contains($0.cid) }
+            .filter { !matchedCIDs.contains($0.cid) && !syntheticCIDs.contains($0.cid) }
             .map { UnmatchedController(callsign: $0.callsign, frequency: $0.frequency, cid: $0.cid, name: $0.name) }
+
+        // Record synthetic sector diagnostics for the developer view.
+        self.syntheticSectors = synthetic.compactMap { sector -> SyntheticSector? in
+            guard let ctrl = sector.activeController else { return nil }
+            let icao = String(ctrl.callsign.prefix(while: { $0 != "_" }))
+            let radiusNm: Double = ctrl.callsign.uppercased().hasSuffix("_TWR") ? 5.0 : 20.0
+            return SyntheticSector(icao: icao, callsign: ctrl.callsign, frequency: ctrl.frequency, radiusNm: radiusNm, cid: ctrl.cid, name: ctrl.name)
+        }
 
         return sectors
     }
 
-    /// Builds a map of uppercase callsign prefix → all controllers that share that prefix.
-    /// e.g. "MSP" → [controllers with callsigns "MSP_11_CTR", "MSP_CTR", …]
-    private func buildPrefixGroupedControllers(from controllers: [Controllers]) -> [String: [Controllers]] {
-        var result: [String: [Controllers]] = [:]
+    /// Generates synthetic circle sectors for TWR/APP/DEP controllers that are online
+    /// but have no matching real VATGlasses sector.
+    ///
+    /// Performance notes:
+    /// - Builds an O(1) ICAO → airport lookup once before iteration.
+    /// - Deduplicates by (ICAO + position type) so only one circle is drawn per airport per type.
+    /// - Circle geometry (64 vertices) is lightweight and computed only when needed.
+    private func generateSyntheticSectors(
+        unmatchedCIDs controllers: [Controllers],
+        airports: [VatglassesAirport]
+    ) -> [VatglassesSector] {
+        // Build a fast ICAO → airport coordinate lookup.
+        var airportByICAO: [String: VatglassesAirport] = [:]
+        airportByICAO.reserveCapacity(airports.count)
+        for airport in airports {
+            airportByICAO[airport.icao.uppercased()] = airport
+        }
+
+        var result: [VatglassesSector] = []
+        // Dedup key: "LSZH_TWR", "EDDH_APP" etc. — one circle per callsign type per airport.
+        var seenKeys = Set<String>()
+
         for controller in controllers {
             let upper = controller.callsign.uppercased()
-            if let underscoreIndex = upper.firstIndex(of: "_") {
-                let prefix = String(upper[upper.startIndex..<underscoreIndex])
-                result[prefix, default: []].append(controller)
-            }
+
+            // Only synthesise for TWR, APP, and DEP positions.
+            let isTWR = upper.hasSuffix("_TWR")
+            let isAPP = upper.hasSuffix("_APP") || upper.hasSuffix("_DEP")
+            guard isTWR || isAPP else { continue }
+
+            // Skip mentor/trainee callsigns (e.g. EPKK_X_TWR, EPKK_T_TWR). _X_ and _T_ are
+            // VATSIM-standard infixes for mentoring/training sessions and should never get a
+            // synthetic sector — the real controller's sector already covers the airspace.
+            guard !upper.contains("_X_") && !upper.contains("_T_") else { continue }
+
+            // Extract the ICAO prefix (everything before the first underscore).
+            guard let underscoreIdx = upper.firstIndex(of: "_") else { continue }
+            let icao = String(upper[upper.startIndex..<underscoreIdx])
+
+            // Deduplicate: skip if we already generated a circle for this callsign.
+            guard seenKeys.insert(upper).inserted else { continue }
+
+            // Require a known airport with valid coordinates.
+            guard let airport = airportByICAO[icao],
+                  abs(airport.latitude) <= 90,
+                  abs(airport.longitude) <= 180 else { continue }
+
+            let radiusNm: Double = isTWR ? 5.0 : 20.0
+            let geometry = makeCircleGeometry(latitude: airport.latitude, longitude: airport.longitude, radiusNm: radiusNm)
+
+            let posType = isTWR ? "TWR" : "APP"
+            // Altitudes stored in FL (hundreds of feet): TWR 0–FL20 (0–2000ft), APP/DEP FL20–FL200 (2000–20000ft).
+            let minFL = isTWR ? 0 : 20
+            let maxFL = isTWR ? 20 : 200
+            let properties = SectorProperties(
+                min: minFL,
+                max: maxFL,
+                name: "\(icao) \(posType) (Synthetic)",
+                groupName: nil,
+                color: nil
+            )
+
+            result.append(VatglassesSector(
+                id: "synthetic/\(upper)",
+                ownerRefs: [icao],
+                frequency: controller.frequency,
+                geometry: geometry,
+                properties: properties,
+                isActive: true,
+                activeOwnerColorHex: nil,
+                activeOwnerRef: icao,
+                activeController: controller,
+                isBasicDataOnly: true,
+                isSynthetic: true
+            ))
         }
+
         return result
     }
 
     /// Finds the first online controller for a nodata.json sector.
     ///
     /// For each ownerRef (a position ID like "KZMP"), looks up the parsed nodata position
-    /// under "nodata/{ownerRef}" to obtain its `pre` prefixes and `type`. Controllers whose
-    /// callsign prefix matches any of those prefixes and whose callsign ends with the type
-    /// (allowing an optional middle component, e.g. MSP_11_CTR) are considered a match.
+    /// under "nodata/{ownerRef}" and delegates to `findMatchingController` which uses the
+    /// callsign-primary, frequency-secondary strategy.
     ///
     /// Falls back to a direct prefix match against the ownerRef itself for legacy entries
     /// (e.g. regions where the ownerRef IS the callsign prefix and no position was parsed).
@@ -187,17 +274,19 @@ final class VatglassesService {
         allPositions: [String: VatglassesPosition],
         prefixGroupedControllers: [String: [Controllers]]
     ) -> (ownerRef: String, controller: Controllers)? {
+        // frequencyGroupedControllers not needed here — nodata positions rarely have frequencies.
+        // Pass an empty map so findMatchingController falls through to callsign-only matching.
+        let emptyFreqMap: [String: [Controllers]] = [:]
+
         for ownerRef in ownerRefs {
-            // Primary path: look up the position stored under "nodata/{ownerRef}" and match
-            // controllers using its pre-prefixes and type (handles MSP_11_CTR → KZMP).
+            // Primary path: delegate to the shared matching logic.
             if let position = allPositions["nodata/\(ownerRef)"] {
-                for pre in position.facilityPrefixes {
-                    let key = pre.uppercased()
-                    if let candidates = prefixGroupedControllers[key] {
-                        if let match = candidates.first(where: { matchesCallsignPattern(controller: $0, position: position) }) {
-                            return (ownerRef, match)
-                        }
-                    }
+                if let match = findMatchingController(
+                    position: position,
+                    frequencyGroupedControllers: emptyFreqMap,
+                    prefixGroupedControllers: prefixGroupedControllers
+                ) {
+                    return (ownerRef, match)
                 }
             }
 
@@ -237,12 +326,24 @@ final class VatglassesService {
     /// Groups controllers by normalised frequency for efficient lookup during sector matching.
     private func buildFrequencyGroupedControllers(from controllers: [Controllers]) -> [String: [Controllers]] {
         var grouped: [String: [Controllers]] = [:]
-        
         for controller in controllers {
             let key = normaliseFrequency(controller.frequency)
             grouped[key, default: []].append(controller)
         }
-        
+        return grouped
+    }
+
+    /// Groups controllers by the callsign prefix (the component before the first `_`).
+    /// Used as a fast lookup for positions that have no frequency in the data.
+    private func buildCallsignPrefixGroupedControllers(from controllers: [Controllers]) -> [String: [Controllers]] {
+        var grouped: [String: [Controllers]] = [:]
+        for controller in controllers {
+            let upper = controller.callsign.uppercased()
+            if let underscore = upper.firstIndex(of: "_") {
+                let prefix = String(upper[upper.startIndex..<underscore])
+                grouped[prefix, default: []].append(controller)
+            }
+        }
         return grouped
     }
     
@@ -251,6 +352,7 @@ final class VatglassesService {
         for sector: VatglassesSector,
         allPositions: [String: VatglassesPosition],
         frequencyGroupedControllers: [String: [Controllers]],
+        prefixGroupedControllers: [String: [Controllers]],
         positionActiveCache: inout [String: (isActive: Bool, controller: Controllers?)]
     ) -> (ownerRef: String, controller: Controllers)? {
         for ownerRef in sector.ownerRefs {
@@ -272,7 +374,8 @@ final class VatglassesService {
 
             if let matchingController = findMatchingController(
                 position: pos,
-                frequencyGroupedControllers: frequencyGroupedControllers
+                frequencyGroupedControllers: frequencyGroupedControllers,
+                prefixGroupedControllers: prefixGroupedControllers
             ) {
                 positionActiveCache[ownerRef] = (isActive: true, controller: matchingController)
                 return (ownerRef, matchingController)
@@ -285,18 +388,57 @@ final class VatglassesService {
     }
     
     /// Returns the first controller whose callsign matches the given position, or nil if none match.
+    ///
+    /// Matching strategy (mirrors the vatglasses reference implementation):
+    /// 1. Always use callsign pattern as the primary filter — narrows candidates via the
+    ///    prefix-keyed lookup (O(1) per `pre` entry) so no full scan is needed.
+    /// 2. When the position has a frequency, additionally require the controller to be on
+    ///    that frequency. This eliminates false positives when two positions share the same
+    ///    callsign prefix but operate on different frequencies (e.g. different APP sectors).
+    /// 3. When the position has no frequency (e.g. NAT, oceanic FSS positions), the callsign
+    ///    match alone is sufficient — there is no secondary filter to apply.
     private func findMatchingController(
         position: VatglassesPosition,
-        frequencyGroupedControllers: [String: [Controllers]]
+        frequencyGroupedControllers: [String: [Controllers]],
+        prefixGroupedControllers: [String: [Controllers]]
     ) -> Controllers? {
-        let normalisedFrequency = normaliseFrequency(position.frequency)
-        guard let controllersOnFrequency = frequencyGroupedControllers[normalisedFrequency] else {
-            return nil
+        // Collect candidates by callsign prefix — O(pre.count) lookups, not O(controllers).
+        var trainingMatch: Controllers? = nil
+
+        for pre in position.facilityPrefixes {
+            let key = pre.uppercased()
+            guard let candidates = prefixGroupedControllers[key] else { continue }
+
+            for controller in candidates {
+                guard matchesCallsignPattern(controller: controller, position: position) else { continue }
+
+                // Callsign matches. If the position has a frequency, also verify the controller
+                // is on that frequency to avoid cross-sector false positives.
+                let frequencyMatches: Bool
+                if let freq = position.frequency {
+                    let normFreq = normaliseFrequency(freq)
+                    let controllerFreq = normaliseFrequency(controller.frequency)
+                    frequencyMatches = controllerFreq == normFreq
+                } else {
+                    // No frequency defined — callsign match is sufficient.
+                    frequencyMatches = true
+                }
+
+                guard frequencyMatches else { continue }
+
+                // Deprioritise mentor/trainee callsigns (_X_, _T_) — keep them as a fallback
+                // but always prefer the real controller if one also matches this position.
+                let upper = controller.callsign.uppercased()
+                if upper.contains("_X_") || upper.contains("_T_") {
+                    if trainingMatch == nil { trainingMatch = controller }
+                } else {
+                    return controller
+                }
+            }
         }
 
-        return controllersOnFrequency.first {
-            matchesCallsignPattern(controller: $0, position: position)
-        }
+        // No plain controller matched — fall back to the training/mentor match if present.
+        return trainingMatch
     }
     
     /// Returns true if the controller's callsign matches the position's facility prefix and type.
@@ -345,13 +487,11 @@ final class VatglassesService {
             decoder.dateDecodingStrategy = .iso8601
             let decoded = try decoder.decode(VatglassesData.self, from: data)
             guard decoded.schemaVersion == VatglassesData.currentSchemaVersion else {
-                print("Vatglasses cache schema version \(decoded.schemaVersion) is outdated (current: \(VatglassesData.currentSchemaVersion)), discarding.")
                 try? FileManager.default.removeItem(at: cacheFileURL)
                 return
             }
             cachedData = decoded
         } catch {
-            print("Failed to load cached Vatglasses data: \(error)")
             try? FileManager.default.removeItem(at: cacheFileURL)
         }
     }
@@ -362,12 +502,9 @@ final class VatglassesService {
         do {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
-            encoder.outputFormatting = .prettyPrinted
             let data = try encoder.encode(dataToSave)
             try data.write(to: cacheFileURL, options: .atomic)
-        } catch {
-            print("Failed to save Vatglasses cache: \(error)")
-        }
+        } catch { }
     }
     
     // MARK: - Private Methods
@@ -652,28 +789,27 @@ final class VatglassesService {
         
         for (posKey, posData) in positionsJSON {
             guard let callsign = posData["callsign"] as? String,
-                  let frequency = posData["frequency"] as? String,
                   let type = posData["type"] as? String else {
                 continue
             }
-            
+
             // "pre" may be a bare string or an array depending on the file format.
             let facilityPrefixes = parseFacilityPrefixes(posData["pre"])
-            
+
             var colors: [String]? = nil
             if let coloursArray = posData["colours"] as? [[String: Any]] {
                 colors = coloursArray.compactMap { $0["hex"] as? String }
             }
-            
+
             positions[posKey] = VatglassesPosition(
                 callsign: callsign,
-                frequency: frequency,
+                frequency: posData["frequency"] as? String,
                 type: type,
                 facilityPrefixes: facilityPrefixes,
                 colors: colors
             )
         }
-        
+
         // Parse airspace
         guard let airspaceArray = json["airspace"] as? [[String: Any]] else {
             // No airspace data, but parse airports if present
@@ -793,12 +929,9 @@ final class VatglassesService {
                     colors = coloursArray.compactMap { $0["hex"] as? String }
                 }
 
-                // frequency is optional in nodata positions per the schema
-                let frequency = posData["frequency"] as? String ?? "Unknown"
-
                 positions[posKey] = VatglassesPosition(
                     callsign: callsign,
-                    frequency: frequency,
+                    frequency: posData["frequency"] as? String,
                     type: type,
                     facilityPrefixes: facilityPrefixes,
                     colors: colors
@@ -916,28 +1049,27 @@ final class VatglassesService {
         
         for (posKey, posData) in positionsJSON {
             guard let callsign = posData["callsign"] as? String,
-                  let frequency = posData["frequency"] as? String,
                   let type = posData["type"] as? String else {
                 continue
             }
-            
+
             // "pre" may be a bare string ("TOR") or an array (["TOR", "YYZ"]) depending on the file format.
             let facilityPrefixes = parseFacilityPrefixes(posData["pre"])
-            
+
             var colors: [String]? = nil
             if let coloursArray = posData["colours"] as? [[String: Any]] {
                 colors = coloursArray.compactMap { $0["hex"] as? String }
             }
-            
+
             positions[posKey] = VatglassesPosition(
                 callsign: callsign,
-                frequency: frequency,
+                frequency: posData["frequency"] as? String,
                 type: type,
                 facilityPrefixes: facilityPrefixes,
                 colors: colors
             )
         }
-        
+
         return (positions, callsignLabels)
     }
 
@@ -1143,12 +1275,13 @@ final class VatglassesService {
         guard let allPositions = cachedData?.allPositions else { return [] }
 
         let frequencyGroupedControllers = buildFrequencyGroupedControllers(from: controllers)
+        let prefixGroupedControllers = buildCallsignPrefixGroupedControllers(from: controllers)
         var result: [Controllers] = []
         var seen: Set<Int> = []
 
         for ownerRef in airport.ownerRefs {
             guard let position = allPositions[ownerRef] else { continue }
-            if let ctrl = findMatchingController(position: position, frequencyGroupedControllers: frequencyGroupedControllers) {
+            if let ctrl = findMatchingController(position: position, frequencyGroupedControllers: frequencyGroupedControllers, prefixGroupedControllers: prefixGroupedControllers) {
                 if seen.insert(ctrl.cid).inserted {
                     result.append(ctrl)
                 }
@@ -1243,6 +1376,7 @@ final class VatglassesService {
         }
 
         let frequencyGroupedControllers = buildFrequencyGroupedControllers(from: controllers)
+        let prefixGroupedControllers = buildCallsignPrefixGroupedControllers(from: controllers)
         var positionActiveCache: [String: (isActive: Bool, controller: Controllers?)] = [:]
 
         // Suffix priority for choosing the most specific direct controller to display.
@@ -1296,7 +1430,7 @@ final class VatglassesService {
                     continue
                 }
 
-                if let ctrl = findMatchingController(position: pos, frequencyGroupedControllers: frequencyGroupedControllers) {
+                if let ctrl = findMatchingController(position: pos, frequencyGroupedControllers: frequencyGroupedControllers, prefixGroupedControllers: prefixGroupedControllers) {
                     positionActiveCache[ownerRef] = (isActive: true, controller: ctrl)
                     topdownMatch = ctrl
                     break
@@ -1336,6 +1470,37 @@ final class VatglassesService {
     }
 
     
+    // MARK: - Synthetic Circle Geometry
+
+    /// Generates a GeoJSON Polygon approximating a circle on the Earth's surface.
+    ///
+    /// Uses the haversine-inverse formula for accurate placement at any latitude.
+    /// 64 vertices give a smooth appearance while remaining lightweight for Mapbox.
+    private func makeCircleGeometry(latitude: Double, longitude: Double, radiusNm: Double, steps: Int = 64) -> SectorGeometry {
+        let radiusM = radiusNm * 1852.0   // nm → metres
+        let latRad  = latitude  * .pi / 180
+        let lonRad  = longitude * .pi / 180
+        let earthR: Double = 6_371_000
+        let angularDist = radiusM / earthR
+
+        var ring: [[Double]] = []
+        ring.reserveCapacity(steps + 1)
+
+        for i in 0...steps {
+            let bearing = (Double(i % steps) / Double(steps)) * 2 * .pi
+            let lat2 = asin(sin(latRad) * cos(angularDist) +
+                            cos(latRad) * sin(angularDist) * cos(bearing))
+            let lon2 = lonRad + atan2(
+                sin(bearing) * sin(angularDist) * cos(latRad),
+                cos(angularDist) - sin(latRad) * sin(lat2)
+            )
+            ring.append([lon2 * 180 / .pi, lat2 * 180 / .pi])
+        }
+
+        // GeoJSON Polygon → [outerRing] → wrapped in [[[[Double]]]]
+        return SectorGeometry(type: "Polygon", coordinates: [[ring]])
+    }
+
     // MARK: - Coordinate Conversion
 
     /// Converts Vatglasses DDMMSS strings to GeoJSON `[longitude, latitude]` pairs.

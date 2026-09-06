@@ -9,8 +9,15 @@ import Foundation
 import Turf
 import CoreLocation
 
-struct VatglassesComitModel: Codable {
+struct VatglassesComitModel: Encodable {
     let sha: String
+}
+
+extension VatglassesComitModel: Decodable {
+    nonisolated init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sha = try container.decode(String.self, forKey: .sha)
+    }
 }
 
 // MARK: - Position Model
@@ -18,7 +25,7 @@ struct VatglassesComitModel: Codable {
 /// Represents a controller position in Vatglasses
 struct VatglassesPosition: Codable {
     let callsign: String
-    let frequency: String
+    let frequency: String?  // Optional — some positions (e.g. NAT) omit the frequency field
     let type: String  // CTR, APP, TWR, GND, DEL, FSS
     let facilityPrefixes: [String]  // "pre" array in JSON
     let colors: [String]?  // Hex color codes from "colours" array
@@ -45,8 +52,12 @@ struct VatglassesSector: Codable, Identifiable {
     /// True for sectors sourced from nodata.json — FIRs with no full VATGlasses data.
     /// These are matched by callsign prefix and displayed with a "Basic Data Only" indicator.
     var isBasicDataOnly: Bool
-    
-    init(id: String, ownerRefs: [String], frequency: String, geometry: SectorGeometry, properties: SectorProperties?, isActive: Bool = false, activeOwnerColorHex: String? = nil, activeOwnerRef: String? = nil, activeController: Controllers? = nil, isBasicDataOnly: Bool = false) {
+    /// True for sectors that were dynamically generated because a TWR/APP controller was
+    /// online but had no matching real sector in the VATGlasses data. These are circle
+    /// approximations (5 nm for TWR, 20 nm for APP/DEP) displayed alongside real sectors.
+    var isSynthetic: Bool
+
+    init(id: String, ownerRefs: [String], frequency: String, geometry: SectorGeometry, properties: SectorProperties?, isActive: Bool = false, activeOwnerColorHex: String? = nil, activeOwnerRef: String? = nil, activeController: Controllers? = nil, isBasicDataOnly: Bool = false, isSynthetic: Bool = false) {
         self.id = id
         self.ownerRefs = ownerRefs
         self.frequency = frequency
@@ -57,6 +68,7 @@ struct VatglassesSector: Codable, Identifiable {
         self.activeOwnerRef = activeOwnerRef
         self.activeController = activeController
         self.isBasicDataOnly = isBasicDataOnly
+        self.isSynthetic = isSynthetic
     }
     
     enum CodingKeys: String, CodingKey {
@@ -66,6 +78,8 @@ struct VatglassesSector: Codable, Identifiable {
         case geometry
         case properties
         case isBasicDataOnly
+        // isSynthetic is intentionally excluded from coding — synthetic sectors are
+        // regenerated from live controller data each session and must not be cached.
     }
     
     init(from decoder: Decoder) throws {
@@ -76,6 +90,7 @@ struct VatglassesSector: Codable, Identifiable {
         geometry = try container.decode(SectorGeometry.self, forKey: .geometry)
         properties = try container.decodeIfPresent(SectorProperties.self, forKey: .properties)
         isBasicDataOnly = try container.decodeIfPresent(Bool.self, forKey: .isBasicDataOnly) ?? false
+        isSynthetic = false // Never persisted; always regenerated at runtime
         isActive = false // Default value when decoding
         activeOwnerColorHex = nil
         activeOwnerRef = nil

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+		VatSight PrivacyInfo.xcprivacy
+		
+		VatSight does not collect, store, or transmit any personal data.
+		The app's own code does not call any required-reason APIs directly.
+		Third-party SDKs (MapboxMaps, ZIPFoundation, GEOSwift) ship their own
+		privacy manifests that cover their own required-reason API usage.
+		
+		Network domains accessed by VatSight:
+		  - data.vatsim.net       (live VATSIM network data, public API)
+		  - api.github.com        (VATGlasses airspace sector data, public repo)
+		  - *.mapbox.com          (map tile rendering via MapboxMaps SDK)
+		
+		No user data is ever sent off-device by VatSight's own code.
+	-->
+
+	<!-- App does not use device data to track users across apps/websites -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+
+	<!-- No tracking domains — VatSight does not perform cross-app/website tracking -->
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<!--
+		Required-reason APIs: VatSight's own code does not directly call any of
+		the five required-reason API categories (file timestamps, system boot time,
+		disk space, active keyboards, or UserDefaults). The array is intentionally
+		empty. SDK-level required-reason API usage is covered by each SDK's own
+		bundled privacy manifest.
+	-->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array/>
+
+	<!--
+		Collected data types: VatSight collects NO data from users.
+		
+		- The VATSIM CID the user optionally enters is stored only on-device
+		  in SwiftData (encrypted SQLite) and is never transmitted anywhere.
+		- Tracked CIDs, preferences, and last map position are stored on-device only.
+		- No analytics, crash reporting, advertising, or telemetry SDKs are used.
+		- No health, financial, location, contact, or biometric data is accessed.
+	-->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+</dict>
+</plist>

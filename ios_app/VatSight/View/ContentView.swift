@@ -35,6 +35,17 @@ struct ContentView: View {
                 .onChange(of: manager.pendingNavigateToCID) { _, cid in
                     if cid != nil { selectedTab = 0 }
                 }
+                .onChange(of: manager.pendingNavigateToSectorId) { _, sectorId in
+                    guard let id = sectorId else { return }
+                    selectedTab = 0
+                    if let coord = manager.pendingNavigateToSectorCoordinate {
+                        radarViewModel.selectSectorAndFly(id: id, coordinate: coord)
+                    } else {
+                        radarViewModel.selectSector(id: id)
+                    }
+                    manager.pendingNavigateToSectorId = nil
+                    manager.pendingNavigateToSectorCoordinate = nil
+                }
                 .fullScreenCover(isPresented: Binding(
                     get: { !manager.userPrefs.hasCompletedOnboarding },
                     set: { _ in }

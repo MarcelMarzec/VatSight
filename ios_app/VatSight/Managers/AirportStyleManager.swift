@@ -31,11 +31,11 @@ final class AirportStyleManager {
 
     // MARK: - Configure
 
-    func configureAirports(on mapView: MapView, isDark: Bool = true) throws {
+    func configureAirports(on mapView: MapView, isDark: Bool = true, airportIconMultiplier: Double = 1.0) throws {
         isDarkTheme = isDark
         registerIndicatorImages(on: mapView)
         try addAirportSource(to: mapView)
-        try addAirportLayer(to: mapView)
+        try addAirportLayer(to: mapView, airportIconMultiplier: airportIconMultiplier)
         try addAirportLabelLayer(to: mapView)
     }
 
@@ -55,6 +55,23 @@ final class AirportStyleManager {
         try? mapView.mapboxMap.updateLayer(withId: Self.airportLabelLayerId, type: SymbolLayer.self) { layer in
             layer.textColor = .expression(labelColor)
             layer.textHaloColor = .constant(halo)
+        }
+    }
+
+    /// Updates the airport circle radius on the existing airport layer without a full reload.
+    func applyAirportIconSize(on mapView: MapView, multiplier: Double) {
+        try? mapView.mapboxMap.updateLayer(withId: Self.airportLayerId, type: CircleLayer.self) { layer in
+            layer.circleRadius = .expression(
+                Exp(.switchCase) {
+                    Exp(.eq) { Exp(.get) { "isSelected" }; true }
+                    4.0 * multiplier
+                    Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
+                    3.0 * multiplier
+                    Exp(.eq) { Exp(.get) { "isFilled" }; true }
+                    3.0 * multiplier
+                    2.0 * multiplier
+                }
+            )
         }
     }
 
@@ -104,7 +121,7 @@ final class AirportStyleManager {
 
     // MARK: - Airport Circle Layer
 
-    private func addAirportLayer(to mapView: MapView) throws {
+    private func addAirportLayer(to mapView: MapView, airportIconMultiplier: Double = 1.0) throws {
         var layer = CircleLayer(
             id: Self.airportLayerId,
             source: Self.airportSourceId
@@ -113,12 +130,12 @@ final class AirportStyleManager {
         layer.circleRadius = .expression(
             Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
-                4.0
+                4.0 * airportIconMultiplier
                 Exp(.eq) { Exp(.get) { "isFriendControlled" }; true }
-                3.0
+                3.0 * airportIconMultiplier
                 Exp(.eq) { Exp(.get) { "isFilled" }; true }
-                3.0
-                2.0
+                3.0 * airportIconMultiplier
+                2.0 * airportIconMultiplier
             }
         )
 

@@ -8,6 +8,7 @@
 
 import SwiftUI
 import SwiftData
+import CoreLocation
 
 @Observable
 final class PreferencesManager {
@@ -20,6 +21,11 @@ final class PreferencesManager {
     /// Cleared by RadarView after it consumes the value.
     var pendingNavigateToCID: Int? = nil
 
+    /// Set to a sector ID to request the app switch to the Map tab and select that sector.
+    /// The associated coordinate is used to fly the camera. Cleared after consumption.
+    var pendingNavigateToSectorId: String? = nil
+    var pendingNavigateToSectorCoordinate: CLLocationCoordinate2D? = nil
+
     init(context: ModelContext) {
         self.context = context
 
@@ -27,12 +33,9 @@ final class PreferencesManager {
 
         do {
             let results = try context.fetch(descriptor)
-            
+
             if let existing = results.first {
                 self.userPrefs = existing
-                print("✅ Loaded existing preferences - CID: \(existing.vatsimCID), Refresh: \(existing.vatsimRefreshRate)")
-                
-                // Ensure refresh rate is valid
                 if existing.vatsimRefreshRate.isEmpty {
                     existing.vatsimRefreshRate = "15s"
                     try? context.save()
@@ -42,11 +45,8 @@ final class PreferencesManager {
                 context.insert(new)
                 try context.save()
                 self.userPrefs = new
-                print("✅ Created new preferences")
             }
         } catch {
-            print("⚠️ Error fetching preferences: \(error)")
-            // Create a new one if fetch fails
             let new = UserPreferencesModel()
             context.insert(new)
             try? context.save()
@@ -56,33 +56,12 @@ final class PreferencesManager {
 
     func updateCID(_ cid: Int) {
         userPrefs.vatsimCID = cid
-        do {
-            try context.save()
-            print("✅ CID saved: \(cid)")
-        } catch {
-            print("❌ Error saving CID: \(error)")
-        }
+        try? context.save()
     }
 
-    func updateLocation(lat: Double, lon: Double) {
-        userPrefs.lastLatitude = lat
-        userPrefs.lastLongitude = lon
-        do {
-            try context.save()
-            print("✅ Location saved: \(lat), \(lon)")
-        } catch {
-            print("❌ Error saving location: \(error)")
-        }
-    }
-    
     func updateRefreshRate(_ rate: String) {
         userPrefs.vatsimRefreshRate = rate
-        do {
-            try context.save()
-            print("✅ Refresh rate saved: \(rate)")
-        } catch {
-            print("❌ Error saving refresh rate: \(error)")
-        }
+        try? context.save()
     }
     
     func updateShowInactiveSectors(_ value: Bool) {
@@ -92,6 +71,21 @@ final class PreferencesManager {
 
     func updateShowAirports(_ value: Bool) {
         userPrefs.showAirports = value
+        try? context.save()
+    }
+
+    func updateShowPilotsLayer(_ value: Bool) {
+        userPrefs.showPilotsLayer = value
+        try? context.save()
+    }
+
+    func updateShowSectorsLayer(_ value: Bool) {
+        userPrefs.showSectorsLayer = value
+        try? context.save()
+    }
+
+    func updateShowAirportLayer(_ value: Bool) {
+        userPrefs.showAirportLayer = value
         try? context.save()
     }
 
@@ -143,6 +137,16 @@ final class PreferencesManager {
         userPrefs.developerModeEnabled && !userPrefs.vatglassesCustomRepoSlug.isEmpty
     }
 
+    func updatePlaneIconMultiplier(_ multiplier: Double) {
+        userPrefs.planeIconMultiplier = multiplier
+        try? context.save()
+    }
+
+    func updateAirportIconMultiplier(_ multiplier: Double) {
+        userPrefs.airportIconMultiplier = multiplier
+        try? context.save()
+    }
+
     func updateMapStyle(_ style: MapStyle) {
         userPrefs.mapStyle = style
         try? context.save()
@@ -160,12 +164,7 @@ final class PreferencesManager {
 
     func incrementAdsWatched(by count: Int = 1) {
         userPrefs.totalAdsWatched += count
-        do {
-            try context.save()
-            print("✅ Total ads watched saved: \(userPrefs.totalAdsWatched)")
-        } catch {
-            print("❌ Error saving ads watched: \(error)")
-        }
+        try? context.save()
     }
 
     func getRefreshIntervalInSeconds() -> TimeInterval {

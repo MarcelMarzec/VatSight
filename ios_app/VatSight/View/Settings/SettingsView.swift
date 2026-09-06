@@ -110,8 +110,7 @@ struct SettingsView: View {
                         }.foregroundColor(.primary)
                     }
 
-                    // TODO: Replace with your hosted privacy policy URL before App Store submission
-                    Link(destination: URL(string: "https://github.com/MarcelMarzec/VatSight/blob/main/PRIVACY.md")!) {
+                    Link(destination: URL(string: "https://vatsight.com/ios_privacy_policy.html")!) {
                         HStack {
                             Image(systemName: "hand.raised.fill").foregroundColor(.primary)
                             VStack(alignment: .leading) {

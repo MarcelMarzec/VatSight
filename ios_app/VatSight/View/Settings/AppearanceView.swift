@@ -15,7 +15,7 @@ struct AppearanceView: View {
         List {
             // MARK: - Map Style
             Section {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading) {
                     Text("Map Style")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -33,16 +33,8 @@ struct AppearanceView: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                .padding(.vertical, 4)
-            } header: {
-                Label("Map", systemImage: "map")
-            } footer: {
-                Text("System uses Night for Dark Mode and Day for Light Mode to match your device appearance.")
-            }
-
-            // MARK: - App Theme
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
+                
+                VStack(alignment: .leading) {
                     Text("App Theme")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -56,11 +48,44 @@ struct AppearanceView: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                .padding(.vertical, 4)
             } header: {
-                Label("Interface", systemImage: "paintpalette")
-            } footer: {
-                Text("System follows your device's Dark/Light Mode setting. Dark and Light override it.")
+                Label("Map Styling", systemImage: "map")
+            }
+            
+            // MARK: - Aircraft Icon Size
+            Section {
+                VStack(alignment: .leading) {
+                    Text("Aircraft Icon Size")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Picker("Aircraft Icon Size", selection: Binding(
+                        get: { prefsManager.userPrefs.planeIconMultiplier },
+                        set: { prefsManager.updatePlaneIconMultiplier($0) }
+                    )) {
+                        ForEach([0.5, 0.75, 1.0, 1.25, 1.5], id: \.self) { multiplier in
+                            Text(String(format: "%.2gx", multiplier)).tag(multiplier)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                
+                VStack(alignment: .leading) {
+                    Text("Airport Icon Size")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Picker("Airport Icon Size", selection: Binding(
+                        get: { prefsManager.userPrefs.airportIconMultiplier },
+                        set: { prefsManager.updateAirportIconMultiplier($0) }
+                    )) {
+                        ForEach([0.5, 0.75, 1.0, 1.25, 1.5], id: \.self) { multiplier in
+                            Text(String(format: "%.2gx", multiplier)).tag(multiplier)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+            } header: {
+                Label("Icon Styling", systemImage: "paperplane")
             }
         }
         .navigationTitle("Appearance")

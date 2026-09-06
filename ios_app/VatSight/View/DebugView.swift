@@ -186,7 +186,7 @@ private struct PositionRow: View {
             // Store the position key in `name` so toggleDebugController can match by key
             name: positionKey,
             callsign: vatsimCallsign,
-            frequency: pos.frequency,
+            frequency: pos.frequency ?? "000.000",
             facility: facilityCode(for: pos.type),
             rating: 3,
             server: "DEBUG",
@@ -251,7 +251,7 @@ private struct PositionRow: View {
                             .foregroundStyle(.secondary)
                     }
                     // VATSIM callsign + frequency
-                    Text("\(vatsimCallsign) · \(pos.frequency) MHz")
+                    Text("\(vatsimCallsign) · \(pos.frequency ?? "—") MHz")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
