@@ -49,6 +49,8 @@ struct VatglassesSector: Codable, Identifiable {
     var activeOwnerColorHex: String?  // Color hex from active owner position
     var activeOwnerRef: String?  // The position ID of the active owner (e.g., "YYD")
     var activeController: Controllers?  // The actual controller controlling this sector
+    /// Additional controllers sharing this sector (e.g. EGLL_N_TWR + EGLL_S_TWR on a single synthetic circle).
+    var activeCoControllers: [Controllers]
     /// True for sectors sourced from nodata.json — FIRs with no full VATGlasses data.
     /// These are matched by callsign prefix and displayed with a "Basic Data Only" indicator.
     var isBasicDataOnly: Bool
@@ -57,7 +59,7 @@ struct VatglassesSector: Codable, Identifiable {
     /// approximations (5 nm for TWR, 20 nm for APP/DEP) displayed alongside real sectors.
     var isSynthetic: Bool
 
-    init(id: String, ownerRefs: [String], frequency: String, geometry: SectorGeometry, properties: SectorProperties?, isActive: Bool = false, activeOwnerColorHex: String? = nil, activeOwnerRef: String? = nil, activeController: Controllers? = nil, isBasicDataOnly: Bool = false, isSynthetic: Bool = false) {
+    init(id: String, ownerRefs: [String], frequency: String, geometry: SectorGeometry, properties: SectorProperties?, isActive: Bool = false, activeOwnerColorHex: String? = nil, activeOwnerRef: String? = nil, activeController: Controllers? = nil, activeCoControllers: [Controllers] = [], isBasicDataOnly: Bool = false, isSynthetic: Bool = false) {
         self.id = id
         self.ownerRefs = ownerRefs
         self.frequency = frequency
@@ -67,6 +69,7 @@ struct VatglassesSector: Codable, Identifiable {
         self.activeOwnerColorHex = activeOwnerColorHex
         self.activeOwnerRef = activeOwnerRef
         self.activeController = activeController
+        self.activeCoControllers = activeCoControllers
         self.isBasicDataOnly = isBasicDataOnly
         self.isSynthetic = isSynthetic
     }
@@ -95,6 +98,7 @@ struct VatglassesSector: Codable, Identifiable {
         activeOwnerColorHex = nil
         activeOwnerRef = nil
         activeController = nil
+        activeCoControllers = []
     }
 }
 

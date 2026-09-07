@@ -98,7 +98,7 @@ final class VatglassesService {
     }
     
     /// Returns sectors with active controller status based on online VATSIM controllers.
-    /// Also generates synthetic circle sectors for TWR/APP controllers that have no real
+    /// Also generates synthetic APP circle sectors for approach controllers that have no real
     /// VATGlasses sector, and updates `unmatchedControllers` and `syntheticSectors`.
     func getActiveSectors(controllers: [Controllers], airports: [VatglassesAirport]) -> [VatglassesSector] {
         guard var sectors = cachedData?.sectors,
@@ -152,15 +152,30 @@ final class VatglassesService {
             }
         }
 
-        // Generate synthetic circle sectors for TWR/APP/DEP controllers that had no real sector.
+        // Build the set of ICAOs that already have a matched real APP/DEP sector.
+        // A synthetic APP circle must not be generated for these — a real sector already covers
+        // the approach airspace even if the specific unmatched controller has no sector of their own.
+        var icaosWithRealAppSector = Set<String>()
+        for sector in sectors where sector.isActive {
+            guard let ctrl = sector.activeController else { continue }
+            let upper = ctrl.callsign.uppercased()
+            guard upper.hasSuffix("_APP") || upper.hasSuffix("_DEP") else { continue }
+            let icao = String(upper.prefix(while: { $0 != "_" }))
+            icaosWithRealAppSector.insert(icao)
+        }
+
+        // Generate synthetic circle sectors for APP/DEP controllers that had no real sector.
         let synthetic = generateSyntheticSectors(
             unmatchedCIDs: controllers.filter { !matchedCIDs.contains($0.cid) },
-            airports: airports
+            airports: airports,
+            icaosWithRealAppSector: icaosWithRealAppSector
         )
-        // Mark synthetic controllers as matched so they don't appear in the unmatched list.
+        // Mark synthetic controllers (primary + co-controllers) as matched so they don't
+        // appear in the unmatched list.
         var syntheticCIDs = Set<Int>()
         for s in synthetic {
             if let cid = s.activeController?.cid { syntheticCIDs.insert(cid) }
+            for co in s.activeCoControllers { syntheticCIDs.insert(co.cid) }
         }
         sectors.append(contentsOf: synthetic)
 
@@ -171,26 +186,36 @@ final class VatglassesService {
             .map { UnmatchedController(callsign: $0.callsign, frequency: $0.frequency, cid: $0.cid, name: $0.name) }
 
         // Record synthetic sector diagnostics for the developer view.
-        self.syntheticSectors = synthetic.compactMap { sector -> SyntheticSector? in
-            guard let ctrl = sector.activeController else { return nil }
+        // Include both the primary controller and any co-controllers on each sector.
+        self.syntheticSectors = synthetic.flatMap { sector -> [SyntheticSector] in
+            guard let ctrl = sector.activeController else { return [] }
             let icao = String(ctrl.callsign.prefix(while: { $0 != "_" }))
-            let radiusNm: Double = ctrl.callsign.uppercased().hasSuffix("_TWR") ? 5.0 : 20.0
-            return SyntheticSector(icao: icao, callsign: ctrl.callsign, frequency: ctrl.frequency, radiusNm: radiusNm, cid: ctrl.cid, name: ctrl.name)
+            let primary = SyntheticSector(icao: icao, callsign: ctrl.callsign, frequency: ctrl.frequency, radiusNm: 20.0, cid: ctrl.cid, name: ctrl.name)
+            let co = sector.activeCoControllers.map { co in
+                let coIcao = String(co.callsign.prefix(while: { $0 != "_" }))
+                return SyntheticSector(icao: coIcao, callsign: co.callsign, frequency: co.frequency, radiusNm: 20.0, cid: co.cid, name: co.name)
+            }
+            return [primary] + co
         }
 
         return sectors
     }
 
-    /// Generates synthetic circle sectors for TWR/APP/DEP controllers that are online
+    /// Generates synthetic 20 nm circle sectors for APP/DEP controllers that are online
     /// but have no matching real VATGlasses sector.
     ///
-    /// Performance notes:
-    /// - Builds an O(1) ICAO → airport lookup once before iteration.
-    /// - Deduplicates by (ICAO + position type) so only one circle is drawn per airport per type.
-    /// - Circle geometry (64 vertices) is lightweight and computed only when needed.
+    /// Key behaviours:
+    /// - Only APP and DEP positions. TWR is not synthesised.
+    /// - One circle per ICAO. Split APP positions (e.g. EGLL_N_APP + EGLL_S_APP) share a
+    ///   single circle; extra controllers are stored in `activeCoControllers`.
+    /// - Suppressed entirely when another controller at the same ICAO already has a real
+    ///   matched APP sector (`icaosWithRealAppSector`).
+    /// - Mentor (_X_) and trainee (_T_) infixes are skipped.
+    /// - Frequency 199.998 (VATSIM observer placeholder) is always skipped.
     private func generateSyntheticSectors(
         unmatchedCIDs controllers: [Controllers],
-        airports: [VatglassesAirport]
+        airports: [VatglassesAirport],
+        icaosWithRealAppSector: Set<String>
     ) -> [VatglassesSector] {
         // Build a fast ICAO → airport coordinate lookup.
         var airportByICAO: [String: VatglassesAirport] = [:]
@@ -199,60 +224,71 @@ final class VatglassesService {
             airportByICAO[airport.icao.uppercased()] = airport
         }
 
-        var result: [VatglassesSector] = []
-        // Dedup key: "LSZH_TWR", "EDDH_APP" etc. — one circle per callsign type per airport.
-        var seenKeys = Set<String>()
+        // Group eligible APP/DEP controllers by ICAO — one circle per airport.
+        var groups: [String: [Controllers]] = [:]
 
         for controller in controllers {
             let upper = controller.callsign.uppercased()
 
-            // Only synthesise for TWR, APP, and DEP positions.
-            let isTWR = upper.hasSuffix("_TWR")
-            let isAPP = upper.hasSuffix("_APP") || upper.hasSuffix("_DEP")
-            guard isTWR || isAPP else { continue }
+            // Skip observer/inactive frequency.
+            guard controller.frequency != "199.998" else { continue }
 
-            // Skip mentor/trainee callsigns (e.g. EPKK_X_TWR, EPKK_T_TWR). _X_ and _T_ are
-            // VATSIM-standard infixes for mentoring/training sessions and should never get a
-            // synthetic sector — the real controller's sector already covers the airspace.
-            guard !upper.contains("_X_") && !upper.contains("_T_") else { continue }
+            // Only synthesise for APP and DEP positions.
+            guard upper.hasSuffix("_APP") || upper.hasSuffix("_DEP") else { continue }
 
-            // Extract the ICAO prefix (everything before the first underscore).
-            guard let underscoreIdx = upper.firstIndex(of: "_") else { continue }
-            let icao = String(upper[upper.startIndex..<underscoreIdx])
+            // Split on underscore to extract ICAO and detect mentor/trainee infixes.
+            let components = upper.split(separator: "_", omittingEmptySubsequences: true).map(String.init)
+            guard components.count >= 2 else { continue }
+            let icao = components[0]
 
-            // Deduplicate: skip if we already generated a circle for this callsign.
-            guard seenKeys.insert(upper).inserted else { continue }
+            // Skip if a real matched APP sector already exists for this ICAO.
+            guard !icaosWithRealAppSector.contains(icao) else { continue }
+
+            // Skip VATSIM mentor (_X_) and trainee (_T_) sessions — second component exactly
+            // "X" or "T" in a 3+ component callsign (e.g. EPKK_X_APP, EPKK_T_APP).
+            if components.count >= 3 {
+                let infix = components[1]
+                guard infix != "X" && infix != "T" else { continue }
+            }
+
+            groups[icao, default: []].append(controller)
+        }
+
+        // Build one VatglassesSector per ICAO group.
+        var result: [VatglassesSector] = []
+
+        for (icao, groupControllers) in groups {
+            guard !groupControllers.isEmpty else { continue }
+
+            let primary = groupControllers[0]
+            let coControllers = Array(groupControllers.dropFirst())
 
             // Require a known airport with valid coordinates.
             guard let airport = airportByICAO[icao],
                   abs(airport.latitude) <= 90,
                   abs(airport.longitude) <= 180 else { continue }
 
-            let radiusNm: Double = isTWR ? 5.0 : 20.0
-            let geometry = makeCircleGeometry(latitude: airport.latitude, longitude: airport.longitude, radiusNm: radiusNm)
+            let geometry = makeCircleGeometry(latitude: airport.latitude, longitude: airport.longitude, radiusNm: 20.0)
 
-            let posType = isTWR ? "TWR" : "APP"
-            // Altitudes stored in FL (hundreds of feet): TWR 0–FL20 (0–2000ft), APP/DEP FL20–FL200 (2000–20000ft).
-            let minFL = isTWR ? 0 : 20
-            let maxFL = isTWR ? 20 : 200
             let properties = SectorProperties(
-                min: minFL,
-                max: maxFL,
-                name: "\(icao) \(posType) (Synthetic)",
+                min: 20,
+                max: 200,
+                name: "\(icao) APP (Synthetic)",
                 groupName: nil,
                 color: nil
             )
 
             result.append(VatglassesSector(
-                id: "synthetic/\(upper)",
+                id: "synthetic/\(primary.callsign.uppercased())",
                 ownerRefs: [icao],
-                frequency: controller.frequency,
+                frequency: primary.frequency,
                 geometry: geometry,
                 properties: properties,
                 isActive: true,
                 activeOwnerColorHex: nil,
                 activeOwnerRef: icao,
-                activeController: controller,
+                activeController: primary,
+                activeCoControllers: coControllers,
                 isBasicDataOnly: true,
                 isSynthetic: true
             ))

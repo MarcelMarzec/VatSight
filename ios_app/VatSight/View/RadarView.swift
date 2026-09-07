@@ -481,12 +481,12 @@ private struct StaleBanner: View {
                         )
                         .onAppear { isSpinning = true }
                         .onDisappear { isSpinning = false }
-                    Text(isFailed ? "Connection lost · Retrying…" : "Stale data · Downloading…")
+                    Text(isFailed ? "Connection lost · Retrying…" : "Old data · Downloading…")
                         .font(.caption.weight(.medium))
                 }
                 .foregroundStyle(isFailed ? Color.red : .primary)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
                 .glassEffect(
                     isFailed ? .regular.tint(Color.red.opacity(0.25)) : .regular,
                     in: .capsule

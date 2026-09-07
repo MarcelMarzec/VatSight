@@ -23,8 +23,11 @@ struct SectorDetailsView: View {
             headerSection
             List {
                 controllerDetailsSection
+                ForEach(sector.activeCoControllers) { co in
+                    coControllerSection(co)
+                }
             }
-            .scrollDisabled(true)
+            .scrollDisabled(sector.activeCoControllers.isEmpty)
             .textSelection(.enabled)
         }
     }
@@ -114,6 +117,41 @@ struct SectorDetailsView: View {
     }
 
     // MARK: - Helpers
+
+    private func coControllerSection(_ co: Controllers) -> some View {
+        let isCoTracked = prefsManager.userPrefs.trackedCIDs.contains(co.cid)
+        return Section {
+            LabeledContent {
+                VStack(alignment: .trailing) {
+                    Text(co.logon_timeFormatted)
+                    Text(co.onlineDuration)
+                }
+            } label: {
+                HStack {
+                    Button {
+                        if isCoTracked {
+                            prefsManager.removeTrackedCID(co.cid)
+                        } else {
+                            prefsManager.addTrackedCID(co.cid)
+                        }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    } label: {
+                        Image(systemName: isCoTracked ? "star.fill" : "star")
+                            .font(.title2)
+                    }
+                    .foregroundColor(isCoTracked ? .green : .primary)
+                    VStack(alignment: .leading) {
+                        Text(co.callsign).font(.headline).foregroundColor(.primary)
+                        Text(co.name).font(.subheadline).foregroundColor(.secondary)
+                        Text(String(co.cid)).font(.caption).foregroundColor(.secondary)
+                    }
+                }
+            }
+            LabeledContent("Frequency", value: co.frequency)
+        } header: {
+            Text("Also Online")
+        }
+    }
 
     var callsignRow: some View {
         HStack {

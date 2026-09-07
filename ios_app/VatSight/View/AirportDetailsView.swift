@@ -132,19 +132,25 @@ struct AirportDetailsView: View {
             }
             if !atisStations.isEmpty {
                     ForEach(atisStations) { station in
-                        VStack(alignment: .leading) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text(atisPositionLabel(for: station.callsign)).font(.subheadline).foregroundColor(.secondary)
                             HStack {
-                                Text(station.callsign)
-                                    .font(.headline)
-                                Spacer()
                                 if let code = station.atis_code {
-                                    Text("Info \(code)")
+                                    Text(code)
+                                        .font(.headline)
+                                        .padding(.horizontal, 13)
+                                        .padding(.vertical, 9)
+                                        .background(Color(.blue))
+                                        .cornerRadius(8)
+                                }
+                                
+                                VStack(alignment: .leading) {
+                                    Text(station.callsign)
+                                        .font(.headline)
+                                    
+                                    Text(station.frequency)
                                         .font(.headline)
                                 }
-                                Spacer()
-                                Text(station.frequency)
-                                    .font(.headline)
                             }
                             Text("\(station.name) (\(String(station.cid)))")
                                 .font(.subheadline)
@@ -153,7 +159,7 @@ struct AirportDetailsView: View {
                                 Text(lines.joined(separator: "\n"))
                                     .font(.default)
                                     .foregroundStyle(.primary)
-                                    .padding(.top, 1)
+                                    .padding(.top, 4)
                             }
                         }
                     }
@@ -258,40 +264,54 @@ private struct ControllerRow: View {
 
     var body: some View {
             VStack(alignment: .leading) {
-                    Text(positionLabel)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                HStack {
-                    Text(controller.callsign)
-                        .font(.headline)
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading){
+                        Text(positionLabel)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        HStack {
+                            Text(controller.frequency)
+                                .font(.headline)
+                            Text("|")
+                            Text(controller.callsign)
+                                .font(.headline)
+                        }
+                        HStack(spacing: 4) {
+                                Text(controller.name + " (\(String(controller.cid)))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            
+                                Button {
+                                    if isTracked {
+                                        prefsManager.removeTrackedCID(controller.cid)
+                                    } else {
+                                        prefsManager.addTrackedCID(controller.cid)
+                                    }
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                } label: {
+                                    Image(systemName: isTracked ? "star.fill" : "star")
+                                        .font(.subheadline)
+                                }
+                                .foregroundColor(isTracked ? .green : .secondary)
+                            }
+                    }
                     Spacer()
-                    Text(controller.frequency)
-                        .font(.headline)
-                }
-                
-                HStack(spacing: 4) {
-                        Text(controller.name + " (\(String(controller.cid)))")
+                    VStack(alignment: .trailing) {
+                        Text(controller.onlineDuration)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                    
-                        Button {
-                            if isTracked {
-                                prefsManager.removeTrackedCID(controller.cid)
-                            } else {
-                                prefsManager.addTrackedCID(controller.cid)
-                            }
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        } label: {
-                            Image(systemName: isTracked ? "star.fill" : "star")
-                                .font(.subheadline)
-                        }
-                        .foregroundColor(isTracked ? .green : .secondary)
+                        Text(controller.ratingInfo?.short ?? "")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
+                }
+
+                
                 
                 if let atis = controller.text_atis, !atis.isEmpty {
                     Text(atis.joined(separator: "\n"))
-                        .font(.default)
-                        .foregroundColor(.primary)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                         .padding(.top, 1)
                 }
             }
@@ -302,6 +322,22 @@ private struct ControllerRow: View {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let manager = PreferencesManager(context: ModelContext(container))
+
+    // Seed the ratings registry so ratingInfo resolves in the preview
+    let _ = {
+        VatsimRatingsRegistry.shared.controllerRatings = [
+            1: ControllerRatings(id: 1, short: "OBS", long: "Observer"),
+            2: ControllerRatings(id: 2, short: "S1",  long: "Student 1"),
+            3: ControllerRatings(id: 3, short: "S2",  long: "Student 2"),
+            4: ControllerRatings(id: 4, short: "S3",  long: "Student 3"),
+            5: ControllerRatings(id: 5, short: "C1",  long: "Controller 1"),
+            7: ControllerRatings(id: 7, short: "C3",  long: "Controller 3"),
+            8: ControllerRatings(id: 8, short: "I1",  long: "Instructor 1"),
+            9: ControllerRatings(id: 9, short: "I3",  long: "Instructor 3"),
+            10: ControllerRatings(id: 10, short: "SUP", long: "Supervisor"),
+            11: ControllerRatings(id: 11, short: "ADM", long: "Administrator"),
+        ]
+    }()
 
     AirportDetailsView(
         airport: VatglassesAirport(
