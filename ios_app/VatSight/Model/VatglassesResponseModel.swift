@@ -106,6 +106,17 @@ struct SectorGeometry: Codable {
     let type: String // "Polygon" or "MultiPolygon"
     let coordinates: [[[[Double]]]] // GeoJSON coordinate format
     
+    /// Returns the approximate centroid of the sector geometry by averaging all outer ring coordinates.
+    var centroid: CLLocationCoordinate2D? {
+        let outerRings: [[Double]] = coordinates.compactMap { $0.first }.flatMap { $0 }
+        guard !outerRings.isEmpty else { return nil }
+        let validCoords = outerRings.filter { $0.count >= 2 }
+        guard !validCoords.isEmpty else { return nil }
+        let lat = validCoords.map { $0[1] }.reduce(0, +) / Double(validCoords.count)
+        let lon = validCoords.map { $0[0] }.reduce(0, +) / Double(validCoords.count)
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+
     // Helper to convert to Turf geometry
     var turfGeometry: Geometry? {
         if type == "Polygon", let firstPolygon = coordinates.first {

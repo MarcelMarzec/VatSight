@@ -17,6 +17,7 @@ final class RadarViewModel: ObservableObject {
     @Published var atis: [ATIS] = []
     @Published var sectors: [VatglassesSector] = []
     @Published var airports: [VatglassesAirport] = []
+    @Published var allPositions: [String: VatglassesPosition] = [:]
     @Published var selectedCID: Int?
     @Published var isShowingPilotSheet = false
     @Published var selectedAirportICAO: String?
@@ -138,6 +139,7 @@ final class RadarViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self?.sectors = data.sectors
                     self?.airports = data.airports
+                    self?.allPositions = data.allPositions
                     if let service = self?.vatglassesService {
                         self?.vatglassesDiagnostics = VatglassesDiagnostics(
                             parseErrors: service.parseErrors,
@@ -158,6 +160,7 @@ final class RadarViewModel: ObservableObject {
                     if !cachedSectors.isEmpty {
                         self?.sectors = cachedSectors
                         self?.airports = cachedAirports
+                        self?.allPositions = self?.vatglassesService.getCachedPositions() ?? [:]
                         self?.updateSectorActiveStatus()
                     }
                     self?.sectorFetchDone = true

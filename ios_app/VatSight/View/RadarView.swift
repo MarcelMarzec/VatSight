@@ -101,8 +101,15 @@ struct RadarView: View {
                     sectorDetent = .height(sectorHeaderHeight)
                 }
             ) {
-                if let sector = viewModel.selectedSector, let controller = sector.activeController {
-                    SectorDetailsView(sector: sector, controller: controller, headerHeight: $sectorHeaderHeight)
+                if let sector = viewModel.selectedSector {
+                    SectorDetailsView(sector: sector, controller: sector.activeController, allPositions: viewModel.allPositions, allSectors: viewModel.sectors, headerHeight: $sectorHeaderHeight) { sectorId in
+                            if let target = viewModel.sectors.first(where: { $0.id == sectorId }),
+                               let centroid = target.geometry.centroid {
+                                viewModel.selectSectorAndFly(id: sectorId, coordinate: centroid)
+                            } else {
+                                viewModel.selectSector(id: sectorId)
+                            }
+                        }
                         .clipShape(
                             UnevenRoundedRectangle(
                                 topLeadingRadius: 20,
