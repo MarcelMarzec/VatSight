@@ -95,31 +95,35 @@ struct SettingsView: View {
                         }
                     } */
                 
-                    Link(destination: URL(string: "https://github.com/MarcelMarzec/VatSight")!) {
-                        HStack {
-                            Image("githubLogo")
-                                .resizable()
-                                .foregroundStyle(.primary)
-                                .frame(width: 25, height: 25)
-                            VStack(alignment: .leading) {
-                                Text("VatSight Github Repository")
-                                Text("View and Contribute the source code, Any help is greatly appreciated!").font(.subheadline).foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
-                        }.foregroundColor(.primary)
+                    if let githubURL = URL(string: "https://github.com/MarcelMarzec/VatSight") {
+                        Link(destination: githubURL) {
+                            HStack {
+                                Image("githubLogo")
+                                    .resizable()
+                                    .foregroundStyle(.primary)
+                                    .frame(width: 25, height: 25)
+                                VStack(alignment: .leading) {
+                                    Text("VatSight Github Repository")
+                                    Text("View and contribute to the source code — any help is greatly appreciated!").font(.subheadline).foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
+                            }.foregroundColor(.primary)
+                        }
                     }
 
-                    Link(destination: URL(string: "https://vatsight.com/ios_privacy_policy.html")!) {
-                        HStack {
-                            Image(systemName: "hand.raised.fill").foregroundColor(.primary)
-                            VStack(alignment: .leading) {
-                                Text("Privacy Policy")
-                                Text("How VatSight handles your data.").font(.subheadline).foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
-                        }.foregroundColor(.primary)
+                    if let privacyURL = URL(string: "https://vatsight.com/ios_privacy_policy.html") {
+                        Link(destination: privacyURL) {
+                            HStack {
+                                Image(systemName: "hand.raised.fill").foregroundColor(.primary)
+                                VStack(alignment: .leading) {
+                                    Text("Privacy Policy")
+                                    Text("How VatSight handles your data.").font(.subheadline).foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
+                            }.foregroundColor(.primary)
+                        }
                     }
                 } header: {
                     Text("Miscellaneous")
@@ -130,6 +134,14 @@ struct SettingsView: View {
                         DeveloperView()
                     } label: {
                         Label("Developers", systemImage: "hammer.fill").foregroundColor(.primary)
+                    }
+                }
+
+                Section {
+                    if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+                       let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String {
+                        LabeledContent("Version", value: "\(version) (\(build))")
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

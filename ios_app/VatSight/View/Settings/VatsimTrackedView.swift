@@ -80,7 +80,7 @@ struct VatsimTrackedView: View {
                         .onTapGesture {
                             guard isOnline else { return }
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            prefsManager.pendingNavigateToCID = cid
+                            radarViewModel.pendingNavigateToCID = cid
                         }
                 }
                 .onDelete { offsets in

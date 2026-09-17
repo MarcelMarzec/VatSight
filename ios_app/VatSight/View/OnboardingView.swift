@@ -25,7 +25,7 @@ struct OnboardingView: View {
         OnboardingPage(
             systemImage: "airplane.departure",
             title: "Welcome to VatSight",
-            description: "A live radar for the VATSIM network. Explore active pilots, controllers and airspace sectors in real time using VATGlasses Data."
+            description: "A live radar for the VATSIM network. Explore active pilots, controllers and airspace sectors in real time using Vatglasses data."
         ),
         OnboardingPage(
             systemImage: "map",

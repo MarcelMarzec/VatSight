@@ -32,19 +32,19 @@ struct ContentView: View {
                 .environment(manager)
                 .environmentObject(radarViewModel)
                 .preferredColorScheme(manager.userPrefs.appTheme.colorScheme)
-                .onChange(of: manager.pendingNavigateToCID) { _, cid in
+                .onChange(of: radarViewModel.pendingNavigateToCID) { _, cid in
                     if cid != nil { selectedTab = 0 }
                 }
-                .onChange(of: manager.pendingNavigateToSectorId) { _, sectorId in
+                .onChange(of: radarViewModel.pendingNavigateToSectorId) { _, sectorId in
                     guard let id = sectorId else { return }
                     selectedTab = 0
-                    if let coord = manager.pendingNavigateToSectorCoordinate {
+                    if let coord = radarViewModel.pendingNavigateToSectorCoordinate {
                         radarViewModel.selectSectorAndFly(id: id, coordinate: coord)
                     } else {
                         radarViewModel.selectSector(id: id)
                     }
-                    manager.pendingNavigateToSectorId = nil
-                    manager.pendingNavigateToSectorCoordinate = nil
+                    radarViewModel.pendingNavigateToSectorId = nil
+                    radarViewModel.pendingNavigateToSectorCoordinate = nil
                 }
                 .fullScreenCover(isPresented: Binding(
                     get: { !manager.userPrefs.hasCompletedOnboarding },

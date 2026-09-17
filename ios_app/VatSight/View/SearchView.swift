@@ -37,6 +37,7 @@ struct SearchView: View {
     var onControllerSelected: (Controllers) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(PreferencesManager.self) private var prefsManager
 
     @State private var query:              String = ""
     @State private var category: SearchCategory = .atc
@@ -257,6 +258,16 @@ struct SearchView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .onAppear {
+                category             = SearchCategory(rawValue: prefsManager.userPrefs.searchCategoryRaw) ?? .atc
+                selectedFacilities   = Set(prefsManager.userPrefs.searchSelectedFacilities)
+                excludedFacilities   = Set(prefsManager.userPrefs.searchExcludedFacilities)
+                showInactiveAirports = prefsManager.userPrefs.searchShowInactiveAirports
+            }
+            .onChange(of: category)             { _, new in prefsManager.updateSearchCategory(new.rawValue) }
+            .onChange(of: selectedFacilities)   { _, new in prefsManager.updateSearchSelectedFacilities(new) }
+            .onChange(of: excludedFacilities)   { _, new in prefsManager.updateSearchExcludedFacilities(new) }
+            .onChange(of: showInactiveAirports) { _, new in prefsManager.updateSearchShowInactiveAirports(new) }
         }
     }
 

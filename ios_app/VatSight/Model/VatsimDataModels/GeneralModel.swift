@@ -15,13 +15,6 @@ struct General: Codable {
     let unique_users: Int
     
     var update_timestampFormatted: String {
-        Self.utcTimeFormatter.string(from: update_timestamp)
+        VatsimDateFormatting.utcTimeFormatter.string(from: update_timestamp)
     }
-    
-    private static let utcTimeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm:ss'z'"
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        return f
-    }()
 }

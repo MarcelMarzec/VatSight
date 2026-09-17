@@ -108,6 +108,14 @@ final class UserPreferencesModel {
     var planeIconMultiplier: Double = 1.0
     /// Airport icon size multiplier — 1.0 is the default size.
     var airportIconMultiplier: Double = 1.0
+    /// Persisted search filter: facility IDs explicitly included. Empty = no include filter.
+    var searchSelectedFacilities: [Int] = []
+    /// Persisted search filter: facility IDs explicitly excluded. ID 0 (Observer) excluded by default.
+    var searchExcludedFacilities: [Int] = [0]
+    /// Persisted search filter: raw value of `SearchCategory`, e.g. "ATC".
+    var searchCategoryRaw: String = "ATC"
+    /// Persisted search filter: whether inactive airports are shown in the Airport tab.
+    var searchShowInactiveAirports: Bool = false
 
     var mapStyle: MapStyle {
         get { MapStyle(rawValue: mapStyleRaw) ?? .system }

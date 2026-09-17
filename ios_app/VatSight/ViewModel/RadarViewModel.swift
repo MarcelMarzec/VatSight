@@ -32,6 +32,9 @@ final class RadarViewModel: ObservableObject {
     @Published var showAirportLayer = true
     @Published var isLoadingData = true
     @Published var pendingCameraFlyTo: CLLocationCoordinate2D? = nil
+    @Published var pendingNavigateToCID: Int? = nil
+    @Published var pendingNavigateToSectorId: String? = nil
+    @Published var pendingNavigateToSectorCoordinate: CLLocationCoordinate2D? = nil
     @Published var selectedAltitudeFt: Double = 0
     @Published var altitudeFilterEnabled = false
     @Published var mergeSectors = false
@@ -51,7 +54,7 @@ final class RadarViewModel: ObservableObject {
     var activeFlightPlanICAOs: Set<String> = []
     
     private let vatsimService = VatsimService()
-    private let vatglassesService = VatglassesService()
+    let vatglassesService = VatglassesService()
     private var timer: Timer?
     private var prefsManager: PreferencesManager?
     
@@ -140,15 +143,7 @@ final class RadarViewModel: ObservableObject {
                     self?.sectors = data.sectors
                     self?.airports = data.airports
                     self?.allPositions = data.allPositions
-                    if let service = self?.vatglassesService {
-                        self?.vatglassesDiagnostics = VatglassesDiagnostics(
-                            parseErrors: service.parseErrors,
-                            unmatchedControllers: [],
-                            invalidAirports: Self.detectInvalidAirports(data.airports),
-                            lastUpdated: Date()
-                        )
-                    }
-                    self?.updateSectorActiveStatus()
+                        self?.updateSectorActiveStatus()
                     self?.objectWillChange.send()
                     self?.sectorFetchDone = true
                     self?.dismissLoadingIfReady()
@@ -248,7 +243,7 @@ final class RadarViewModel: ObservableObject {
         }
     }
 
-    private func mergedWithDebugControllers(_ live: [Controllers]) -> [Controllers] {
+    func mergedWithDebugControllers(_ live: [Controllers]) -> [Controllers] {
         guard !debugControllers.isEmpty else { return live }
         let debugCIDs = Set(debugControllers.map { $0.cid })
         return live.filter { !debugCIDs.contains($0.cid) } + debugControllers
@@ -276,30 +271,7 @@ final class RadarViewModel: ObservableObject {
         airports.first { $0.icao == selectedAirportICAO }
     }
     
-    private func updateControllersAtSelectedAirport() {
-        guard let icao = selectedAirportICAO else {
-            controllersAtSelectedAirport = []
-            return
-        }
 
-        let mergedControllers = mergedWithDebugControllers(controllers)
-        let prefixes = vatglassesService.callsignPrefixes(for: icao)
-        let directControllers = mergedControllers.filter { ctrl in
-            let upper = ctrl.callsign.uppercased()
-            guard !upper.hasSuffix("_ATIS") else { return false }
-            return prefixes.contains { upper.hasPrefix($0 + "_") }
-        }
-
-        var topdownControllers: [Controllers] = []
-        if let airport = selectedAirport {
-            let allTopdown = vatglassesService.getTopdownControllers(for: airport, controllers: mergedControllers)
-            let directCIDs = Set(directControllers.map { $0.cid })
-            topdownControllers = allTopdown.filter { !directCIDs.contains($0.cid) }
-        }
-
-        controllersAtSelectedAirport = (directControllers + topdownControllers)
-            .sorted { positionOrder($0.callsign) > positionOrder($1.callsign) }
-    }
     
     var selectedSector: VatglassesSector? {
         sectors.first(where: { $0.id == selectedSectorId })
@@ -310,7 +282,7 @@ final class RadarViewModel: ObservableObject {
         selectedSector?.activeController?.cid
     }
     
-    private func positionOrder(_ callsign: String) -> Int {
+    func positionOrder(_ callsign: String) -> Int {
         let upper = callsign.uppercased()
         if upper.hasSuffix("_DEL") { return 0 }
         if upper.hasSuffix("_GND") { return 1 }
@@ -325,129 +297,7 @@ final class RadarViewModel: ObservableObject {
         sectors.filter { $0.isActive }
     }
     
-    func selectPilot(cid: Int) {
-        openPilotSheet(cid: cid, flyTo: nil, enableTracking: false)
-    }
 
-    func selectPilotAndFly(cid: Int, coordinate: CLLocationCoordinate2D, enableTracking: Bool = false) {
-        openPilotSheet(cid: cid, flyTo: coordinate, enableTracking: enableTracking)
-    }
-
-    private func openPilotSheet(cid: Int, flyTo coordinate: CLLocationCoordinate2D?, enableTracking: Bool) {
-        isShowingAirportSheet = false
-        selectedAirportICAO = nil
-        controllersAtSelectedAirport = []
-        isShowingSectorSheet = false
-        selectedSectorId = nil
-
-        if altitudeFilterEnabled, let pilot = pilots.first(where: { $0.cid == cid }) {
-            selectedAltitudeFt = Double(pilot.altitude)
-        }
-
-        selectedCID = cid
-        isShowingPilotSheet = true
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-
-        if let coordinate {
-            pendingCameraFlyTo = coordinate
-        }
-    }
-
-    func selectAirportAndFly(icao: String) {
-        isShowingPilotSheet = false
-        selectedCID = nil
-        isShowingSectorSheet = false
-        selectedSectorId = nil
-        isShowingAirportSheet = false
-        selectedAirportICAO = icao
-        updateControllersAtSelectedAirport()
-        if let airport = airports.first(where: { $0.icao == icao }) {
-            pendingCameraFlyTo = CLLocationCoordinate2D(latitude: airport.latitude, longitude: airport.longitude)
-        }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-            self?.isShowingAirportSheet = true
-        }
-    }
-
-    func airportName(for icao: String) -> String? {
-        airports.first { $0.icao.uppercased() == icao.uppercased() }?.callsign
-    }
-    
-    func dismissPilotSheet() {
-        isShowingPilotSheet = false
-        selectedCID = nil
-    }
-
-    func onPilotSheetDismissed() {
-        selectedCID = nil
-    }
-    
-    func selectAirport(icao: String) {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        if isShowingPilotSheet || isShowingSectorSheet {
-            isShowingPilotSheet = false
-            selectedCID = nil
-            isShowingSectorSheet = false
-            selectedSectorId = nil
-            selectedAirportICAO = icao
-            updateControllersAtSelectedAirport()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-                self?.isShowingAirportSheet = true
-            }
-        } else {
-            selectedAirportICAO = icao
-            updateControllersAtSelectedAirport()
-            isShowingAirportSheet = true
-        }
-    }
-
-    func dismissAirportSheet() {
-        isShowingAirportSheet = false
-        selectedAirportICAO = nil
-        controllersAtSelectedAirport = []
-    }
-    
-    func selectSector(id: String) {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        if isShowingPilotSheet || isShowingAirportSheet {
-            isShowingPilotSheet = false
-            selectedCID = nil
-            isShowingAirportSheet = false
-            selectedAirportICAO = nil
-            selectedSectorId = id
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-                self?.isShowingSectorSheet = true
-            }
-        } else {
-            selectedSectorId = id
-            isShowingSectorSheet = true
-        }
-    }
-
-    /// Selects a sector by ID, flies the camera to the given coordinate, and opens the sector sheet.
-    func selectSectorAndFly(id: String, coordinate: CLLocationCoordinate2D) {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        isShowingPilotSheet = false
-        selectedCID = nil
-        isShowingAirportSheet = false
-        selectedAirportICAO = nil
-        pendingCameraFlyTo = coordinate
-        if isShowingSectorSheet {
-            // Sheet already open — update selection in place.
-            selectedSectorId = id
-        } else {
-            selectedSectorId = id
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
-                self?.isShowingSectorSheet = true
-            }
-        }
-    }
-    
-    func dismissSectorSheet() {
-        isShowingSectorSheet = false
-        selectedSectorId = nil
-    }
     
     func toggleSectors() {
         showInactiveSectors.toggle()
@@ -598,90 +448,4 @@ final class RadarViewModel: ObservableObject {
         )
     }
 
-    // MARK: - Friend CID Helpers
-
-    /// Returns the set of airport ICAOs where a tracked CID is the active controller.
-    func friendControlledAirportICAOs(friendCIDs: Set<Int>) -> Set<String> {
-        guard !friendCIDs.isEmpty else { return [] }
-        var result = Set<String>()
-        for airport in airports {
-            if let controller = airport.activeController, friendCIDs.contains(controller.cid) {
-                result.insert(airport.icao)
-            }
-        }
-        return result
-    }
-
-    /// Traffic data for the currently selected airport, derived from live pilots and prefiles.
-    var selectedAirportTraffic: AirportTraffic? {
-        guard let icao = selectedAirportICAO else { return nil }
-        let upperICAO = icao.uppercased()
-        let groundSpeedThreshold = 40
-
-        var airborneDep: [Pilot] = []
-        var airborneArr: [Pilot] = []
-        var groundDep: [Pilot] = []
-        var groundArr: [Pilot] = []
-
-        for pilot in pilots {
-            guard let fp = pilot.flight_plan else { continue }
-            let isDeparture = fp.departure.uppercased() == upperICAO
-            let isArrival   = fp.arrival.uppercased()   == upperICAO
-            guard isDeparture || isArrival else { continue }
-
-            let isOnGround = pilot.groundspeed < groundSpeedThreshold
-
-            if isDeparture {
-                if isOnGround { groundDep.append(pilot) }
-                else { airborneDep.append(pilot) }
-            }
-            if isArrival {
-                if isOnGround { groundArr.append(pilot) }
-                else { airborneArr.append(pilot) }
-            }
-        }
-
-        let prefileDep = prefiles.filter { $0.flight_plan?.departure.uppercased() == upperICAO }
-        let prefileArr = prefiles.filter { $0.flight_plan?.arrival.uppercased()   == upperICAO }
-
-        return AirportTraffic(
-            airborneDepartures: airborneDep,
-            airborneArrivals:   airborneArr,
-            groundDepartures:   groundDep,
-            groundArrivals:     groundArr,
-            prefileDepartures:  prefileDep,
-            prefileArrivals:    prefileArr
-        )
-    }
-}
-
-// MARK: - AirportTraffic
-
-struct AirportTraffic {
-    /// Airborne pilots with this airport as departure (groundspeed >= 40 kt)
-    let airborneDepartures: [Pilot]
-    /// Airborne pilots with this airport as arrival (groundspeed >= 40 kt)
-    let airborneArrivals: [Pilot]
-    /// On-ground pilots with this airport as departure (groundspeed < 40 kt)
-    let groundDepartures: [Pilot]
-    /// On-ground pilots with this airport as arrival (groundspeed < 40 kt)
-    let groundArrivals: [Pilot]
-    /// Prefiled plans departing from this airport (no live position)
-    let prefileDepartures: [Prefiles]
-    /// Prefiled plans arriving at this airport (no live position)
-    let prefileArrivals: [Prefiles]
-
-    var totalDepartures: Int {
-        airborneDepartures.count + groundDepartures.count + prefileDepartures.count
-    }
-    var totalArrivals: Int {
-        airborneArrivals.count + groundArrivals.count + prefileArrivals.count
-    }
-    var totalOnGround: Int {
-        groundDepartures.count + groundArrivals.count
-    }
-    /// All airborne pilots (departures + arrivals) — used to draw airport-to-pilot lines.
-    var allAirbornePilots: [Pilot] {
-        airborneDepartures + airborneArrivals
-    }
 }

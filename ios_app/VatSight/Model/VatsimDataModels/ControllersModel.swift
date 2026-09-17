@@ -34,11 +34,11 @@ struct Controllers: Codable, Identifiable {
     }
 
     var logon_timeFormatted: String {
-        Self.utcTimeFormatter.string(from: logon_time)
+        VatsimDateFormatting.utcTimeFormatter.string(from: logon_time)
     }
     
     var last_updatedFormatted: String {
-        Self.utcTimeFormatter.string(from: last_updated)
+        VatsimDateFormatting.utcTimeFormatter.string(from: last_updated)
     }
 
     /// Duration online as a formatted string, e.g. "2h 34m"
@@ -51,11 +51,4 @@ struct Controllers: Codable, Identifiable {
         }
         return "\(minutes)m"
     }
-    
-    private static let utcTimeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm:ss'z'"
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        return f
-    }()
 }

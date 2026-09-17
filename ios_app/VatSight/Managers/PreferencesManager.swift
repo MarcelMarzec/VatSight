@@ -8,7 +8,6 @@
 
 import SwiftUI
 import SwiftData
-import CoreLocation
 
 @Observable
 final class PreferencesManager {
@@ -16,15 +15,6 @@ final class PreferencesManager {
     private let context: ModelContext
 
     var userPrefs: UserPreferencesModel
-
-    /// Set to a CID to request the app switch to the Map tab and navigate to that pilot/controller.
-    /// Cleared by RadarView after it consumes the value.
-    var pendingNavigateToCID: Int? = nil
-
-    /// Set to a sector ID to request the app switch to the Map tab and select that sector.
-    /// The associated coordinate is used to fly the camera. Cleared after consumption.
-    var pendingNavigateToSectorId: String? = nil
-    var pendingNavigateToSectorCoordinate: CLLocationCoordinate2D? = nil
 
     init(context: ModelContext) {
         self.context = context
@@ -159,6 +149,28 @@ final class PreferencesManager {
 
     func markOnboardingComplete() {
         userPrefs.hasCompletedOnboarding = true
+        try? context.save()
+    }
+
+    // MARK: - Search Filters
+
+    func updateSearchSelectedFacilities(_ ids: Set<Int>) {
+        userPrefs.searchSelectedFacilities = Array(ids)
+        try? context.save()
+    }
+
+    func updateSearchExcludedFacilities(_ ids: Set<Int>) {
+        userPrefs.searchExcludedFacilities = Array(ids)
+        try? context.save()
+    }
+
+    func updateSearchCategory(_ rawValue: String) {
+        userPrefs.searchCategoryRaw = rawValue
+        try? context.save()
+    }
+
+    func updateSearchShowInactiveAirports(_ value: Bool) {
+        userPrefs.searchShowInactiveAirports = value
         try? context.save()
     }
 

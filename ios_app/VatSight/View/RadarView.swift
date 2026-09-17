@@ -147,9 +147,9 @@ struct RadarView: View {
             .onChange(of: prefsManager.userPrefs.vatsimRefreshRate) { _, _ in
                 viewModel.restartAutoRefresh()
             }
-            .onChange(of: prefsManager.pendingNavigateToCID) { _, cid in
+            .onChange(of: viewModel.pendingNavigateToCID) { _, cid in
                 guard let cid else { return }
-                defer { prefsManager.pendingNavigateToCID = nil }
+                defer { viewModel.pendingNavigateToCID = nil }
 
                 if let pilot = viewModel.pilots.first(where: { $0.cid == cid }) {
                     viewModel.selectPilotAndFly(cid: cid, coordinate: pilot.coordinate)
@@ -488,12 +488,12 @@ private struct StaleBanner: View {
                         )
                         .onAppear { isSpinning = true }
                         .onDisappear { isSpinning = false }
-                    Text(isFailed ? "Connection lost · Retrying…" : "Old data · Downloading…")
+                    Text(isFailed ? "Connection lost · Retrying…" : "Updating data…")
                         .font(.caption.weight(.medium))
                 }
                 .foregroundStyle(isFailed ? Color.red : .primary)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+                .padding(.vertical, 16)
                 .glassEffect(
                     isFailed ? .regular.tint(Color.red.opacity(0.25)) : .regular,
                     in: .capsule

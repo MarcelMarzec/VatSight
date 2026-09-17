@@ -216,8 +216,8 @@ struct VATGlassesDataView: View {
             if self.isRedownloading {
                 self.isRedownloading = false
                 self.updateDataInfo()
-                self.alertTitle = "Timeout"
-                self.alertMessage = "The redownload took too long. The data may still be loading in the background. Try restarting the app if sectors don't appear."
+                self.alertTitle = "Reload Timed Out"
+                self.alertMessage = "Reload timed out. Check your connection and try again. The data may still be loading in the background."
                 self.showingAlert = true
             }
         }

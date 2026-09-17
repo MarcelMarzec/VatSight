@@ -67,19 +67,12 @@ struct Pilot: Codable, Identifiable {
     }
     
     var last_updatedFormatted: String {
-        Self.utcTimeFormatter.string(from: last_updated)
+        VatsimDateFormatting.utcTimeFormatter.string(from: last_updated)
     }
     
     private static let logonTimeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "HH:mm'z'"
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        return f
-    }()
-    
-    private static let utcTimeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm:ss'z'"
         f.timeZone = TimeZone(secondsFromGMT: 0)
         return f
     }()
@@ -112,13 +105,6 @@ struct FlightPlan: Codable {
     var fuel_timeFormatted: String {
         Self.hhmmTimeFormatter(fuel_time)
     }
-    
-    private static let utcTimeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm:ss'z'"
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        return f
-    }()
     
     private static func hhmmTimeFormatter(_ value: String) -> String {
         guard value.count == 4 else { return value }

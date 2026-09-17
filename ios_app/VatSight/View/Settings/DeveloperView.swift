@@ -51,7 +51,7 @@ struct DeveloperView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "info.circle")
                             .foregroundStyle(.secondary)
-                        Text("Sector debug panel enabled on the map.")
+                        Text("The sector debug panel is now visible on the map.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -381,12 +381,12 @@ struct DeveloperView: View {
         // Find the airport coordinate to fly the camera to.
         if let airport = radarViewModel.airports.first(where: { $0.icao.uppercased() == sector.icao.uppercased() }) {
             let coord = CLLocationCoordinate2D(latitude: airport.latitude, longitude: airport.longitude)
-            prefsManager.pendingNavigateToSectorId = sectorId
-            prefsManager.pendingNavigateToSectorCoordinate = coord
+            radarViewModel.pendingNavigateToSectorId = sectorId
+            radarViewModel.pendingNavigateToSectorCoordinate = coord
         } else {
             // Airport not in list — select the sector without flying.
-            prefsManager.pendingNavigateToSectorId = sectorId
-            prefsManager.pendingNavigateToSectorCoordinate = nil
+            radarViewModel.pendingNavigateToSectorId = sectorId
+            radarViewModel.pendingNavigateToSectorCoordinate = nil
         }
         dismiss()
     }

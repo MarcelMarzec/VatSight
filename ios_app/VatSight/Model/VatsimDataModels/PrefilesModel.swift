@@ -18,13 +18,6 @@ struct Prefiles: Codable, Identifiable {
     var id: Int { cid }
     
     var last_updatedFormatted: String {
-        Self.utcTimeFormatter.string(from: last_updated)
+        VatsimDateFormatting.utcTimeFormatter.string(from: last_updated)
     }
-    
-    private static let utcTimeFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm:ss'z'"
-        f.timeZone = TimeZone(secondsFromGMT: 0)
-        return f
-    }()
 }

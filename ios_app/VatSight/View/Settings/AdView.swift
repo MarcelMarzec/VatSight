@@ -19,8 +19,19 @@ protocol AdProvider {
     func showAd(onRewarded: @escaping () -> Void) async
 }
 
+// MARK: - No-Op Ad Provider (Release builds only)
+// Used in release builds where no real ad SDK is integrated yet.
+#if !DEBUG
+final class NoOpAdProvider: AdProvider {
+    var isAdReady: Bool = false
+    func loadAd() async {}
+    func showAd(onRewarded: @escaping () -> Void) async {}
+}
+#endif
+
 // MARK: - Simulated Ad Provider
-// Replace this class with a real AdMob / other SDK implementation
+// Replace this class with a real AdMob / other SDK implementation before shipping.
+#if DEBUG
 final class SimulatedAdProvider: AdProvider {
     var isAdReady: Bool = true
 
@@ -36,6 +47,7 @@ final class SimulatedAdProvider: AdProvider {
         onRewarded()
     }
 }
+#endif
 
 // MARK: - Ad Count Option
 enum AdCount: Int, CaseIterable, Identifiable {
@@ -83,8 +95,14 @@ struct AdView: View {
     @Environment(PreferencesManager.self) private var prefsManager
     @Environment(\.dismiss) private var dismiss
 
-    // Swap SimulatedAdProvider() for your real SDK provider here
+    // Swap SimulatedAdProvider() for your real SDK provider here.
+    // SimulatedAdProvider is only available in DEBUG builds — replace with a real provider before shipping.
+    #if DEBUG
     private let adProvider: AdProvider = SimulatedAdProvider()
+    #else
+    // TODO: Replace with real ad SDK provider (e.g. Google AdMob rewarded ads)
+    private let adProvider: AdProvider = NoOpAdProvider()
+    #endif
 
     @State private var playbackState: AdPlaybackState = .idle
     @State private var adsWatchedThisSession = 0
@@ -124,7 +142,7 @@ struct AdView: View {
                         .foregroundColor(.pink)
                     Text("Support VatSight")
                         .font(.title2.bold())
-                    Text("VatSight is free to use. You can support the developer by voluntarily watching a short advert — no cost to you!")
+                    Text("VatSight is free to use. Support development by voluntarily watching a short advert — no cost to you!")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -250,7 +268,7 @@ struct AdView: View {
                 Button(role: .cancel) {
                     finishSession()
                 } label: {
-                    Text("Stop here — that's enough!")
+                    Text("Stop here — that's enough")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
