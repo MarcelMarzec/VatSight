@@ -7,6 +7,25 @@
 
 import SwiftUI
 
+/// Sort orders available for the airport list.
+private enum AirportSortOrder: String, CaseIterable {
+    case totalPilotsHigh   = "Total Pilots: High → Low"
+    case controllersHigh   = "Controllers: High → Low"
+    case departuresHigh    = "Departures: High → Low"
+    case arrivalsHigh      = "Arrivals: High → Low"
+    case onGroundHigh      = "On Ground: High → Low"
+
+    var systemImage: String {
+        switch self {
+        case .totalPilotsHigh:  return "paperplane"
+        case .controllersHigh:  return "antenna.radiowaves.left.and.right"
+        case .departuresHigh:   return "airplane.departure"
+        case .arrivalsHigh:     return "airplane.arrival"
+        case .onGroundHigh:     return "airplane.landed"
+        }
+    }
+}
+
 /// The three searchable categories.
 private enum SearchCategory: String, CaseIterable {
     case airport  = "Airport"
@@ -30,13 +49,13 @@ struct SearchView: View {
     let airports:    [VatglassesAirport]
     let pilots:      [Pilot]
     let controllers: [Controllers]
+    let prefiles:    [Prefiles]
 
-    // Callbacks — each handler dismisses the sheet from the caller side
+    // Callbacks — each handler navigates to the map tab from the caller side
     var onAirportSelected:    (String) -> Void
     var onPilotSelected:      (Int) -> Void
     var onControllerSelected: (Controllers) -> Void
 
-    @Environment(\.dismiss) private var dismiss
     @Environment(PreferencesManager.self) private var prefsManager
 
     @State private var query:              String = ""
@@ -49,6 +68,8 @@ struct SearchView: View {
     @State private var excludedFacilities: Set<Int> = [0]
     /// When true, inactive airports are included in the airport list.
     @State private var showInactiveAirports: Bool = false
+    /// Current sort order for the airport list.
+    @State private var airportSort: AirportSortOrder = .totalPilotsHigh
 
     // MARK: - Cached pre-computations
 
@@ -57,35 +78,70 @@ struct SearchView: View {
         pilots.sorted { $0.callsign < $1.callsign }
     }
 
-    /// Traffic counts keyed by uppercase ICAO. Built once from the full pilots array
-    /// so the airport list doesn't iterate all pilots for every visible row.
-    private var trafficCountsByICAO: [String: AirportCounts] {
+    /// Single-pass lookup table: traffic counts + controller count per uppercase ICAO.
+    /// Built once per render so sort comparisons are O(1) dictionary lookups.
+    /// Counting logic mirrors AirportDetailsView / AirportTraffic so numbers match.
+    private var airportStats: [String: AirportCounts] {
         var result: [String: AirportCounts] = [:]
+        // Live pilots → airborne deps/arrs and on-ground counts.
+        // On-ground pilots contribute to onGround at BOTH their dep and arr airports
+        // (matching totalOnGround = groundDepartures + groundArrivals in AirportTraffic).
         for pilot in pilots {
             guard let fp = pilot.flight_plan else { continue }
-            let dep = fp.departure.uppercased()
-            let arr = fp.arrival.uppercased()
+            let dep   = fp.departure.uppercased()
+            let arr   = fp.arrival.uppercased()
             let onGnd = pilot.groundspeed < 40
             if !dep.isEmpty {
-                var c = result[dep] ?? AirportCounts(departures: 0, arrivals: 0, onGround: 0)
-                if onGnd {
-                    c = AirportCounts(departures: c.departures, arrivals: c.arrivals, onGround: c.onGround + 1)
-                } else {
-                    c = AirportCounts(departures: c.departures + 1, arrivals: c.arrivals, onGround: c.onGround)
-                }
+                var c = result[dep] ?? AirportCounts()
+                if onGnd { c.onGround += 1 } else { c.departures += 1 }
                 result[dep] = c
             }
-            if !arr.isEmpty && arr != dep {
-                var c = result[arr] ?? AirportCounts(departures: 0, arrivals: 0, onGround: 0)
-                if onGnd {
-                    c = AirportCounts(departures: c.departures, arrivals: c.arrivals, onGround: c.onGround + 1)
-                } else {
-                    c = AirportCounts(departures: c.departures, arrivals: c.arrivals + 1, onGround: c.onGround)
-                }
+            if !arr.isEmpty {
+                var c = result[arr] ?? AirportCounts()
+                if onGnd { c.onGround += 1 } else { c.arrivals += 1 }
                 result[arr] = c
             }
         }
+        // Prefiles → count toward departures and arrivals (no live position, never on ground)
+        for prefile in prefiles {
+            guard let fp = prefile.flight_plan else { continue }
+            let dep = fp.departure.uppercased()
+            let arr = fp.arrival.uppercased()
+            if !dep.isEmpty {
+                var c = result[dep] ?? AirportCounts()
+                c.departures += 1
+                result[dep] = c
+            }
+            if !arr.isEmpty {
+                var c = result[arr] ?? AirportCounts()
+                c.arrivals += 1
+                result[arr] = c
+            }
+        }
+        // Controllers → use the pre-matched data on each airport.
+        // groundServiceIndicators holds space-separated letters (T/G/D/A) for each active
+        // ground service; activeController represents an approach/departure controller.
+        // This mirrors the matching logic in VatglassesMatchingService and avoids
+        // falsely attributing sector/enroute controllers (e.g. EGTT_CTR) to airports.
+        for airport in airports {
+            let icao = airport.icao.uppercased()
+            let groundCount = airport.groundServiceIndicators
+                .split(separator: " ")
+                .filter { !$0.isEmpty }
+                .count
+            let approachCount = airport.activeController != nil ? 1 : 0
+            if groundCount + approachCount > 0 {
+                var c = result[icao] ?? AirportCounts()
+                c.controllers = groundCount + approachCount
+                result[icao] = c
+            }
+        }
         return result
+    }
+
+    /// Convenience accessor used by result rows.
+    private func stats(for icao: String) -> AirportCounts {
+        airportStats[icao.uppercased()] ?? AirportCounts()
     }
 
     // MARK: - Facility chip data
@@ -111,12 +167,31 @@ struct SearchView: View {
 
     private var filteredAirports: [VatglassesAirport] {
         let base = showInactiveAirports ? airports : airports.filter { $0.isActive }
-        let sorted = base.sorted { $0.icao < $1.icao }
-        guard !query.isEmpty else { return sorted }
-        let q = query.uppercased()
-        return sorted.filter {
-            $0.icao.uppercased().contains(q) ||
-            ($0.callsign?.uppercased().contains(q) ?? false)
+        let textFiltered: [VatglassesAirport]
+        if query.isEmpty {
+            textFiltered = base
+        } else {
+            let q = query.uppercased()
+            textFiltered = base.filter {
+                $0.icao.uppercased().contains(q) ||
+                ($0.callsign?.uppercased().contains(q) ?? false)
+            }
+        }
+        // Capture the lookup table once so the sort closure is pure O(1) per comparison
+        let stats = airportStats
+        return textFiltered.sorted { a, b in
+            let sa = stats[a.icao.uppercased()] ?? AirportCounts()
+            let sb = stats[b.icao.uppercased()] ?? AirportCounts()
+            let va: Int
+            let vb: Int
+            switch airportSort {
+            case .totalPilotsHigh:  va = sa.total;       vb = sb.total
+            case .controllersHigh:  va = sa.controllers; vb = sb.controllers
+            case .departuresHigh:   va = sa.departures;  vb = sb.departures
+            case .arrivalsHigh:     va = sa.arrivals;    vb = sb.arrivals
+            case .onGroundHigh:     va = sa.onGround;    vb = sb.onGround
+            }
+            return va != vb ? va > vb : a.icao < b.icao
         }
     }
 
@@ -154,12 +229,14 @@ struct SearchView: View {
         return afterExclude.filter { selectedFacilities.contains($0.facility) }
     }
 
-    // MARK: - Airport traffic counts
+    // MARK: - Airport stats
 
     private struct AirportCounts {
-        let departures: Int
-        let arrivals: Int
-        let onGround: Int
+        var departures:  Int = 0
+        var arrivals:    Int = 0
+        var onGround:    Int = 0
+        var controllers: Int = 0
+        var total: Int { departures + arrivals + onGround }
     }
 
     // MARK: - Visible slices
@@ -178,85 +255,102 @@ struct SearchView: View {
 
     private var hasMore: Bool { visibleCount < totalCount }
 
+    // MARK: - List content
+
+    @ViewBuilder
+    private var listContent: some View {
+        // Category picker — always visible at the top of the list
+        Picker("Category", selection: $category) {
+            Text("ATC (\(controllers.count))").tag(SearchCategory.atc)
+            Text("Pilots (\(pilots.count))").tag(SearchCategory.pilot)
+            Text("Airports (\(airports.count))").tag(SearchCategory.airport)
+        }
+        .pickerStyle(.segmented)
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+
+        // Filter chips inline, only when relevant
+        if category == .atc && !availableFacilities.isEmpty {
+            Section {
+                facilityChips
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        } else if category == .airport {
+            Section {
+                airportFilterChips
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+        }
+
+        // Results
+        switch category {
+        case .pilot:
+            aircraftResults
+        case .atc:
+            atcResults
+        case .airport:
+            airportResults
+        }
+
+        // Infinite-scroll sentinel
+        if hasMore {
+            Color.clear
+                .frame(height: 1)
+                .listRowSeparator(.hidden)
+                .onAppear { visibleCount += pageSize }
+        }
+    }
+
     // MARK: - Body
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Category picker
-                Picker("Category", selection: $category) {
-                    Text("\(SearchCategory.atc.rawValue) (\(controllers.count))")
-                        .tag(SearchCategory.atc)
-                    Text("\(SearchCategory.pilot.rawValue) (\(pilots.count))")
-                        .tag(SearchCategory.pilot)
-                    Text("\(SearchCategory.airport.rawValue) (\(airports.count))")
-                        .tag(SearchCategory.airport)
-                }
-                .pickerStyle(.segmented)
-                .padding()
-                .onChange(of: category) { _, _ in
-                    visibleCount = pageSize
-                    selectedFacilities = []
-                    excludedFacilities = [0]
-                    showInactiveAirports = false
-                }
-
-                // Search field
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField(placeholder, text: $query)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.characters)
-                    if !query.isEmpty {
-                        Button { query = "" } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
+            List {
+                listContent
+            }
+            .listStyle(.plain)
+            .navigationTitle("Search")
+            .searchable(text: $query, placement: .toolbar, prompt: placeholder)
+            .searchToolbarBehavior(.minimize)
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.characters)
+            .toolbar {
+                if category == .airport {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            ForEach(AirportSortOrder.allCases, id: \.self) { order in
+                                Button {
+                                    airportSort = order
+                                    visibleCount = pageSize
+                                } label: {
+                                    Label(
+                                        order.rawValue,
+                                        systemImage: airportSort == order
+                                            ? "checkmark"
+                                            : order.systemImage
+                                    )
+                                }
+                            }
+                        } label: {
+                            Label("Sort", systemImage: airportSort == .totalPilotsHigh
+                                  ? "arrow.up.arrow.down"
+                                  : "arrow.up.arrow.down.circle.fill")
                         }
                     }
                 }
-                .padding(10)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-                .onChange(of: query) { _, _ in visibleCount = pageSize }
-
-                // Filter chips
-                if category == .atc && !availableFacilities.isEmpty {
-                    facilityChips
-                } else if category == .airport {
-                    airportFilterChips
-                }
-
-                Divider()
-
-                // Results list
-                List {
-                    switch category {
-                    case .pilot:
-                        aircraftResults
-                    case .atc:
-                        atcResults
-                    case .airport:
-                        airportResults
-                    }
-
-                    // Infinite-scroll sentinel: loads the next page when this row appears
-                    if hasMore {
-                        Color.clear
-                            .frame(height: 1)
-                            .listRowSeparator(.hidden)
-                            .onAppear { visibleCount += pageSize }
-                    }
-                }
-                .listStyle(.plain)
             }
-            .navigationTitle("Search")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+            .onChange(of: query)    { _, _ in visibleCount = pageSize }
+            .onChange(of: category) { _, _ in
+                visibleCount = pageSize
+                selectedFacilities = []
+                excludedFacilities = [0]
+                showInactiveAirports = false
+                airportSort = .totalPilotsHigh
             }
             .onAppear {
                 category             = SearchCategory(rawValue: prefsManager.userPrefs.searchCategoryRaw) ?? .atc
@@ -319,7 +413,7 @@ struct SearchView: View {
                     visibleCount = pageSize
                     showInactiveAirports.toggle()
                 } label: {
-                    Text("Show inactive (\(airports.filter { !$0.isActive }.count))")
+                    Text("Show uncontrolled (\(airports.filter { !$0.isActive }.count))")
                         .font(.caption)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -346,7 +440,6 @@ struct SearchView: View {
             ForEach(visibleAirports) { airport in
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    dismiss()
                     onAirportSelected(airport.icao)
                 } label: {
                     HStack(spacing: 8) {
@@ -371,7 +464,7 @@ struct SearchView: View {
                                 .padding(.leading, 4)
                         }
                         // Traffic counts (pre-computed once across all pilots)
-                        let counts = trafficCountsByICAO[airport.icao.uppercased()] ?? AirportCounts(departures: 0, arrivals: 0, onGround: 0)
+                        let counts = stats(for: airport.icao)
                         HStack(spacing: 10) {
                             trafficStat("airplane.departure", count: counts.departures)
                             trafficStat("airplane.arrival",   count: counts.arrivals)
@@ -438,7 +531,6 @@ struct SearchView: View {
             ForEach(visiblePilots) { pilot in
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    dismiss()
                     onPilotSelected(pilot.cid)
                 } label: {
                     HStack {
@@ -484,7 +576,6 @@ struct SearchView: View {
             ForEach(visibleControllers) { controller in
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    dismiss()
                     onControllerSelected(controller)
                 } label: {
                     HStack {
@@ -542,6 +633,7 @@ struct SearchView: View {
         airports: previewAirports(),
         pilots: previewPilots(),
         controllers: [],
+        prefiles: [],
         onAirportSelected:    { _ in },
         onPilotSelected:      { _ in },
         onControllerSelected: { _ in }

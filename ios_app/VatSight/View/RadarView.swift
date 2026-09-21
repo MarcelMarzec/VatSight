@@ -15,7 +15,6 @@ struct RadarView: View {
     @EnvironmentObject private var viewModel: RadarViewModel
     @Namespace private var glassNamespace
     @State private var showingLayerMenu = false
-    @State private var showingSearch = false
     @State private var showingDebug = false
     /// Timer used to periodically re-evaluate the stale-data banner.
     @State private var stalenessCheckTimer: Timer? = nil
@@ -25,6 +24,8 @@ struct RadarView: View {
     @State private var sectorDetent: PresentationDetent = .height(160)
     // Header height measured from a hidden off-screen render — never inside the sheet itself.
     @State private var sectorHeaderHeight: CGFloat = 160
+    /// Measured height of the top-trailing button stack, used to dynamically position the altitude slider.
+    @State private var buttonStackHeight: CGFloat = 120
     
     var body: some View {
         ZStack {
@@ -192,22 +193,8 @@ struct RadarView: View {
                 }
                 
                 VStack(spacing: 12) {
-                    // Search + locate-me + layer menu — joined as one pill
                     GlassEffectContainer {
                         VStack(spacing: 0) {
-                            Button {
-                                showingSearch = true
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            } label: {
-                                Image(systemName: "magnifyingglass")
-                                    .imageScale(.medium)
-                                    .padding(12)
-                                    .contentShape(.circle)
-                            }
-                            .buttonStyle(.plain)
-                            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 22))
-                            .glassEffectUnion(id: "pill", namespace: glassNamespace)
-
                             Button {
                                 showingLayerMenu.toggle()
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -216,7 +203,7 @@ struct RadarView: View {
                                     .rotationEffect(.degrees(90))
                                     .imageScale(.medium)
                                     .padding(12)
-                                    .padding(.bottom, 8)
+                                    .padding(.vertical, 8)
                                     .contentShape(.circle)
                             }
                             .buttonStyle(.plain)
@@ -310,24 +297,34 @@ struct RadarView: View {
                 }
             }
             .padding()
+            .background(
+                GeometryReader { stackGeo in
+                    Color.clear.onAppear {
+                        buttonStackHeight = stackGeo.size.height
+                    }
+                    .onChange(of: stackGeo.size.height) { _, newHeight in
+                        buttonStackHeight = newHeight
+                    }
+                }
+            )
         }
         .overlay(alignment: .trailing) {
             if viewModel.altitudeFilterEnabled {
                 GeometryReader { geo in
-                    // Reserve space for the buttons above (~160 pt) and bottom safe area.
+                    // Dynamically computed from the measured button stack height + 12 pt gap.
                     // When a sheet is open, push the slider up so it isn't covered.
-                    let topOffset: CGFloat = 180
+                    let topOffset: CGFloat = buttonStackHeight + 12
                     let sheetHeight: CGFloat = {
                         if viewModel.isShowingSectorSheet {
                             return sectorHeaderHeight + 2
                         }
                         if viewModel.isShowingPilotSheet {
-                            return geo.size.height * 0.325 + 2
+                            return geo.size.height * 0.28 + 12
                         }
                         if viewModel.isShowingAirportSheet {
-                            return geo.size.height * 0.3 + 2
+                            return geo.size.height * 0.25 + 12
                         }
-                        return 16
+                        return 12
                     }()
                     let bottomPad: CGFloat = sheetHeight
                     let availableHeight = geo.size.height - topOffset - bottomPad
@@ -383,6 +380,10 @@ struct RadarView: View {
                         Spacer().frame(height: bottomPad)
                     }
                     .frame(width: 60, height: geo.size.height)
+                    .animation(.spring(duration: 0.4), value: viewModel.isShowingPilotSheet)
+                    .animation(.spring(duration: 0.4), value: viewModel.isShowingAirportSheet)
+                    .animation(.spring(duration: 0.4), value: viewModel.isShowingSectorSheet)
+                    .animation(.spring(duration: 0.4), value: sectorHeaderHeight)
                 }
                 .frame(width: 60)
                 .padding(.trailing, 8)
@@ -412,31 +413,6 @@ struct RadarView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
                 .presentationBackgroundInteraction(.enabled)
-        }
-        .sheet(isPresented: $showingSearch) {
-            SearchView(
-                airports: viewModel.airports,
-                pilots: viewModel.pilots,
-                controllers: viewModel.controllers,
-                onAirportSelected: { icao in
-                    viewModel.selectAirportAndFly(icao: icao)
-                },
-                onPilotSelected: { cid in
-                    guard let pilot = viewModel.pilots.first(where: { $0.cid == cid }) else { return }
-                    viewModel.selectPilotAndFly(
-                        cid: cid,
-                        coordinate: pilot.coordinate,
-                        enableTracking: true
-                    )
-                },
-                onControllerSelected: { controller in
-                    if let airport = viewModel.airports.first(where: { $0.activeController?.cid == controller.cid }) {
-                        viewModel.selectAirportAndFly(icao: airport.icao)
-                    } else if let sector = viewModel.sectors.first(where: { $0.activeController?.cid == controller.cid }) {
-                        viewModel.selectSector(id: sector.id)
-                    }
-                }
-            )
         }
     }
     
