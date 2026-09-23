@@ -1,3 +1,41 @@
+# ---------- Security ----------
+
+# No directory listings (e.g. /images/, /style/, /phplist/config/)
+Options -Indexes
+
+# Never serve dotfiles such as .DS_Store or .htaccess
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# phpList wording overrides (english.inc) and other include files aren't web pages
+<FilesMatch "\.inc$">
+    Require all denied
+</FilesMatch>
+
+# phpList's REST API (api.php / api/v2) isn't used
+<IfModule mod_alias.c>
+    RedirectMatch 404 ^/phplist/api(\.php|/)
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set Strict-Transport-Security "max-age=31536000"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+    Header always unset X-Powered-By
+    Header unset X-Powered-By
+
+    # Strict content security policy for our own pages only (index.php,
+    # privacy_policy.php, and any plain .html page). phpList's own PHP pages
+    # under /phplist/ use inline scripts, so they override this back off in
+    # their own .htaccess (see public/phplist/.htaccess).
+    <FilesMatch "\.(html|php)$">
+        Header set Content-Security-Policy "default-src 'self'; script-src 'none'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
+    </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /
@@ -7,15 +45,24 @@ RewriteCond %{HTTPS} off [OR]
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 RewriteRule ^ https://vatsight.com%{REQUEST_URI} [L,R=301]
 
-# 2) Canonicalize /index or /index.html -> /
-RewriteCond %{THE_REQUEST} \s/+index(\.html)?[\s?] [NC]
+# 2) Old iOS-specific privacy policy URL -> renamed page
+RewriteRule ^ios_privacy_policy/?$ /privacy_policy [R=301,L]
+
+# 3) Canonicalize /index, /index.html or /index.php -> /
+RewriteCond %{THE_REQUEST} \s/+index(\.html|\.php)?[\s?] [NC]
 RewriteRule ^ / [R=301,L]
 
-# 3) Canonicalize any other /page.html -> /page (drop the extension)
-RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
+# 4) Canonicalize any other /page.html or /page.php -> /page (drop the extension)
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.(?:html|php)[\s?] [NC]
 RewriteRule ^ /%1 [R=301,L,NE]
 
-# 4) Serve the matching .html file for the extensionless URL, without redirecting
+# 5) Serve the matching .php file for the extensionless URL, without redirecting
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^(.*)$ $1.php [L]
+
+# 6) Fall back to a matching plain .html file for the extensionless URL
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}\.html -f

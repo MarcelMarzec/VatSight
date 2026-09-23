@@ -120,38 +120,17 @@
 
     <a class="skip-link" href="#main-content">Skip to main content</a>
 
-    <header class="nav">
-        <div class="nav-inner">
-            <a class="nav-brand" href="#top">
-                <img src="images/Vatsightlogo.png" alt="" width="26" height="26">
-                <span>VatSight</span>
-            </a>
-            <input type="checkbox" id="nav-toggle" class="nav-toggle-input">
-            <nav class="nav-links" aria-label="Primary">
-                <a href="#features">Features</a>
-                <a href="#screenshots">Screenshots</a>
-                <a href="#open-source">Open Source</a>
-                <a href="#credits">Credits</a>
-                <a href="#faq">FAQ</a>
-            </nav>
-            <div class="nav-right">
-                <a class="nav-cta" href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.48v-1.7c-2.78.62-3.37-1.36-3.37-1.36-.46-1.2-1.11-1.52-1.11-1.52-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.36 1.11 2.93.85.09-.67.35-1.11.64-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.9-1.33 2.74-1.05 2.74-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9v2.82c0 .27.18.58.69.48A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
-                    GitHub
-                </a>
-                <label for="nav-toggle" class="nav-toggle" aria-label="Toggle menu">
-                    <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-                    <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
-                </label>
-            </div>
-        </div>
-        <label for="nav-toggle" class="nav-backdrop" aria-hidden="true"></label>
-    </header>
+    <?php include __DIR__ . '/partials/header.php'; ?>
 
     <main id="main-content">
         <section class="hero" id="top">
             <div class="hero-inner">
                 <div class="hero-copy">
+                    <a class="hero-kicker" href="#newsletter">
+                        <span class="hero-kicker-dot"></span>
+                        TestFlight beta opening soon &mdash; sign up to get an invite
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </a>
                     <h1>See the virtual skies<br>come alive.</h1>
                     <p class="hero-sub">VatSight is a free, open-source radar for the VATSIM network — live traffic, VatGlasses ATC sectors, and airport activity, all on one clean map.</p>
                     <div class="hero-actions">
@@ -568,8 +547,9 @@
 
         <section class="final-cta" id="newsletter">
             <div class="section-inner">
-                <h2>Get notified when VatSight launches</h2>
-                <p>Join the mailing list for the TestFlight beta invite, the App Store launch and major updates. A few emails a year, never spam.</p>
+                <span class="cta-eyebrow">Newsletter &middot; beta sign-ups open</span>
+                <h2>Be the first to know when TestFlight testing opens</h2>
+                <p>VatSight is heading into closed testing on TestFlight before its free App Store launch. Sign up and we'll email you the moment a beta invite is ready, plus the App Store launch and any major updates. A few emails a year, never spam.</p>
                 <!-- Newsletter sign-up: posts straight to phpList (public/phplist). Keep list[2] and id=1 in sync with the phpList list and subscribe page IDs. -->
                 <form class="signup-form" action="/phplist/?p=subscribe&amp;id=1" method="post">
                     <input type="hidden" name="list[2]" value="signup">
@@ -582,7 +562,7 @@
                         <input id="signup-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" maxlength="254" required>
                         <button type="submit" name="subscribe" value="Subscribe">Notify me</button>
                     </div>
-                    <p class="signup-legal">We'll email you a link to confirm. Unsubscribe any time with one click. See our <a href="/ios_privacy_policy#newsletter">Privacy Policy</a>.</p>
+                    <p class="signup-legal">We'll email you a link to confirm. Unsubscribe any time with one click. See our <a href="/privacy_policy#newsletter">Privacy Policy</a>.</p>
                 </form>
                 <div class="hero-actions">
                     <a class="btn-secondary" href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">
@@ -595,22 +575,7 @@
         </section>
     </main>
 
-    <footer>
-        <div class="footer-inner">
-            <a class="footer-brand" href="#top">
-                <img src="images/Vatsightlogo.png" alt="" width="22" height="22">
-                VatSight
-            </a>
-            <div class="footer-links">
-                <a href="/phplist/?p=subscribe&amp;id=1">Newsletter</a>
-                <a href="/ios_privacy_policy">Privacy Policy</a>
-                <a href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">GitHub</a>
-                <a href="https://marcelmarzec.com/contact-me" target="_blank" rel="noopener">Contact</a>
-            </div>
-        </div>
-        <p class="footer-disclaimer">VatSight is an independent project and is not affiliated with or endorsed by VATSIM. Flight data is sourced from the VATSIM network; airspace data from Vatglasses.</p>
-        <p class="footer-copy">© 2026 Marcel Marzec</p>
-    </footer>
+    <?php include __DIR__ . '/partials/footer.php'; ?>
 
 </body>
 
