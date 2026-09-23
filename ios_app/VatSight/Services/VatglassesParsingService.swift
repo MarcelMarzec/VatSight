@@ -86,7 +86,7 @@ extension VatglassesService {
                 // Store positions only under their scoped key to prevent cross-FIR collisions.
                 // ownerRefs in sectors are already prefixed at parse time.
                 for (posKey, position) in positions {
-                    allPositions["\(directoryName)/\(posKey)"] = position
+                    allPositions["\(directoryName.uppercased())/\(posKey)"] = position
                 }
                 // Merge callsign labels (later files may override earlier ones for the same type+middle).
                 for (type, middleMap) in callsignLabels {
@@ -111,7 +111,7 @@ extension VatglassesService {
                 airports.append(contentsOf: parsedAirports)
                 // Store positions only under their scoped key to prevent cross-FIR collisions.
                 for (posKey, position) in positions {
-                    allPositions["\(filePrefix)/\(posKey)"] = position
+                    allPositions["\(filePrefix.uppercased())/\(posKey)"] = position
                 }
                 // Merge callsign labels.
                 for (type, middleMap) in callsignLabels {
@@ -135,7 +135,7 @@ extension VatglassesService {
             airports.append(contentsOf: nodataAirports)
             // Scope nodata positions under "nodata/" prefix to avoid collisions.
             for (posKey, position) in nodataPositions {
-                allPositions["nodata/\(posKey)"] = position
+                allPositions["NODATA/\(posKey.uppercased())"] = position
             }
             // Merge callsign labels from nodata.json.
             for (type, middleMap) in nodataCallsigns {
@@ -304,7 +304,7 @@ extension VatglassesService {
 
                 // Create globally unique sector ID with region prefix
                 let baseSectorId = sectorData.count > 1 ? "\(id)_\(index)" : id
-                let sectorId = "\(regionPrefix)/\(baseSectorId)"
+                let sectorId = "\(regionPrefix.uppercased())/\(baseSectorId)"
 
                 let vatglassesSector = VatglassesSector(
                     id: sectorId,
@@ -393,7 +393,7 @@ extension VatglassesService {
                 } else {
                     rawTopdown = parseFacilityPrefixes(airportData["pre"])
                 }
-                let ownerRefs = rawTopdown.map { "nodata/\($0)" }
+                let ownerRefs = rawTopdown.map { "NODATA/\($0.uppercased())" }
 
                 airports.append(VatglassesAirport(
                     icao: icao,
@@ -448,7 +448,7 @@ extension VatglassesService {
 
                 let baseSectorId = sectorData.count > 1 ? "\(id)_\(index)" : id
                 sectors.append(VatglassesSector(
-                    id: "nodata/\(baseSectorId)",
+                    id: "NODATA/\(baseSectorId)",
                     ownerRefs: ownerRefs,   // raw FIR identifiers, matched by prefix at activation time
                     frequency: "Unknown",
                     geometry: geometry,
@@ -468,7 +468,6 @@ extension VatglassesService {
                          userInfo: [NSLocalizedDescriptionKey: "Invalid positions.json format - not a JSON object"])
         }
 
-        // Parse top-level "callsigns" key if present.
         let callsignLabels = json["callsigns"] as? [String: [String: String]] ?? [:]
 
         // Supports two formats: wrapped (`{ "positions": {...} }`) or direct (`{ "SNE": {...} }`)
@@ -609,7 +608,7 @@ extension VatglassesService {
                 )
                 let baseSectorId = sectorData.count > 1 ? "\(id)_\(index)" : id
                 let vatglassesSector = VatglassesSector(
-                    id: "\(regionPrefix)/\(baseSectorId)",
+                    id: "\(regionPrefix.uppercased())/\(baseSectorId)",
                     ownerRefs: owner,
                     frequency: frequency,
                     geometry: geometry,

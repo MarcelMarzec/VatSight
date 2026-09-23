@@ -14,12 +14,11 @@ struct DeveloperView: View {
     @EnvironmentObject private var radarViewModel: RadarViewModel
     @Environment(\.dismiss) private var dismiss
 
-    // Local draft of the repo slug while the user is typing
     @State private var repoSlugDraft: String = ""
     @State private var showRepoAppliedBanner = false
     @FocusState private var repoFieldFocused: Bool
 
-    // Unmatched controller filter pills — all true = filtered out (hidden) by default
+    // Filter pills — true = category is hidden
     @State private var hideObservers = true   // frequency 199.998
     @State private var hideGND = true
     @State private var hideDEL = true
@@ -28,18 +27,15 @@ struct DeveloperView: View {
 
     var body: some View {
         List {
-            // MARK: - Developer Mode toggle
             Section {
                 Toggle(isOn: Binding(
                     get: { prefsManager.userPrefs.developerModeEnabled },
                     set: { newValue in
                         prefsManager.updateDeveloperMode(newValue)
                         if newValue {
-                            // Restore saved custom slug (may be empty = default)
                             let saved = prefsManager.userPrefs.vatglassesCustomRepoSlug
                             radarViewModel.applyVatglassesCustomRepo(saved)
                         } else {
-                            // Dev mode off — revert to default repo
                             radarViewModel.applyVatglassesCustomRepo("")
                         }
                     }
@@ -58,7 +54,6 @@ struct DeveloperView: View {
                 }
             }
             
-            // MARK: Vatglasses Data Source (dev mode only)
             if prefsManager.userPrefs.developerModeEnabled {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
@@ -122,13 +117,10 @@ struct DeveloperView: View {
                     Text("Currently using the default Vatglasses repository.")
                 }
             }
-            } // end dev mode if (Vatglasses Data Source)
+            }
 
-            // MARK: - Diagnostics (dev mode only)
             if prefsManager.userPrefs.developerModeEnabled {
-                // MARK: Diagnostics — Unmatched / Synthetic Controllers (combined)
                 Section {
-                    // Filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             FilterPill(label: "OBS Freq", isFiltered: $hideObservers)
@@ -140,7 +132,6 @@ struct DeveloperView: View {
                         .padding(.vertical, 4)
                     }
 
-                    // Synthetic sectors — tappable, flies camera to the circle on the map.
                     let synthetic = radarViewModel.vatglassesDiagnostics.syntheticSectors
                     ForEach(synthetic) { sector in
                         Button {
@@ -180,7 +171,6 @@ struct DeveloperView: View {
                         .buttonStyle(.plain)
                     }
 
-                    // Truly unmatched controllers (no real sector and no synthetic circle).
                     let unmatched = filteredUnmatched
                     if synthetic.isEmpty && unmatched.isEmpty {
                         Label("All controllers matched", systemImage: "checkmark.circle")
@@ -237,7 +227,6 @@ struct DeveloperView: View {
                     }
                 }
                 
-                // MARK: Diagnostics — Parse Errors
                 Section {
                     let errors = radarViewModel.vatglassesDiagnostics.parseErrors
                     if errors.isEmpty {
@@ -281,7 +270,6 @@ struct DeveloperView: View {
                     }
                 }
 
-                // MARK: Diagnostics — Invalid Airports
                 Section {
                     let invalid = radarViewModel.vatglassesDiagnostics.invalidAirports
                     if invalid.isEmpty {
@@ -374,17 +362,13 @@ struct DeveloperView: View {
         radarViewModel.applyVatglassesCustomRepo("")
     }
 
-    /// Selects the synthetic sector on the radar map and switches to the Map tab.
-    /// Looks up the airport coordinate from the live airports list; falls back to centre-of-screen.
     private func navigateToSynthetic(_ sector: SyntheticSector) {
-        let sectorId = "synthetic/\(sector.callsign.uppercased())"
-        // Find the airport coordinate to fly the camera to.
+        let sectorId = "SYNTHETIC/\(sector.callsign)"
         if let airport = radarViewModel.airports.first(where: { $0.icao.uppercased() == sector.icao.uppercased() }) {
             let coord = CLLocationCoordinate2D(latitude: airport.latitude, longitude: airport.longitude)
             radarViewModel.pendingNavigateToSectorId = sectorId
             radarViewModel.pendingNavigateToSectorCoordinate = coord
         } else {
-            // Airport not in list — select the sector without flying.
             radarViewModel.pendingNavigateToSectorId = sectorId
             radarViewModel.pendingNavigateToSectorCoordinate = nil
         }

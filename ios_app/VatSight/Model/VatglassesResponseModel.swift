@@ -94,7 +94,7 @@ struct VatglassesSector: Codable, Identifiable {
         properties = try container.decodeIfPresent(SectorProperties.self, forKey: .properties)
         isBasicDataOnly = try container.decodeIfPresent(Bool.self, forKey: .isBasicDataOnly) ?? false
         isSynthetic = false // Never persisted; always regenerated at runtime
-        isActive = false // Default value when decoding
+        isActive = false
         activeOwnerColorHex = nil
         activeOwnerRef = nil
         activeController = nil
@@ -117,7 +117,6 @@ struct SectorGeometry: Codable {
         return CLLocationCoordinate2D(latitude: lat, longitude: lon)
     }
 
-    // Helper to convert to Turf geometry
     var turfGeometry: Geometry? {
         if type == "Polygon", let firstPolygon = coordinates.first {
             let rings = firstPolygon.map { ring in
@@ -215,7 +214,7 @@ struct VatglassesAirport: Codable, Identifiable {
 
 struct VatglassesData: Codable {
     /// Increment this whenever the cache schema changes to force a fresh download.
-    static let currentSchemaVersion = 6
+    static let currentSchemaVersion = 9
 
     let schemaVersion: Int
     let sectors: [VatglassesSector]

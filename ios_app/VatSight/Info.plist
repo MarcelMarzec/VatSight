@@ -4,5 +4,7 @@
 <dict>
 	<key>MBXAccessToken</key>
 	<string>$(MAPBOX_ACCESS_TOKEN)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>VatSight uses your location to center the radar map on your position, making it easier to find nearby airports and air traffic.</string>
 </dict>
 </plist>

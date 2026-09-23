@@ -360,7 +360,7 @@ enum SectorGeoJSON {
             }
 
             guard !geoPolygons.isEmpty else {
-                merged.append(syntheticSector(id: first, geometry: .collected(from: group)))
+                merged.append(syntheticSector(id: first, geometry: .collected(from: group), group: group))
                 continue
             }
 
@@ -370,7 +370,7 @@ enum SectorGeoJSON {
                 let result = try multiPoly.unaryUnion()
                 guard let sectorGeom = SectorGeometry(from: result) else {
                     unionedGeometry = SectorGeometry.collected(from: group)
-                    merged.append(syntheticSector(id: first, geometry: unionedGeometry))
+                    merged.append(syntheticSector(id: first, geometry: unionedGeometry, group: group))
                     continue
                 }
                 unionedGeometry = sectorGeom
@@ -379,7 +379,7 @@ enum SectorGeoJSON {
                 unionedGeometry = SectorGeometry.collected(from: group)
             }
 
-            merged.append(syntheticSector(id: first, geometry: unionedGeometry))
+            merged.append(syntheticSector(id: first, geometry: unionedGeometry, group: group))
         }
 
         return merged
@@ -387,9 +387,16 @@ enum SectorGeoJSON {
 
     /// Builds a synthetic merged VatglassesSector from a representative first sector and
     /// the pre-computed merged geometry.
-    private static func syntheticSector(id first: VatglassesSector, geometry: SectorGeometry) -> VatglassesSector {
-        VatglassesSector(
-            id: "merged-\(first.activeController?.cid ?? 0)",
+    private static func syntheticSector(id first: VatglassesSector, geometry: SectorGeometry, group: [VatglassesSector] = []) -> VatglassesSector {
+        let mergedID: String
+        if group.count > 1 {
+            let base = first.activeOwnerRef ?? first.ownerRefs.first ?? first.id
+            mergedID = "\(base) (\(group.count) sectors)"
+        } else {
+            mergedID = first.id
+        }
+        return VatglassesSector(
+            id: mergedID,
             ownerRefs: first.ownerRefs,
             frequency: first.frequency,
             geometry: geometry,

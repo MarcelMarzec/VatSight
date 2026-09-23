@@ -40,7 +40,6 @@ extension VatglassesService {
             // Skip observer/inactive frequency.
             guard controller.frequency != "199.998" else { continue }
 
-            // Only synthesise for APP and DEP positions.
             guard upper.hasSuffix("_APP") || upper.hasSuffix("_DEP") else { continue }
 
             // Split on underscore to extract ICAO and detect mentor/trainee infixes.
@@ -86,7 +85,7 @@ extension VatglassesService {
             )
 
             result.append(VatglassesSector(
-                id: "synthetic/\(primary.callsign.uppercased())",
+                id: "SYNTHETIC/\(primary.callsign)",
                 ownerRefs: [icao],
                 frequency: primary.frequency,
                 geometry: geometry,
@@ -123,7 +122,7 @@ extension VatglassesService {
 
         for ownerRef in ownerRefs {
             // Primary path: delegate to the shared matching logic.
-            if let position = allPositions["nodata/\(ownerRef)"] {
+            if let position = allPositions["NODATA/\(ownerRef.uppercased())"] {
                 if let match = findMatchingController(
                     position: position,
                     frequencyGroupedControllers: emptyFreqMap,
@@ -149,7 +148,13 @@ extension VatglassesService {
     /// Scopes a raw ownerRef to a specific FIR region, unless it already contains a cross-file
     /// prefix (e.g. "fss/EUCME" is returned as-is; "CT" becomes "regionPrefix/CT").
     func scopedOwnerRef(_ ref: String, regionPrefix: String) -> String {
-        return ref.contains("/") ? ref : "\(regionPrefix)/\(ref)"
+        if ref.contains("/") {
+            // Already scoped (e.g. "fss/EUCME") — uppercase only the prefix component.
+            let parts = ref.split(separator: "/", maxSplits: 1)
+            guard parts.count == 2 else { return ref }
+            return "\(parts[0].uppercased())/\(parts[1])"
+        }
+        return "\(regionPrefix.uppercased())/\(ref)"
     }
 
     /// Normalises a frequency string to a canonical form for comparison.

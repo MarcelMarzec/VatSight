@@ -163,7 +163,6 @@ final class RadarStyleManager {
             Exp(.get) { "heading" }
         )
 
-        // Only show airborne aircraft on this layer
         layer.filter = Exp(.eq) { Exp(.get) { "isOnGround" }; false }
 
         layer.iconAllowOverlap = .constant(true)
@@ -192,7 +191,6 @@ final class RadarStyleManager {
             }
         )
 
-        // Only show airborne aircraft labels on this layer
         layer.filter = Exp(.eq) { Exp(.get) { "isOnGround" }; false }
 
         layer.textSize = .constant(12)
@@ -324,18 +322,18 @@ final class RadarStyleManager {
         if isDarkTheme {
             return Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelf" }; true }
-                Exp(.rgba) { 255; 200; 0; 1.0 }    // gold — matches icon
+                Exp(.rgba) { 255; 200; 0; 1.0 }
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
-                Exp(.rgba) { 48; 230; 110; 1.0 }   // matches icon
+                Exp(.rgba) { 48; 230; 110; 1.0 }
                 Exp(.rgba) { 255; 255; 255; 1.0 }
             }
         } else {
             return Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelf" }; true }
-                Exp(.rgba) { 200; 150; 0; 1.0 }    // deeper gold — matches icon
+                Exp(.rgba) { 200; 150; 0; 1.0 }
                 Exp(.eq) { Exp(.get) { "isFriend" }; true }
-                Exp(.rgba) { 20; 155; 65; 1.0 }    // matches icon
-                Exp(.rgba) { 51; 64; 102; 1.0 }    // matches sector label stroke
+                Exp(.rgba) { 20; 155; 65; 1.0 }
+                Exp(.rgba) { 51; 64; 102; 1.0 }
             }
         }
     }

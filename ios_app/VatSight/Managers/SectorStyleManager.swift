@@ -511,7 +511,6 @@ final class SectorStyleManager {
             }
         )
 
-        // `iconTextFit: .both` makes the icon stretch to exactly cover the text bounding box.
         layer.iconTextFit = .constant(.both)
 
         // Padding (pt) added around the text box before the pill is sized.

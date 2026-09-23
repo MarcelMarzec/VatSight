@@ -7,7 +7,6 @@
 import Foundation
 import ZIPFoundation
 import CoreLocation
-internal import _LocationEssentials
 
 final class VatglassesService {
 
@@ -124,7 +123,7 @@ final class VatglassesService {
                     sectors[i].isActive = true
                     sectors[i].activeOwnerRef = ownerRef
                     sectors[i].activeController = matchingController
-                    sectors[i].activeOwnerColorHex = allPositions["nodata/\(ownerRef)"]?.primaryColorHex
+                    sectors[i].activeOwnerColorHex = allPositions["NODATA/\(ownerRef.uppercased())"]?.primaryColorHex
                     matchedCIDs.insert(matchingController.cid)
                 } else {
                     sectors[i].isActive = false

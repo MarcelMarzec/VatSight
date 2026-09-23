@@ -37,6 +37,7 @@ struct SectorDetailsView: View {
 
     var body: some View {
         NavigationStack {
+            VStack(spacing: 0) {
             if let controller {
                 headerSection(controller: controller)
             } else {
@@ -55,6 +56,7 @@ struct SectorDetailsView: View {
             .scrollDisabled(false)
             .textSelection(.enabled)
             .navigationBarTitleDisplayMode(.large)
+            } // VStack
         }
     }
 
@@ -63,9 +65,6 @@ struct SectorDetailsView: View {
             LabeledContent("Sector ID", value: sector.id)
             if let groupName = sector.properties?.groupName {
                 LabeledContent("FIR / Group", value: groupName)
-            }
-            if isActive {
-                LabeledContent("Frequency", value: sector.frequency)
             }
             if let min = sector.properties?.min, let max = sector.properties?.max {
                 LabeledContent("Altitude Band", value: altitudeBandLabel(min: min, max: max))
@@ -84,80 +83,92 @@ struct SectorDetailsView: View {
             : Array(sector.ownerRefs.enumerated().filter { activeOwnerRefs.contains($0.element) })
 
         return Section {
-            ForEach(visibleRefs, id: \.offset) { index, ref in
-                let position = allPositions[ref]
-                let isOwner = ref == sector.activeOwnerRef
-                // A ref is online if it is the active owner of any sector in the dataset
-                let isOnline = activeOwnerRefs.contains(ref)
-                let badgeColor: Color = isOwner ? .green : (isOnline ? .primary : .secondary)
+            if sector.ownerRefs.isEmpty {
+                Text("No ownership data available")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(visibleRefs, id: \.offset) { index, ref in
+                    let position = allPositions[ref]
+                    let isOwner = ref == sector.activeOwnerRef
+                    // A ref is online if it is the active owner of any sector in the dataset
+                    let isOnline = activeOwnerRefs.contains(ref)
+                    let isTappable = !isOwner && isOnline
+                    let badgeColor: Color = isOwner ? .green : (isOnline ? .primary : .secondary)
 
-                HStack(spacing: 12) {
-                    if isOwner {
-                        Image(systemName: "antenna.radiowaves.left.and.right")
-                            .font(.caption2)
-                            .foregroundColor(.green)
-                            .frame(width: 16)
-                    } else if index > 0 {
-                        Image(systemName: "arrow.up")
-                            .font(.caption2)
-                            .foregroundColor(isOnline ? .primary : .secondary)
-                            .frame(width: 16)
-                    } else {
-                        Spacer().frame(width: 16)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(ref.uppercased())
-                                .font(.system(.footnote, design: .monospaced))
-                                .foregroundColor(isOwner ? .green : (isOnline ? .primary : .secondary))
-                            if let type = position?.type {
-                                Text(type)
-                                    .font(.caption2.bold())
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 2)
-                                    .background((isOnline ? badgeColor : Color.secondary).opacity(0.15))
-                                    .foregroundColor(isOnline ? badgeColor : .secondary)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    HStack(spacing: 12) {
+                        if isOwner {
+                            Image(systemName: "antenna.radiowaves.left.and.right")
+                                .font(.caption2)
+                                .foregroundColor(.green)
+                                .frame(width: 16)
+                        } else if index > 0 {
+                            Image(systemName: "chevron.up")
+                                .font(.caption2)
+                                .foregroundColor(isOnline ? .primary : .secondary)
+                                .frame(width: 16)
+                        } else {
+                            Spacer().frame(width: 16)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(ref)
+                                    .font(.system(.footnote, design: .monospaced))
+                                    .foregroundColor(isOwner ? .green : (isOnline ? .primary : .secondary))
+                                if let type = position?.type {
+                                    Text(type)
+                                        .font(.caption2.bold())
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 2)
+                                        .background((isOnline ? badgeColor : Color.secondary).opacity(0.15))
+                                        .foregroundColor(isOnline ? badgeColor : .secondary)
+                                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                                }
+                            }
+                            if let callsign = position?.callsign {
+                                Text(callsign)
+                                    .font(.subheadline)
+                                    .foregroundColor(isOnline ? .primary : .secondary)
                             }
                         }
-                        if let callsign = position?.callsign {
-                            Text(callsign)
-                                .font(.subheadline)
+                        Spacer()
+                        if let freq = position?.frequency {
+                            Text(freq)
+                                .font(.system(.footnote, design: .monospaced))
                                 .foregroundColor(isOnline ? .primary : .secondary)
                         }
+                        if isTappable {
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
-                    Spacer()
-                    if let freq = position?.frequency {
-                        Text(freq)
-                            .font(.system(.footnote, design: .monospaced))
-                            .foregroundColor(isOnline ? .primary : .secondary)
-                    }
-                }
-                .padding(.vertical, 2)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    guard !isOwner, isOnline, let targetSector = allSectors.first(where: { $0.activeOwnerRef == ref }) else { return }
-                    onSectorSelected?(targetSector.id)
-                }
-            }
-            if hiddenCount > 0 {
-                Button {
-                    withAnimation {
-                        showAllOwners.toggle()
-                    }
-                } label: {
-                    HStack {
-                        Spacer().frame(width: 16)
-                        Image(systemName: showAllOwners ? "chevron.up" : "chevron.down")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                        Text(showAllOwners ? "Show less" : "\(hiddenCount) offline position\(hiddenCount == 1 ? "" : "s")")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                        Spacer()
+                    .padding(.vertical, 2)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard isTappable, let targetSector = allSectors.first(where: { $0.activeOwnerRef == ref }) else { return }
+                        onSectorSelected?(targetSector.id)
                     }
                 }
-                .buttonStyle(.plain)
+                if hiddenCount > 0 {
+                    Button {
+                        withAnimation {
+                            showAllOwners.toggle()
+                        }
+                    } label: {
+                        HStack {
+                            Spacer().frame(width: 16)
+                            Image(systemName: showAllOwners ? "chevron.up" : "chevron.down")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Text(showAllOwners ? "Show less" : "\(hiddenCount) offline position\(hiddenCount == 1 ? "" : "s")")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         } header: {
             Text("Ownership Hierarchy")
@@ -165,28 +176,26 @@ struct SectorDetailsView: View {
             if let controller {
                 HStack {
                     Spacer()
-                    VStack {
-                        Text("Last Updated")
-                            .font(.subheadline)
-                        Text(controller.last_updatedFormatted)
-                            .font(.subheadline)
-                    }
-                    Spacer()
+                    Text("Last updated \(controller.last_updatedFormatted) UTC")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
     }
 
     private func altitudeBandLabel(min: Int, max: Int) -> String {
+        // Vatglasses stores altitudes as FL numbers (e.g. 70 = FL070 = 7,000 ft).
+        // Below FL100 (value < 100) display in feet; FL100 and above display as FL.
         let minStr: String
         if min == 0 {
             minStr = "SFC"
-        } else if min < 10_000 {
-            minStr = "\(min) ft"
+        } else if min < 100 {
+            minStr = "\(min * 100)ft"
         } else {
-            minStr = "FL\(min / 100)"
+            minStr = "FL\(min)"
         }
-        let maxStr = max < 10_000 ? "\(max) ft" : "FL\(max / 100)"
+        let maxStr = max < 100 ? "\(max * 100)ft" : "FL\(max)"
         return "\(minStr) – \(maxStr)"
     }
 
@@ -196,7 +205,7 @@ struct SectorDetailsView: View {
         VStack(alignment: .leading) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(sector.properties?.name ?? sector.id)
+                    Text(sector.properties?.name ?? sector.ownerRefs.first.flatMap { allPositions[$0]?.callsign } ?? sector.id)
                         .font(.title2.bold())
                     if let groupName = sector.properties?.groupName {
                         Text(groupName)
@@ -213,6 +222,7 @@ struct SectorDetailsView: View {
         }
         .padding()
         .padding(.bottom, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.height
         } action: { newHeight in
@@ -227,34 +237,36 @@ struct SectorDetailsView: View {
             Text(controller.frequency)
                 .font(.title2).padding(.top, 8)
             HStack {
-                if let name = sector.properties?.name {
-                    Text(name)
+                if let ownerRef = sector.activeOwnerRef, let callsign = allPositions[ownerRef]?.callsign {
+                    Text(callsign)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
-                if sector.properties?.name != nil, sector.properties?.groupName != nil {
+                if sector.activeOwnerRef.flatMap({ allPositions[$0]?.callsign }) != nil, sector.properties?.groupName != nil, !sector.isBasicDataOnly {
                     Text("|").font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 if let groupName = sector.properties?.groupName {
-                    Text(groupName)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    if sector.isBasicDataOnly {
+                        Text(groupName)
+                            .font(.caption.bold())
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.yellow)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    } else {
+                        Text(groupName)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
                 }
-            }
-            if sector.isBasicDataOnly {
-                Text("Basic Data Only")
-                    .font(.caption.bold())
-                    .foregroundColor(.black)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color(red: 1.0, green: 0.71, blue: 0.0))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
             }
             atisText(controller: controller)
         }
         .padding()
         .padding(.bottom, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .textSelection(.enabled)
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.height
@@ -274,27 +286,39 @@ struct SectorDetailsView: View {
                 }
             } label: {
                 HStack {
-                    Button {
-                        if isTracked {
-                            prefsManager.removeTrackedCID(controller.cid)
-                        } else {
-                            prefsManager.addTrackedCID(controller.cid)
-                        }
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    } label: {
-                        Image(systemName: isTracked ? "star.fill" : "star")
-                            .font(.title2)
-                    }
-                    .foregroundColor(isTracked ? .green : .primary)
                     VStack(alignment: .leading) {
-                        Text(controller.name).font(.headline).foregroundColor(.primary)
+                        HStack {
+                            Text(controller.name).font(.headline).foregroundColor(.primary)
+                            if isTracked {
+                                Image(systemName: "star.fill")
+                                    .foregroundStyle(.green)
+                            }
+                        }
                         Text(String(controller.cid)).font(.subheadline).foregroundColor(.secondary)
+                        if prefsManager.shouldShowSwipeToTrackHint && !isTracked {
+                            Text("Swipe right to track")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                 }
             }
+            .swipeActions(edge: .leading) {
+                Button {
+                    if isTracked {
+                        prefsManager.removeTrackedCID(controller.cid)
+                    } else {
+                        prefsManager.addTrackedCID(controller.cid)
+                        prefsManager.incrementSwipeToTrackHint()
+                    }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Label(isTracked ? "Untrack" : "Track", systemImage: isTracked ? "star.slash" : "star")
+                }
+                .tint(isTracked ? .orange : .green)
+            }
             LabeledContent("Rating", value: ratingLabel(for: controller))
             LabeledContent("Facility", value: facilityLabel(for: controller))
-            LabeledContent("Server", value: controller.server)
         } header: {
             Text("Controller Details")
         }
@@ -312,28 +336,40 @@ struct SectorDetailsView: View {
                 }
             } label: {
                 HStack {
-                    Button {
-                        if isCoTracked {
-                            prefsManager.removeTrackedCID(co.cid)
-                        } else {
-                            prefsManager.addTrackedCID(co.cid)
-                        }
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    } label: {
-                        Image(systemName: isCoTracked ? "star.fill" : "star")
-                            .font(.title2)
-                    }
-                    .foregroundColor(isCoTracked ? .green : .primary)
                     VStack(alignment: .leading) {
                         Text(co.callsign).font(.headline).foregroundColor(.primary)
                         Text(co.name).font(.subheadline).foregroundColor(.secondary)
                         Text(String(co.cid)).font(.caption).foregroundColor(.secondary)
+                        if prefsManager.shouldShowSwipeToTrackHint && !isCoTracked {
+                            Text("Swipe right to track")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    if isCoTracked {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
                     }
                 }
             }
+            .swipeActions(edge: .leading) {
+                Button {
+                    if isCoTracked {
+                        prefsManager.removeTrackedCID(co.cid)
+                    } else {
+                        prefsManager.addTrackedCID(co.cid)
+                        prefsManager.incrementSwipeToTrackHint()
+                    }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Label(isCoTracked ? "Untrack" : "Track", systemImage: isCoTracked ? "star.slash" : "star")
+                }
+                .tint(isCoTracked ? .orange : .green)
+            }
             LabeledContent("Frequency", value: co.frequency)
         } header: {
-            Text("Also Online")
+            Text("Co-Controller")
         }
     }
 
@@ -342,10 +378,9 @@ struct SectorDetailsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(controller.callsign)
                     .font(.title2.bold())
-                HStack {
-                    Text(controller.name).font(.subheadline).foregroundColor(.secondary)
-                    Text("(\(String(controller.cid)))").font(.subheadline).foregroundColor(.secondary)
-                }
+                Text(controller.name)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             }
             Spacer()
             Button { dismiss() } label: {
@@ -358,10 +393,30 @@ struct SectorDetailsView: View {
     @ViewBuilder
     private func atisText(controller: Controllers) -> some View {
         if let atis = controller.text_atis, !atis.isEmpty {
-            Text(atis.joined(separator: "\n"))
+            Text(atisAttributedString(from: atis))
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private func atisAttributedString(from lines: [String]) -> AttributedString {
+        let fullText = lines.joined(separator: "\n")
+        var result = AttributedString(fullText)
+
+        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+        let nsString = fullText as NSString
+        let matches = detector?.matches(in: fullText, options: [], range: NSRange(location: 0, length: nsString.length)) ?? []
+
+        for match in matches {
+            guard let url = match.url,
+                  let range = Range(match.range, in: fullText),
+                  let attrRange = Range(range, in: result) else { continue }
+            result[attrRange].link = url
+            result[attrRange].foregroundColor = .blue
+            result[attrRange].underlineStyle = .single
+        }
+
+        return result
     }
 
     private func ratingLabel(for controller: Controllers) -> String {
@@ -445,6 +500,7 @@ private let previewOwnerRefs = [
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let manager = PreferencesManager(context: ModelContext(container))
+    // swipeToTrackHintCount defaults to 0, so hint text is visible
 
     SectorDetailsView(sector: sector, controller: controller, allPositions: previewPositions, allSectors: [sector, approachSector], headerHeight: .constant(0))
         .environment(manager)

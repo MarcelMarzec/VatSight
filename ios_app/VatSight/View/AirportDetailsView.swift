@@ -17,6 +17,7 @@ struct AirportDetailsView: View {
     var onPilotSelected: ((Int, Double, Double) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(PreferencesManager.self) private var prefsManager
     @State private var metar: String? = nil
     @State private var metarLoading = true
     @State private var showingTraffic = false
@@ -113,7 +114,7 @@ struct AirportDetailsView: View {
 
         List {
             // Controllers section
-            Section("Online Controllers") {
+            Section {
                 if controllers.isEmpty {
                     Text("No controllers online at this airport.")
                         .font(.subheadline)
@@ -124,6 +125,13 @@ struct AirportDetailsView: View {
                             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                     }
                 }
+            } header: {
+                Text("Online Controllers")
+            } footer: {
+                if !controllers.isEmpty && prefsManager.shouldShowSwipeToTrackHint {
+                    Text("Swipe right on a controller to track them.")
+                }
+            }
 
             // ATIS section
             let atisStations = atis.filter {
@@ -131,36 +139,35 @@ struct AirportDetailsView: View {
                 && $0.callsign.uppercased().contains("ATIS")
             }
             if !atisStations.isEmpty {
-                    ForEach(atisStations) { station in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(atisPositionLabel(for: station.callsign)).font(.subheadline).foregroundColor(.secondary)
-                            HStack {
-                                if let code = station.atis_code {
-                                    Text(code)
-                                        .font(.headline)
-                                        .padding(.horizontal, 13)
-                                        .padding(.vertical, 9)
-                                        .background(Color(.blue))
-                                        .cornerRadius(8)
-                                }
-                                
-                                VStack(alignment: .leading) {
-                                    Text(station.callsign)
-                                        .font(.headline)
-                                    
-                                    Text(station.frequency)
-                                        .font(.headline)
-                                }
+                ForEach(atisStations) { station in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(atisPositionLabel(for: station.callsign)).font(.subheadline).foregroundColor(.secondary)
+                        HStack {
+                            if let code = station.atis_code {
+                                Text(code)
+                                    .font(.headline)
+                                    .padding(.horizontal, 13)
+                                    .padding(.vertical, 9)
+                                    .background(Color(.blue))
+                                    .cornerRadius(8)
                             }
-                            Text("\(station.name) (\(String(station.cid)))")
-                                .font(.subheadline)
-                                .foregroundStyle(Color.secondary)
-                            if let lines = station.text_atis {
-                                Text(lines.joined(separator: "\n"))
-                                    .font(.default)
-                                    .foregroundStyle(.primary)
-                                    .padding(.top, 4)
+
+                            VStack(alignment: .leading) {
+                                Text(station.callsign)
+                                    .font(.headline)
+
+                                Text(station.frequency)
+                                    .font(.headline)
                             }
+                        }
+                        Text("\(station.name) (\(String(station.cid)))")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.secondary)
+                        if let lines = station.text_atis {
+                            Text(atisAttributedString(from: lines))
+                                .font(.default)
+                                .foregroundStyle(.primary)
+                                .padding(.top, 4)
                         }
                     }
                 }
@@ -190,6 +197,23 @@ struct AirportDetailsView: View {
     }
 
     // MARK: - Helpers
+
+    private func atisAttributedString(from lines: [String]) -> AttributedString {
+        let fullText = lines.joined(separator: "\n")
+        var result = AttributedString(fullText)
+        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+        let nsString = fullText as NSString
+        let matches = detector?.matches(in: fullText, options: [], range: NSRange(location: 0, length: nsString.length)) ?? []
+        for match in matches {
+            guard let url = match.url,
+                  let range = Range(match.range, in: fullText),
+                  let attrRange = Range(range, in: result) else { continue }
+            result[attrRange].link = url
+            result[attrRange].foregroundColor = .blue
+            result[attrRange].underlineStyle = .single
+        }
+        return result
+    }
 
     private func atisPositionLabel(for callsign: String) -> String {
         let upper = callsign.uppercased()
@@ -262,60 +286,79 @@ private struct ControllerRow: View {
         !controller.callsign.uppercased().hasPrefix(airportICAO.uppercased() + "_")
     }
 
+    private func atisAttributedString(from lines: [String]) -> AttributedString {
+        let fullText = lines.joined(separator: "\n")
+        var result = AttributedString(fullText)
+        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+        let nsString = fullText as NSString
+        let matches = detector?.matches(in: fullText, options: [], range: NSRange(location: 0, length: nsString.length)) ?? []
+        for match in matches {
+            guard let url = match.url,
+                  let range = Range(match.range, in: fullText),
+                  let attrRange = Range(range, in: result) else { continue }
+            result[attrRange].link = url
+            result[attrRange].foregroundColor = .blue
+            result[attrRange].underlineStyle = .single
+        }
+        return result
+    }
+
     var body: some View {
-            VStack(alignment: .leading) {
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading){
-                        Text(positionLabel)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        HStack {
-                            Text(controller.frequency)
-                                .font(.headline)
-                            Text("|")
-                            Text(controller.callsign)
-                                .font(.headline)
-                        }
-                        HStack(spacing: 4) {
-                                Text(controller.name + " (\(String(controller.cid)))")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            
-                                Button {
-                                    if isTracked {
-                                        prefsManager.removeTrackedCID(controller.cid)
-                                    } else {
-                                        prefsManager.addTrackedCID(controller.cid)
-                                    }
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                } label: {
-                                    Image(systemName: isTracked ? "star.fill" : "star")
-                                        .font(.subheadline)
-                                }
-                                .foregroundColor(isTracked ? .green : .secondary)
-                            }
+        VStack(alignment: .leading) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading) {
+                    Text(positionLabel)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text(controller.frequency)
+                            .font(.headline)
+                        Text("|")
+                        Text(controller.callsign)
+                            .font(.headline)
                     }
-                    Spacer()
-                    VStack(alignment: .trailing) {
-                        Text(controller.onlineDuration)
+                    HStack {
+                        Text(controller.name + " (\(String(controller.cid)))")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        Text(controller.ratingInfo?.short ?? "")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        if isTracked {
+                            Image(systemName: "star.fill")
+                                .font(.subheadline)
+                                .foregroundColor(.green)
+                        }
                     }
                 }
-
-                
-                
-                if let atis = controller.text_atis, !atis.isEmpty {
-                    Text(atis.joined(separator: "\n"))
+                Spacer()
+                VStack(alignment: .trailing) {
+                    Text(controller.onlineDuration)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                        .padding(.top, 1)
+                    Text(controller.ratingInfo?.short ?? "")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
             }
+
+            if let atis = controller.text_atis, !atis.isEmpty {
+                Text(atisAttributedString(from: atis))
+                    .font(.subheadline)
+            }
         }
+        .swipeActions(edge: .leading) {
+            Button {
+                if isTracked {
+                    prefsManager.removeTrackedCID(controller.cid)
+                } else {
+                    prefsManager.addTrackedCID(controller.cid)
+                    prefsManager.incrementSwipeToTrackHint()
+                }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                Label(isTracked ? "Untrack" : "Track", systemImage: isTracked ? "star.slash" : "star")
+            }
+            .tint(isTracked ? .orange : .green)
+        }
+    }
 }
 
 #Preview {

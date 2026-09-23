@@ -13,25 +13,18 @@ struct VatSightApp: App {
     let container: ModelContainer
     
     init() {
-        // Opt out of Mapbox's telemetry/analytics collection by default, for every user.
-        // This is the same flag Mapbox's own attribution-sheet "Telemetry" toggle reads/writes
-        // (see MapboxMaps' AttributionMenu/EventsManager) — setting it here just flips the
-        // default before the SDK ever gets a chance to send anything. Does not affect Mapbox's
-        // separate anonymous turnstile/MAU ping, which their SDK sends regardless (required by
-        // Mapbox's ToS for billing purposes) and carries no device/session/IP telemetry.
+        // Opt out of Mapbox telemetry. Does not affect the anonymous MAU ping
+        // required by Mapbox's ToS (no device/session/IP data in that ping).
         UserDefaults.standard.set(false, forKey: "MGLMapboxMetricsEnabled")
 
         let schema = Schema([UserPreferencesModel.self])
-        
-        // Check if we're in preview mode or if we should use in-memory storage
         let isPreview = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: isPreview)
         
         do {
             container = try ModelContainer(for: schema, configurations: config)
         } catch {
-            // Migration failed — delete the old store and start fresh rather than
-            // silently falling back to in-memory (which loses prefs every launch).
+            // Migration failed — delete the old store and start fresh.
             if !isPreview {
                 let storeURL = URL.applicationSupportDirectory.appending(path: "default.store")
                 for ext in ["", "-shm", "-wal"] {
@@ -39,12 +32,10 @@ struct VatSightApp: App {
                 }
                 try? FileManager.default.removeItem(at: storeURL)
             }
-            let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: isPreview)
-            do {
-                container = try ModelContainer(for: schema, configurations: fallbackConfig)
-            } catch {
-                fatalError("Failed to initialize ModelContainer after store deletion: \(error)")
-            }
+            // Last resort: in-memory only - prefs won't persist but the app stays functional.
+            // try! is safe: an in-memory container has no disk I/O to fail.
+            let inMemoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            container = try! ModelContainer(for: schema, configurations: inMemoryConfig)
         }
     }
     

@@ -97,6 +97,15 @@ final class PreferencesManager {
         try? context.save()
     }
 
+    func incrementSwipeToTrackHint() {
+        userPrefs.swipeToTrackHintCount += 1
+        try? context.save()
+    }
+
+    var shouldShowSwipeToTrackHint: Bool {
+        userPrefs.swipeToTrackHintCount < 3
+    }
+
     func removeTrackedCID(_ cid: Int) {
         userPrefs.trackedCIDs.removeAll { $0 == cid }
         try? context.save()
@@ -171,11 +180,6 @@ final class PreferencesManager {
 
     func updateSearchShowInactiveAirports(_ value: Bool) {
         userPrefs.searchShowInactiveAirports = value
-        try? context.save()
-    }
-
-    func incrementAdsWatched(by count: Int = 1) {
-        userPrefs.totalAdsWatched += count
         try? context.save()
     }
 

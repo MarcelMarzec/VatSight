@@ -7,21 +7,21 @@
 
 import SwiftUI
 import SwiftData
+import SafariServices
 
 struct SettingsView: View {
     @Environment(PreferencesManager.self) private var prefsManager
     @EnvironmentObject private var radarViewModel: RadarViewModel
     @State private var cidInputText = ""
+    @State private var showPrivacyPolicy = false
     @FocusState private var cidFieldFocused: Bool
     private var vatsimDataRefreshRates = ["15s", "30s", "1min"]
 
-    // Computed property to display CID or "ENTER" prompt
     private var displayedCID: String {
         let cid = prefsManager.userPrefs.vatsimCID
         return cid > 0 ? String(cid) : "ENTER"
     }
     
-    // Binding for the refresh rate picker
     private var vatsimRefreshRate: Binding<String> {
         Binding(
             get: { prefsManager.userPrefs.vatsimRefreshRate },
@@ -83,18 +83,6 @@ struct SettingsView: View {
                     }
                     .foregroundColor(.primary)
                     
-                    /* NavigationLink{
-                        AdView()
-                    } label: {
-                        HStack(spacing: 20) {
-                            Image(systemName: "dollarsign").foregroundColor(.green)
-                            VStack(alignment: .leading){
-                                Text("Support my work for Free")
-                                Text("Vatsight is free, support me by volontarily watching an advert").font(.subheadline).foregroundColor(.secondary)
-                            }
-                        }
-                    } */
-                
                     if let githubURL = URL(string: "https://github.com/MarcelMarzec/VatSight") {
                         Link(destination: githubURL) {
                             HStack {
@@ -112,17 +100,23 @@ struct SettingsView: View {
                         }
                     }
 
-                    if let privacyURL = URL(string: "https://vatsight.com/ios_privacy_policy.html") {
-                        Link(destination: privacyURL) {
-                            HStack {
-                                Image(systemName: "hand.raised.fill").foregroundColor(.primary)
-                                VStack(alignment: .leading) {
-                                    Text("Privacy Policy")
-                                    Text("How VatSight handles your data.").font(.subheadline).foregroundColor(.secondary)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
-                            }.foregroundColor(.primary)
+                    Button {
+                        showPrivacyPolicy = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "hand.raised.fill").foregroundColor(.primary)
+                            VStack(alignment: .leading) {
+                                Text("Privacy Policy")
+                                Text("How VatSight handles your data.").font(.subheadline).foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
+                        }.foregroundColor(.primary)
+                    }
+                    .sheet(isPresented: $showPrivacyPolicy) {
+                        if let url = URL(string: "https://vatsight.com/ios_privacy_policy.html") {
+                            SafariView(url: url)
+                                .ignoresSafeArea()
                         }
                     }
                 } header: {
@@ -164,6 +158,16 @@ struct SettingsView: View {
             }
         }
     }
+}
+
+struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }
 
 #Preview {

@@ -87,7 +87,6 @@ final class UserPreferencesModel {
     var lastLongitude: Double
     var lastZoom: Double
     var vatsimRefreshRate: String
-    var totalAdsWatched: Int
     var showInactiveSectors: Bool = false
     var showAirports: Bool = false
     var showPilotsLayer: Bool = true
@@ -104,18 +103,15 @@ final class UserPreferencesModel {
     var mapStyleRaw: String = MapStyle.system.rawValue
     /// Raw value of `AppTheme` — stored as String for SwiftData compatibility.
     var appThemeRaw: String = AppTheme.system.rawValue
-    /// Plane icon size multiplier — 1.0 is the default size.
     var planeIconMultiplier: Double = 1.0
-    /// Airport icon size multiplier — 1.0 is the default size.
     var airportIconMultiplier: Double = 1.0
-    /// Persisted search filter: facility IDs explicitly included. Empty = no include filter.
     var searchSelectedFacilities: [Int] = []
-    /// Persisted search filter: facility IDs explicitly excluded. ID 0 (Observer) excluded by default.
+    /// ID 0 (Observer) excluded by default.
     var searchExcludedFacilities: [Int] = [0]
-    /// Persisted search filter: raw value of `SearchCategory`, e.g. "ATC".
     var searchCategoryRaw: String = "ATC"
-    /// Persisted search filter: whether inactive airports are shown in the Airport tab.
     var searchShowInactiveAirports: Bool = false
+    /// Hidden after 3 uses.
+    var swipeToTrackHintCount: Int = 0
 
     var mapStyle: MapStyle {
         get { MapStyle(rawValue: mapStyleRaw) ?? .system }
@@ -133,7 +129,6 @@ final class UserPreferencesModel {
         lastLongitude: Double,
         lastZoom: Double,
         vatsimRefreshRate: String = "15s",
-        totalAdsWatched: Int = 0,
         showInactiveSectors: Bool = false,
         showAirports: Bool = false,
         showPilotsLayer: Bool = true,
@@ -155,7 +150,6 @@ final class UserPreferencesModel {
         self.lastLongitude = lastLongitude
         self.lastZoom = lastZoom
         self.vatsimRefreshRate = vatsimRefreshRate
-        self.totalAdsWatched = totalAdsWatched
         self.showInactiveSectors = showInactiveSectors
         self.showAirports = showAirports
         self.showPilotsLayer = showPilotsLayer
@@ -179,8 +173,7 @@ final class UserPreferencesModel {
             lastLatitude: 51.5074,
             lastLongitude: -0.1278,
             lastZoom: 3,
-            vatsimRefreshRate: "15s",
-            totalAdsWatched: 0
+            vatsimRefreshRate: "15s"
         )
     }
 }
