@@ -27,13 +27,10 @@ Options -Indexes
     Header always unset X-Powered-By
     Header unset X-Powered-By
 
-    # Strict content security policy for our own pages only (index.php,
-    # privacy_policy.php, and any plain .html page). phpList's own PHP pages
-    # under /phplist/ use inline scripts, so they override this back off in
-    # their own .htaccess (see public/phplist/.htaccess).
-    <FilesMatch "\.(html|php)$">
-        Header set Content-Security-Policy "default-src 'self'; script-src 'none'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
-    </FilesMatch>
+    # The strict Content-Security-Policy for our own pages is sent from PHP
+    # (top of index.php and privacy_policy.php), not here, so it never
+    # reaches phpList under /phplist/, which needs its scripts. LiteSpeed
+    # doesn't reliably honour a per-folder unset or env= exclusion.
 </IfModule>
 
 <IfModule mod_rewrite.c>

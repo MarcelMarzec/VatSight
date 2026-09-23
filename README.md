@@ -52,6 +52,9 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 * VATSIM data APIs
 * Vatglasses Sector Data
 
+### AI Assistance
+Parts of VatSight were developed with the help of generative AI tools (e.g. Claude). All code is reviewed, tested and maintained by [@MarcelMarzec](https://github.com/MarcelMarzec).
+
 ### Acknowledgements
 * User data sourced from VATSIM API
 * Airspace data sourced from Vatglassses
