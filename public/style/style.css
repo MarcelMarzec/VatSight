@@ -1266,3 +1266,160 @@ footer {
 
     .doc-card { padding: 28px 20px; }
 }
+
+/* ---------- Newsletter sign-up ---------- */
+
+.signup-form {
+    width: 100%;
+    max-width: 480px;
+}
+
+.signup-row {
+    display: flex;
+    gap: 8px;
+    padding: 6px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    transition: border-color 0.15s ease;
+}
+
+.signup-row:focus-within {
+    border-color: rgba(134, 203, 14, 0.55);
+}
+
+.signup-row input[type="email"] {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    padding: 10px 12px;
+}
+
+.signup-row input[type="email"]::placeholder {
+    color: var(--text-faint);
+}
+
+.signup-row button {
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 11px 20px;
+    border-radius: 11px;
+    background: var(--accent);
+    color: rgb(12, 16, 4);
+    white-space: nowrap;
+    transition: opacity 0.15s ease;
+}
+
+.signup-row button:hover {
+    opacity: 0.9;
+}
+
+.signup-row button:disabled {
+    opacity: 0.55;
+    cursor: progress;
+}
+
+.signup-hp {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.signup-status {
+    min-height: 1.6em;
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--text-dim);
+}
+
+.signup-status.is-success {
+    color: var(--accent);
+}
+
+.signup-status.is-error {
+    color: rgb(255, 138, 128);
+}
+
+.signup-status a {
+    text-decoration: underline;
+}
+
+.signup-legal {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--text-faint);
+    line-height: 1.6;
+}
+
+.signup-legal a {
+    color: var(--text-dim);
+    text-decoration: underline;
+}
+
+.final-cta .signup-form {
+    margin: 0 auto 28px;
+}
+
+.final-cta .signup-status,
+.final-cta .signup-legal {
+    text-align: center;
+    max-width: none;
+    margin-bottom: 0;
+}
+
+.final-cta p.signup-legal {
+    margin: 6px auto 0;
+}
+
+.final-cta p.signup-status {
+    margin: 12px auto 0;
+}
+
+.doc-card .signup-form {
+    margin: 8px 0 8px;
+}
+
+.doc-card .signup-row input[type="email"] {
+    background: transparent;
+}
+
+.doc-card .signup-row {
+    background: var(--bg-soft);
+}
+
+.doc-card p.signup-status,
+.doc-card p.signup-legal {
+    margin-bottom: 0;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 480px) {
+    .signup-row {
+        flex-direction: column;
+    }
+
+    .signup-row button {
+        width: 100%;
+    }
+}

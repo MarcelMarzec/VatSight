@@ -4,7 +4,7 @@
 <head>
     <title>Privacy Policy — VatSight</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="description" content="VatSight's privacy policy. VatSight does not collect, store, or share any personal data — everything stays on your device." />
+    <meta name="description" content="How VatSight handles your data across the iOS app, vatsight.com and the VatSight newsletter. The app collects no personal data; the newsletter stores only what it needs to email you." />
     <meta name="author" content="Marcel Marzec" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#090909" />
@@ -20,7 +20,7 @@
     <meta name="twitter:title" content="Privacy Policy — VatSight" />
     <meta name="twitter:image" content="https://vatsight.com/images/Vatsightlogo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" type="text/css" href="style/style.css?v=20260917"/>
+    <link rel="stylesheet" type="text/css" href="style/style.css?v=20260923"/>
     <link rel="canonical" href="https://vatsight.com/ios_privacy_policy" />
     <link rel="icon" type="image/png" href="/images/favicon/favicon-96x96.png?v=20260509" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/images/favicon/favicon.svg?v=20260509" />
@@ -66,7 +66,7 @@
         <section class="doc-hero">
             <div class="section-inner">
                 <h1>Privacy Policy</h1>
-                <p class="doc-updated">Last updated September 2026</p>
+                <p class="doc-updated">Last updated 23 September 2026</p>
             </div>
         </section>
 
@@ -74,15 +74,21 @@
             <div class="section-inner">
                 <div class="doc-card">
                     <div class="highlight-box">
-                        <p><strong>Short version:</strong> VatSight does not collect, store, or share any personal data. Everything you enter stays on your device. No accounts. No analytics. Mapbox's map telemetry is switched off by default. Ads are entirely optional — off by default, and shown only if you choose to enable them in Settings.</p>
+                        <p><strong>Short version:</strong> The VatSight app does not collect, store, or share any personal data. Everything you enter stays on your device. No accounts. No analytics. Mapbox's map telemetry is switched off by default. Ads are entirely optional — off by default, and shown only if you choose to enable them in Settings.</p>
+                        <p style="margin-top: 10px;">The only personal data we hold is your email address, and only if you choose to join the <a href="#newsletter" class="link-text">VatSight newsletter</a>. It's used for nothing else, never shared or sold, and you can unsubscribe with one click.</p>
                     </div>
 
-                    <h2>1. Overview</h2>
-                    <p>VatSight is a live radar application for the <a href="https://www.vatsim.net" target="_blank" rel="noopener" class="link-text">VATSIM</a> virtual air traffic network. It displays publicly available flight data on an interactive map. This privacy policy explains what information the app uses, where it comes from, and how it is handled.</p>
-                    <p>VatSight is developed and maintained by Marcel Marzec. By using VatSight you agree to this policy.</p>
+                    <h2>1. Overview and Who We Are</h2>
+                    <p>VatSight is a live radar application for the <a href="https://www.vatsim.net" target="_blank" rel="noopener" class="link-text">VATSIM</a> virtual air traffic network. It displays publicly available flight data on an interactive map. This privacy policy explains what information is used, where it comes from, and how it is handled across:</p>
+                    <ul>
+                        <li>the VatSight iOS app (Sections 2–9)</li>
+                        <li>the website at <code>vatsight.com</code> (<a href="#website" class="link-text">Section 10</a>)</li>
+                        <li>the VatSight newsletter (<a href="#newsletter" class="link-text">Section 11</a>)</li>
+                    </ul>
+                    <p>VatSight is developed and maintained by Marcel Marzec, an individual based in the United Kingdom. For the purposes of UK data protection law (the UK GDPR and the Data Protection Act 2018), Marcel Marzec is the <strong>controller</strong> of any personal data described in this policy. You can reach him at <a href="mailto:contact@marcelmarzec.com" class="link-text">contact@marcelmarzec.com</a>.</p>
 
-                    <h2>2. Information VatSight Does NOT Collect</h2>
-                    <p>Mapbox's own SDK telemetry is disabled by default (see <a href="#mapbox-sdk" class="link-text">Section 5</a>), and unless you choose to enable the optional ads described in <a href="#advertising" class="link-text">Section 6</a>, VatSight does not collect, transmit, or share any of the following:</p>
+                    <h2>2. Information the App Does NOT Collect</h2>
+                    <p>Mapbox's own SDK telemetry is disabled by default (see <a href="#mapbox-sdk" class="link-text">Section 5</a>), and unless you choose to enable the optional ads described in <a href="#advertising" class="link-text">Section 6</a>, the VatSight app does not collect, transmit, or share any of the following:</p>
                     <ul>
                         <li>Your name, email address, or any contact information</li>
                         <li>Your device's location (GPS or network-based)</li>
@@ -200,28 +206,110 @@
                     <h2 id="location">7. Location Services</h2>
                     <p>VatSight does <strong>not</strong> request access to your device's location. The app does not use <code>CLLocationManager</code> or any GPS / network location API. The map is centred based on your previously saved map position, which is stored only on-device.</p>
 
-                    <h2>8. Children's Privacy</h2>
-                    <p>VatSight is not directed at children under 13. The app collects no personal information from any user, including children. The optional advertising feature described in Section 6 should only be enabled by adult users; VatSight does not knowingly direct ads at children.</p>
-
-                    <h2>9. Data Retention and Deletion</h2>
-                    <p>All on-device data (preferences, CIDs, cache) is stored only on your device. You can delete all stored data at any time by uninstalling VatSight. The app contains no server-side user accounts, so there is no data to delete from any server.</p>
-                    <p>The VATGlasses sector data cache can also be cleared from within the app via Settings → VATGlasses Sector Data → Redownload.</p>
-
-                    <h2>10. iCloud Backup</h2>
+                    <h2>8. iCloud Backup</h2>
                     <p>Your VatSight preferences (stored via SwiftData) may be included in iCloud backups if you have iCloud Backup enabled on your device. This is handled entirely by iOS and subject to Apple's privacy policy. The VATGlasses cache file is stored in the Documents directory and may be included in iCloud backups; it contains only public airspace data (no personal information).</p>
 
-                    <h2>11. Security</h2>
-                    <p>VatSight's on-device data is stored by SwiftData, which uses the standard iOS data protection mechanisms. All network requests use HTTPS (TLS). VatSight does not store or transmit any authentication credentials.</p>
+                    <h2>9. App Data Retention and Deletion</h2>
+                    <p>All on-device data (preferences, CIDs, cache) is stored only on your device. You can delete all stored data at any time by uninstalling VatSight. The app contains no server-side user accounts, so there is no app data to delete from any server.</p>
+                    <p>The VATGlasses sector data cache can also be cleared from within the app via Settings → VATGlasses Sector Data → Redownload.</p>
 
-                    <h2>12. Changes to This Policy</h2>
-                    <p>If VatSight's data practices change in a future update, this policy will be updated and the "Last updated" date at the top will be revised. Continued use of the app after a policy change constitutes acceptance of the updated policy.</p>
+                    <h2 id="website">10. The Website</h2>
+                    <p>The <code>vatsight.com</code> website has no user accounts, no analytics, no advertising and no tracking pixels, and it does not set any cookies (the newsletter pages are the one exception; see <a href="#cookies" class="link-text">Section 12</a>). Like almost every website, it still involves some technical processing:</p>
+                    <ul>
+                        <li><strong>Server logs.</strong> When you visit, our web hosting provider's server automatically records standard technical information: your IP address, browser user agent, the page requested, the referring page and the time. These logs are used only to keep the site running and secure, and they are deleted automatically on the hosting provider's rotation schedule.</li>
+                        <li><strong>Cloudflare.</strong> The <code>vatsight.com</code> domain uses Cloudflare for DNS. Where traffic is routed through Cloudflare's network, Cloudflare processes your IP address to deliver the site and protect it from attacks. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener" class="link-text">Cloudflare's privacy policy</a>.</li>
+                        <li><strong>Google Fonts.</strong> The site's typefaces are loaded from Google Fonts, so your browser connects to Google's servers, which receive your IP address and user agent. See <a href="https://developers.google.com/fonts/faq/privacy" target="_blank" rel="noopener" class="link-text">Google Fonts' privacy FAQ</a>.</li>
+                    </ul>
+                    <p>Our lawful basis for this processing is our <strong>legitimate interests</strong> (UK GDPR Article 6(1)(f)) in running a secure, working website. We do not use this data to identify you, build profiles or track you across other sites.</p>
 
-                    <h2>13. Contact</h2>
+                    <h2 id="newsletter">11. The Newsletter</h2>
+                    <p>You can choose to join the VatSight newsletter on the <a href="/phplist/?p=subscribe&amp;id=1" class="link-text">sign-up page</a> or the home page. It is used only to email you about the TestFlight beta, the App Store launch and major VatSight updates.</p>
+
+                    <h3>What we store</h3>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Why</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Your email address</td>
+                                    <td>To send you the newsletter</td>
+                                </tr>
+                                <tr>
+                                    <td>Email format preference (HTML or plain text)</td>
+                                    <td>To send emails in the format you prefer</td>
+                                </tr>
+                                <tr>
+                                    <td>Date, time, IP address and browser details of your sign-up, confirmation and any changes you make</td>
+                                    <td>As a record of your consent, and to spot abusive sign-ups</td>
+                                </tr>
+                                <tr>
+                                    <td>Delivery status (e.g. bounced emails)</td>
+                                    <td>To stop emailing addresses that no longer work</td>
+                                </tr>
+                                <tr>
+                                    <td>Unsubscribe date, and a reason if you choose to give one</td>
+                                    <td>To make sure we never email you again after you opt out</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p>We do <strong>not</strong> track whether you open our emails or which links you click, and we don't ask for your name or any other details.</p>
+
+                    <h3>Double opt-in and consent</h3>
+                    <p>When you sign up, we send a confirmation email. You're only added to the list after you click the link in it, so nobody can subscribe you without your agreement. Our lawful basis for sending the newsletter is your <strong>consent</strong> (UK GDPR Article 6(1)(a) and regulation 22 of the Privacy and Electronic Communications Regulations). You can withdraw your consent at any time. This doesn't affect anything we sent before you withdrew it.</p>
+
+                    <h3>Unsubscribing</h3>
+                    <p>Every newsletter email has an <strong>Unsubscribe</strong> link that removes you with one click, and supports the one-click unsubscribe button many email apps show. You can also <a href="/phplist/?p=unsubscribe&amp;id=1" class="link-text">unsubscribe here</a>, <a href="/phplist/?p=preferences&amp;id=1" class="link-text">change your details here</a>, or just email us.</p>
+
+                    <h3>Where your data is kept and who can see it</h3>
+                    <p>The newsletter runs on <a href="https://www.phplist.org" target="_blank" rel="noopener" class="link-text">phpList</a>, open-source software that we host ourselves on the same web server as this website, at <code>vatsight.com/phplist</code>. Emails are sent from our own mail server. We do not use a third-party email marketing service. Your address is never sold, rented or shared with anyone, and it's used for nothing except this newsletter. The only third party involved is our web hosting provider, which stores the server data on our behalf as a processor under a data processing agreement.</p>
+                    <p>If our hosting provider stores or processes any of this data outside the UK, we make sure the transfer is covered by adequacy regulations or appropriate safeguards, as UK data protection law requires.</p>
+
+                    <h3>How long we keep it</h3>
+                    <ul>
+                        <li><strong>While you're subscribed:</strong> we keep your details for as long as you stay on the list.</li>
+                        <li><strong>If you never confirm:</strong> unconfirmed sign-ups are deleted regularly, normally within a month.</li>
+                        <li><strong>After you unsubscribe:</strong> we keep only your email address and the date you opted out, on a suppression list, so that you are never emailed again. This is based on our legitimate interest in respecting your choice. Ask us and we'll delete it completely, but then we can't guarantee you won't be re-subscribed if someone enters your address again.</li>
+                        <li><strong>If the newsletter closes:</strong> we delete the whole list.</li>
+                    </ul>
+
+                    <h2 id="cookies">12. Cookies</h2>
+                    <p>The main VatSight website does not set any cookies. The newsletter's sign-up, confirmation and preferences pages (under <code>vatsight.com/phplist/</code>) set a single session cookie that phpList needs to process your form. It contains no personal information and expires when you close your browser. Because it's strictly necessary for the service you've asked for, it doesn't require consent under PECR.</p>
+
+                    <h2>13. Children's Privacy</h2>
+                    <p>VatSight is not directed at children under 13. The app collects no personal information from any user, including children. The optional advertising feature described in Section 6 should only be enabled by adult users; VatSight does not knowingly direct ads at children. You must be 13 or older to subscribe to the newsletter. If you believe a child under 13 has subscribed, contact us and we'll delete their details.</p>
+
+                    <h2>14. Security</h2>
+                    <p>VatSight's on-device data is stored by SwiftData, which uses the standard iOS data protection mechanisms. All network requests use HTTPS (TLS). The app does not store or transmit any authentication credentials.</p>
+                    <p>The website and newsletter pages are only served over HTTPS. Access to the newsletter's admin area is limited to the developer and protected by a strong password, and the software is kept up to date.</p>
+
+                    <h2 id="your-rights">15. Your Rights</h2>
+                    <p>Under UK data protection law, you have the right to:</p>
+                    <ul>
+                        <li><strong>access</strong> the personal data we hold about you and get a copy of it</li>
+                        <li><strong>rectify</strong> it if it's wrong or incomplete</li>
+                        <li><strong>erase</strong> it</li>
+                        <li><strong>restrict</strong> or <strong>object to</strong> how we use it</li>
+                        <li><strong>data portability</strong>, which means getting your data in a machine-readable format</li>
+                        <li><strong>withdraw consent</strong> at any time, for example by unsubscribing from the newsletter</li>
+                    </ul>
+                    <p>To use any of these rights, email <a href="mailto:contact@marcelmarzec.com" class="link-text">contact@marcelmarzec.com</a>. We'll reply within one month. There's no charge.</p>
+                    <p>If you're unhappy with how we've handled your data, please contact us first so we can put it right. You also have the right to complain to the UK's data protection regulator, the <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener" class="link-text">Information Commissioner's Office (ICO)</a>, on 0303 123 1113.</p>
+
+                    <h2>16. Changes to This Policy</h2>
+                    <p>If VatSight's data practices change, this policy will be updated and the "Last updated" date at the top will be revised. If a change significantly affects how we use newsletter subscribers' data, we'll also tell subscribers by email before it takes effect.</p>
+
+                    <h2>17. Contact</h2>
                     <p>If you have any questions about this privacy policy or VatSight's data practices, please contact:</p>
                     <p><strong>Marcel Marzec</strong><br>
                     <a href="mailto:contact@marcelmarzec.com" class="link-text">contact@marcelmarzec.com</a></p>
 
-                    <p class="doc-footnote">VatSight is an independent application and is not affiliated with, endorsed by, or sponsored by VATSIM, Mapbox, or VATGlasses.</p>
+                    <p class="doc-footnote">VatSight is an independent application and is not affiliated with, endorsed by, or sponsored by VATSIM, Mapbox, VATGlasses, or phpList.</p>
                 </div>
             </div>
         </section>
@@ -234,6 +322,7 @@
                 VatSight
             </a>
             <div class="footer-links">
+                <a href="/phplist/?p=subscribe&amp;id=1">Newsletter</a>
                 <a href="/ios_privacy_policy">Privacy Policy</a>
                 <a href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">GitHub</a>
                 <a href="https://marcelmarzec.com/contact-me" target="_blank" rel="noopener">Contact</a>

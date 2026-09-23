@@ -25,7 +25,7 @@
     <meta name="twitter:image" content="https://vatsight.com/images/Vatsightlogo.png" />
     <meta name="twitter:image:alt" content="VatSight app icon" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" type="text/css" href="style/style.css?v=20260917"/>
+    <link rel="stylesheet" type="text/css" href="style/style.css?v=20260923"/>
     <link rel="canonical" href="https://vatsight.com" />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
     <link rel="icon" type="image/png" href="/images/favicon/favicon-96x96.png?v=20260509" sizes="96x96" />
@@ -566,16 +566,30 @@
             </div>
         </section>
 
-        <section class="final-cta">
+        <section class="final-cta" id="newsletter">
             <div class="section-inner">
                 <h2>Get notified when VatSight launches</h2>
-                <p>The app is being actively built in the open. Follow along on GitHub or reach out directly with feedback and ideas.</p>
+                <p>Join the mailing list for the TestFlight beta invite, the App Store launch and major updates. A few emails a year, never spam.</p>
+                <!-- Newsletter sign-up: posts straight to phpList (public/phplist). Keep list[2] and id=1 in sync with the phpList list and subscribe page IDs. -->
+                <form class="signup-form" action="/phplist/?p=subscribe&amp;id=1" method="post">
+                    <input type="hidden" name="list[2]" value="signup">
+                    <input type="hidden" name="htmlemail" value="1">
+                    <div class="signup-hp" aria-hidden="true">
+                        <label>Leave this field empty <input type="text" name="VerificationCodeX" value="" tabindex="-1" autocomplete="off"></label>
+                    </div>
+                    <div class="signup-row">
+                        <label for="signup-email" class="sr-only">Email address</label>
+                        <input id="signup-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" maxlength="254" required>
+                        <button type="submit" name="subscribe" value="Subscribe">Notify me</button>
+                    </div>
+                    <p class="signup-legal">We'll email you a link to confirm. Unsubscribe any time with one click. See our <a href="/ios_privacy_policy#newsletter">Privacy Policy</a>.</p>
+                </form>
                 <div class="hero-actions">
                     <a class="btn-secondary" href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.48v-1.7c-2.78.62-3.37-1.36-3.37-1.36-.46-1.2-1.11-1.52-1.11-1.52-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.36 1.11 2.93.85.09-.67.35-1.11.64-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.9-1.33 2.74-1.05 2.74-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9v2.82c0 .27.18.58.69.48A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
                         Follow on GitHub
                     </a>
-                    <a class="btn-primary" href="https://marcelmarzec.com/contact-me" target="_blank" rel="noopener">Get in Contact</a>
+                    <a class="btn-secondary" href="https://marcelmarzec.com/contact-me" target="_blank" rel="noopener">Get in Contact</a>
                 </div>
             </div>
         </section>
@@ -588,6 +602,7 @@
                 VatSight
             </a>
             <div class="footer-links">
+                <a href="/phplist/?p=subscribe&amp;id=1">Newsletter</a>
                 <a href="/ios_privacy_policy">Privacy Policy</a>
                 <a href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">GitHub</a>
                 <a href="https://marcelmarzec.com/contact-me" target="_blank" rel="noopener">Contact</a>

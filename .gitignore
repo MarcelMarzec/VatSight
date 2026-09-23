@@ -10,3 +10,7 @@ xcuserdata/
 
 # Swift Package Manager
 .build/
+
+# phpList install (third-party code + config with database/mailbox passwords)
+public/phplist/
+public/phplist*.zip

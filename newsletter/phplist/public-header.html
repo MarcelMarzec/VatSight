@@ -1,0 +1,303 @@
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#090909" />
+<link rel="icon" type="image/png" href="https://vatsight.com/images/favicon/favicon-96x96.png?v=20260509" sizes="96x96" />
+<link rel="icon" type="image/svg+xml" href="https://vatsight.com/images/favicon/favicon.svg?v=20260509" />
+<link rel="apple-touch-icon" sizes="180x180" href="https://vatsight.com/images/favicon/apple-touch-icon.png?v=20260509" />
+<link rel="stylesheet" type="text/css" href="https://vatsight.com/style/style.css?v=20260923" />
+<style>
+/* VatSight theme for phpList public pages. Source: newsletter/phplist/public-header.html */
+.phplist-page .nav-inner {
+    justify-content: space-between;
+}
+
+.phplist-page .footer-links {
+    flex-wrap: wrap;
+    row-gap: 10px;
+}
+
+.pl-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--text-dim);
+}
+
+.pl-back:hover {
+    color: var(--text);
+}
+
+.pl-back svg {
+    width: 16px;
+    height: 16px;
+}
+
+.phplist-page .doc {
+    padding-top: 64px;
+}
+
+.pl-card {
+    margin: 0 auto;
+    max-width: 640px;
+}
+
+.pl-card h1,
+.pl-card h2,
+.pl-card h3,
+.pl-card h4 {
+    color: var(--text);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    margin: 0 0 14px;
+}
+
+.pl-card h1 { font-size: 28px; }
+.pl-card h2 { font-size: 22px; }
+.pl-card h3 { font-size: 19px; }
+.pl-card h4 { font-size: 16px; }
+
+.pl-card p,
+.pl-card li,
+.pl-card td,
+.pl-card label,
+.pl-card div {
+    color: var(--text-dim);
+    line-height: 1.7;
+}
+
+.pl-card p {
+    margin: 0 0 14px;
+}
+
+.pl-card b,
+.pl-card strong {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.pl-card a {
+    color: var(--accent);
+}
+
+.pl-card a:hover {
+    text-decoration: underline;
+}
+
+.pl-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px;
+}
+
+.pl-card li {
+    margin-bottom: 6px;
+}
+
+/* Form layout: phpList uses tables, so turn rows into stacked fields. */
+
+.pl-card table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 16px;
+}
+
+.pl-card tr {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 14px;
+}
+
+.pl-card td {
+    display: block;
+    padding: 0;
+    font-size: 14px;
+}
+
+.pl-card td.attributename,
+.pl-card td:first-child:not(:only-child) {
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.pl-card input[type="text"],
+.pl-card input[type="email"],
+.pl-card input[type="password"],
+.pl-card select,
+.pl-card textarea {
+    width: 100%;
+    max-width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.pl-card textarea {
+    min-height: 110px;
+    resize: vertical;
+    margin-top: 8px;
+}
+
+.pl-card input[type="text"]:focus,
+.pl-card input[type="email"]:focus,
+.pl-card input[type="password"]:focus,
+.pl-card select:focus,
+.pl-card textarea:focus {
+    border-color: rgba(134, 203, 14, 0.55);
+}
+
+.pl-card input[type="checkbox"],
+.pl-card input[type="radio"] {
+    accent-color: rgb(134, 203, 14);
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    vertical-align: -2px;
+}
+
+.pl-card input[type="submit"],
+.pl-card button,
+.pl-card .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px 22px;
+    margin: 8px 12px 8px 0;
+    border-radius: 12px;
+    background: var(--accent);
+    color: rgb(12, 16, 4);
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+}
+
+.pl-card input[type="submit"]:hover,
+.pl-card button:hover,
+.pl-card .button:hover {
+    opacity: 0.9;
+    text-decoration: none;
+}
+
+.pl-card input[type="submit"]:focus-visible,
+.pl-card button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+/* Messages */
+
+.pl-card .error,
+.pl-card .missing,
+.pl-card span.error {
+    color: rgb(255, 138, 128);
+    font-size: 14px;
+}
+
+.pl-card .error .required,
+.pl-card span.required {
+    color: var(--text-faint);
+    font-size: 13px;
+}
+
+.pl-card .information,
+.pl-card .adminmessage {
+    background: var(--accent-soft);
+    border: 1px solid rgba(134, 203, 14, 0.25);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 0 0 20px;
+    color: var(--text);
+}
+
+/* List-choice block on the subscribe page */
+
+.pl-card .accordion,
+.pl-card .list {
+    margin: 4px 0 16px;
+}
+
+.pl-card .listname {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.pl-card .listdescription {
+    display: block;
+    font-size: 13.5px;
+    color: var(--text-faint);
+    margin-left: 24px;
+}
+
+/* phpList credit: keep it, but make it quiet and on-theme. */
+
+.pl-card .poweredby,
+.pl-card .poweredby + div,
+.pl-card div[style*="small-caps"] {
+    font-family: inherit !important;
+    font-size: 12px !important;
+    font-variant: normal !important;
+    color: var(--text-faint) !important;
+    text-align: left !important;
+    padding: 20px 0 0 !important;
+    margin: 12px 0 0;
+    border-top: 1px solid var(--card-border);
+}
+
+.pl-card .poweredby img {
+    display: inline-block;
+    opacity: 0.6;
+    filter: grayscale(1) invert(1);
+}
+
+.pl-card div[style*="small-caps"] a {
+    color: var(--text-dim);
+}
+
+@media (max-width: 600px) {
+    .phplist-page .doc {
+        padding-top: 40px;
+    }
+
+    .pl-card input[type="submit"],
+    .pl-card .button {
+        width: 100%;
+        margin-right: 0;
+    }
+}
+</style>
+</head>
+
+<body class="phplist-page">
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="nav">
+    <div class="nav-inner">
+        <a class="nav-brand" href="https://vatsight.com/">
+            <img src="https://vatsight.com/images/Vatsightlogo.png" alt="" width="26" height="26">
+            <span>VatSight</span>
+        </a>
+        <a class="pl-back" href="https://vatsight.com/">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            Back to vatsight.com
+        </a>
+    </div>
+</header>
+
+<main id="main-content">
+    <section class="doc">
+        <div class="section-inner">
+            <div class="doc-card pl-card">

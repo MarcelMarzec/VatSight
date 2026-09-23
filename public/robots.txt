@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /phplist/
 
 Sitemap: https://vatsight.com/sitemap.xml
