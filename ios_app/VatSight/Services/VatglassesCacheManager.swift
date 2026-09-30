@@ -11,6 +11,11 @@ extension VatglassesService {
     func loadCachedDataFromDisk() {
         guard FileManager.default.fileExists(atPath: cacheFileURL.path) else { return }
 
+        // Load synchronously — this is called once at init time on whatever thread
+        // constructs VatglassesService (always the main thread via RadarViewModel).
+        // Keeping it synchronous ensures cachedData is populated before the first
+        // fetchSectorData() call, preventing the race where the async disk load finishes
+        // after fetchCommitInfo fails and completion is never called.
         do {
             let data = try Data(contentsOf: cacheFileURL)
             let decoder = JSONDecoder()
@@ -29,12 +34,16 @@ extension VatglassesService {
     func saveCachedDataToDisk() {
         guard let dataToSave = cachedData else { return }
 
-        do {
-            let encoder = JSONEncoder()
-            encoder.dateEncodingStrategy = .iso8601
-            let data = try encoder.encode(dataToSave)
-            try data.write(to: cacheFileURL, options: .atomic)
-        } catch { }
+        // Encode on the calling thread (main) to avoid passing VatglassesData across
+        // isolation boundaries, then write the raw bytes on a background thread.
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let encoded = try? encoder.encode(dataToSave) else { return }
+
+        let url = cacheFileURL
+        DispatchQueue.global(qos: .utility).async {
+            try? encoded.write(to: url, options: .atomic)
+        }
     }
 
     func fetchCommitInfo(completion: @escaping (Result<VatglassesComitModel, Error>) -> Void) {
@@ -59,7 +68,7 @@ extension VatglassesService {
         task.resume()
     }
 
-    func downloadAndParseSectors(commitSHA: String, completion: @escaping (Result<VatglassesData, Error>) -> Void) {
+    func downloadAndParseSectors(commitSHA: String, commitDate: Date? = nil, completion: @escaping (Result<VatglassesData, Error>) -> Void) {
         parseErrors = []   // reset diagnostics for this fetch
         let task = URLSession.shared.dataTask(with: repoURL) { [weak self] data, response, error in
             guard let self = self else { return }
@@ -82,6 +91,7 @@ extension VatglassesService {
                     allPositions: vatglassesData.allPositions,
                     lastUpdated: Date(),
                     commitSHA: commitSHA,
+                    commitDate: commitDate,
                     callsignLabels: vatglassesData.callsignLabels
                 )
 

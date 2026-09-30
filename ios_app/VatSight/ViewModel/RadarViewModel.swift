@@ -60,6 +60,7 @@ final class RadarViewModel: ObservableObject {
     
     private var vatsimFetchDone = false
     private var sectorFetchDone = false
+    private var hasStarted = false
     
     private var refreshInterval: TimeInterval {
         prefsManager?.getRefreshIntervalInSeconds() ?? 15
@@ -79,9 +80,10 @@ final class RadarViewModel: ObservableObject {
         self.vatglassesService.customRepoSlug = slug
     }
     
+    /// Called once when the app first becomes active and the data has never been loaded.
+    /// After that, use `handleForeground()` / `handleBackground()` for scene-phase transitions.
     func startAutoRefresh() {
-        guard timer == nil else { return }
-        
+        hasStarted = true
         let hasData = !pilots.isEmpty || !sectors.isEmpty
         if !hasData {
             isLoadingData = true
@@ -90,19 +92,47 @@ final class RadarViewModel: ObservableObject {
             loadVatsimData()
             loadSectorData()
         }
-        
-        timer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
-            self?.loadVatsimData()
+
+        scheduleTimers()
+    }
+
+    /// Call when the app moves to the foreground or the user returns to the radar tab.
+    /// Immediately fetches fresh data so the display is never waiting for the next timer tick.
+    /// Guard: no-op until `startAutoRefresh()` has been called so that the scenePhase `.active`
+    /// event that fires on cold launch cannot set `vatsimFetchDone = true` while `sectorFetchDone`
+    /// is still false, which would permanently block `dismissLoadingIfReady()`.
+    func handleForeground() {
+        guard hasStarted else { return }
+        loadVatsimData()
+        scheduleTimers()
+    }
+
+    /// Call when the app moves to the background. Stops the polling timers to save resources.
+    func handleBackground() {
+        cancelTimers()
+    }
+
+    func restartAutoRefresh() {
+        cancelTimers()
+        scheduleTimers()
+    }
+
+    /// Stops the polling timers without triggering a fetch.
+    func stopAutoRefresh() {
+        cancelTimers()
+    }
+
+    // MARK: - Private timer helpers
+
+    private func scheduleTimers() {
+        if timer == nil {
+            timer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
+                self?.loadVatsimData()
+            }
         }
     }
-    
-    func restartAutoRefresh() {
-        let wasRunning = timer != nil
-        stopAutoRefresh()
-        if wasRunning { startAutoRefresh() }
-    }
-    
-    func stopAutoRefresh() {
+
+    private func cancelTimers() {
         timer?.invalidate()
         timer = nil
     }
@@ -211,28 +241,54 @@ final class RadarViewModel: ObservableObject {
     }
     
     private func updateSectorActiveStatus() {
-        var icaos = Set<String>()
-        for pilot in pilots {
-            if let fp = pilot.flight_plan {
-                if !fp.departure.isEmpty { icaos.insert(fp.departure) }
-                if !fp.arrival.isEmpty { icaos.insert(fp.arrival) }
+        // Snapshot immutable inputs so the background thread has no data races.
+        let currentPilots = pilots
+        let currentControllers = controllers
+        let currentDebugControllers = debugControllers
+        let currentATIS = atis
+        let hasSectors = !sectors.isEmpty
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+
+            var icaos = Set<String>()
+            for pilot in currentPilots {
+                if let fp = pilot.flight_plan {
+                    if !fp.departure.isEmpty { icaos.insert(fp.departure) }
+                    if !fp.arrival.isEmpty { icaos.insert(fp.arrival) }
+                }
             }
-        }
-        activeFlightPlanICAOs = icaos
 
-        let mergedControllers = mergedWithDebugControllers(controllers)
-        airports = vatglassesService.getActiveAirports(controllers: mergedControllers, atis: atis)
-        updateControllersAtSelectedAirport()
+            let mergedControllers: [Controllers]
+            if currentDebugControllers.isEmpty {
+                mergedControllers = currentControllers
+            } else {
+                let debugCIDs = Set(currentDebugControllers.map { $0.cid })
+                mergedControllers = currentControllers.filter { !debugCIDs.contains($0.cid) } + currentDebugControllers
+            }
 
-        if !sectors.isEmpty {
-            sectors = vatglassesService.getActiveSectors(controllers: mergedControllers, airports: airports)
-            vatglassesDiagnostics = VatglassesDiagnostics(
-                parseErrors: vatglassesService.parseErrors,
-                unmatchedControllers: vatglassesService.unmatchedControllers,
-                invalidAirports: Self.detectInvalidAirports(airports),
-                syntheticSectors: vatglassesService.syntheticSectors,
-                lastUpdated: Date()
-            )
+            let updatedAirports = self.vatglassesService.getActiveAirports(controllers: mergedControllers, atis: currentATIS)
+
+            var updatedSectors: [VatglassesSector]? = nil
+            var diagnostics: VatglassesDiagnostics? = nil
+            if hasSectors {
+                updatedSectors = self.vatglassesService.getActiveSectors(controllers: mergedControllers, airports: updatedAirports)
+                diagnostics = VatglassesDiagnostics(
+                    parseErrors: self.vatglassesService.parseErrors,
+                    unmatchedControllers: self.vatglassesService.unmatchedControllers,
+                    invalidAirports: Self.detectInvalidAirports(updatedAirports),
+                    syntheticSectors: self.vatglassesService.syntheticSectors,
+                    lastUpdated: Date()
+                )
+            }
+
+            DispatchQueue.main.async {
+                self.activeFlightPlanICAOs = icaos
+                self.airports = updatedAirports
+                if let s = updatedSectors { self.sectors = s }
+                if let d = diagnostics { self.vatglassesDiagnostics = d }
+                self.updateControllersAtSelectedAirport()
+            }
         }
     }
 

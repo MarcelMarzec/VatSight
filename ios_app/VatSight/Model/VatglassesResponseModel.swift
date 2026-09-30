@@ -9,14 +9,30 @@ import Foundation
 import Turf
 import CoreLocation
 
-struct VatglassesComitModel: Encodable {
+struct VatglassesComitModel {
     let sha: String
+    let commitDate: Date?
 }
 
 extension VatglassesComitModel: Decodable {
+    // Mirrors the GitHub commits API structure: { sha, commit: { committer: { date } } }
+    private enum CodingKeys: String, CodingKey { case sha, commit }
+    private enum CommitKeys: String, CodingKey { case committer }
+    private enum CommitterKeys: String, CodingKey { case date }
+
     nonisolated init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         sha = try container.decode(String.self, forKey: .sha)
+
+        // Decode nested commit.committer.date
+        if let commitContainer = try? container.nestedContainer(keyedBy: CommitKeys.self, forKey: .commit),
+           let committerContainer = try? commitContainer.nestedContainer(keyedBy: CommitterKeys.self, forKey: .committer),
+           let dateString = try? committerContainer.decode(String.self, forKey: .date) {
+            let formatter = ISO8601DateFormatter()
+            commitDate = formatter.date(from: dateString)
+        } else {
+            commitDate = nil
+        }
     }
 }
 
@@ -214,7 +230,7 @@ struct VatglassesAirport: Codable, Identifiable {
 
 struct VatglassesData: Codable {
     /// Increment this whenever the cache schema changes to force a fresh download.
-    static let currentSchemaVersion = 9
+    static let currentSchemaVersion = 10
 
     let schemaVersion: Int
     let sectors: [VatglassesSector]
@@ -222,6 +238,8 @@ struct VatglassesData: Codable {
     let allPositions: [String: VatglassesPosition]
     let lastUpdated: Date
     let commitSHA: String
+    /// The date/time the commit was pushed to GitHub (from commit.committer.date in the GitHub API).
+    let commitDate: Date?
     /// Merged callsign label definitions from all parsed vatglasses region files.
     /// Structure: positionType → middleComponent → humanLabel
     /// e.g. ["TWR": ["": "Tower", "I": "Info (AFIS)"], "GND": ["": "Ground", "^[A-Z]": "Ground"]]
@@ -236,16 +254,18 @@ struct VatglassesData: Codable {
         case allPositions
         case lastUpdated
         case commitSHA
+        case commitDate
         case callsignLabels
     }
     
-    init(sectors: [VatglassesSector], airports: [VatglassesAirport], allPositions: [String: VatglassesPosition], lastUpdated: Date, commitSHA: String, callsignLabels: [String: [String: String]] = [:]) {
+    init(sectors: [VatglassesSector], airports: [VatglassesAirport], allPositions: [String: VatglassesPosition], lastUpdated: Date, commitSHA: String, commitDate: Date? = nil, callsignLabels: [String: [String: String]] = [:]) {
         self.schemaVersion = Self.currentSchemaVersion
         self.sectors = sectors
         self.airports = airports
         self.allPositions = allPositions
         self.lastUpdated = lastUpdated
         self.commitSHA = commitSHA
+        self.commitDate = commitDate
         self.callsignLabels = callsignLabels
     }
     
@@ -257,6 +277,7 @@ struct VatglassesData: Codable {
         allPositions = try container.decode([String: VatglassesPosition].self, forKey: .allPositions)
         lastUpdated = try container.decode(Date.self, forKey: .lastUpdated)
         commitSHA = try container.decode(String.self, forKey: .commitSHA)
+        commitDate = try container.decodeIfPresent(Date.self, forKey: .commitDate)
         callsignLabels = try container.decodeIfPresent([String: [String: String]].self, forKey: .callsignLabels) ?? [:]
     }
 }

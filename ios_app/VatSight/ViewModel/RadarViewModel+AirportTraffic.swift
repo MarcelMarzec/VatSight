@@ -50,13 +50,34 @@ extension RadarViewModel {
         )
     }
 
-    /// Returns the set of airport ICAOs where a tracked CID is the active controller.
+    /// Returns the set of airport ICAOs where any online friend CID is controlling.
+    /// Checks all controllers whose callsign prefix matches the airport ICAO, not just
+    /// the single `activeController` stored on the airport (which is only the highest-priority one).
     func friendControlledAirportICAOs(friendCIDs: Set<Int>) -> Set<String> {
         guard !friendCIDs.isEmpty else { return [] }
+
+        // Build a lookup: callsign prefix → set of CIDs with that prefix.
+        // Covers both full ICAO (e.g. "EGKK") and 3-char variant (e.g. "GKK") prefixes.
+        var prefixToCIDs: [String: Set<Int>] = [:]
+        for ctrl in controllers {
+            let upper = ctrl.callsign.uppercased()
+            if let underscore = upper.firstIndex(of: "_") {
+                let prefix = String(upper[upper.startIndex..<underscore])
+                prefixToCIDs[prefix, default: []].insert(ctrl.cid)
+            }
+        }
+
         var result = Set<String>()
         for airport in airports {
-            if let controller = airport.activeController, friendCIDs.contains(controller.cid) {
-                result.insert(airport.icao)
+            guard airport.isActive else { continue }
+            let icao = airport.icao.uppercased()
+            // Check both the full ICAO prefix and the 3-char shortened variant.
+            let prefixes: [String] = icao.count == 4 ? [icao, String(icao.dropFirst())] : [icao]
+            for prefix in prefixes {
+                if let cids = prefixToCIDs[prefix], !cids.isDisjoint(with: friendCIDs) {
+                    result.insert(airport.icao)
+                    break
+                }
             }
         }
         return result

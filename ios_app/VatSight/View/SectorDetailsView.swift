@@ -30,9 +30,9 @@ struct SectorDetailsView: View {
         self._showAllOwners = State(initialValue: controller == nil)
     }
 
-    private var isTracked: Bool {
+    private var isFriend: Bool {
         guard let cid = controller?.cid else { return false }
-        return prefsManager.userPrefs.trackedCIDs.contains(cid)
+        return prefsManager.userPrefs.friendCIDs.contains(cid)
     }
 
     var body: some View {
@@ -66,12 +66,29 @@ struct SectorDetailsView: View {
             if let groupName = sector.properties?.groupName {
                 LabeledContent("FIR / Group", value: groupName)
             }
-            if let min = sector.properties?.min, let max = sector.properties?.max {
+            if let (min, max) = effectiveAltitudeBand(isActive: isActive) {
                 LabeledContent("Altitude Band", value: altitudeBandLabel(min: min, max: max))
             }
         } header: {
             Text("Sector Info")
         }
+    }
+
+    /// Returns the effective altitude band to display.
+    /// - When inactive: the sector's own min/max.
+    /// - When active: the lowest min and highest max across all sectors owned by the same position.
+    private func effectiveAltitudeBand(isActive: Bool) -> (min: Int, max: Int)? {
+        guard let ownMin = sector.properties?.min, let ownMax = sector.properties?.max else { return nil }
+        guard isActive, let ownerRef = sector.activeOwnerRef else {
+            return (ownMin, ownMax)
+        }
+        let ownerSectors = allSectors.filter { $0.activeOwnerRef == ownerRef }
+        let mins = ownerSectors.compactMap { $0.properties?.min }
+        let maxs = ownerSectors.compactMap { $0.properties?.max }
+        guard let lowestMin = mins.min(), let highestMax = maxs.max() else {
+            return (ownMin, ownMax)
+        }
+        return (lowestMin, highestMax)
     }
 
     private func ownershipHierarchySection(controller: Controllers?) -> some View {
@@ -289,14 +306,14 @@ struct SectorDetailsView: View {
                     VStack(alignment: .leading) {
                         HStack {
                             Text(controller.name).font(.headline).foregroundColor(.primary)
-                            if isTracked {
+                            if isFriend {
                                 Image(systemName: "star.fill")
                                     .foregroundStyle(.green)
                             }
                         }
                         Text(String(controller.cid)).font(.subheadline).foregroundColor(.secondary)
-                        if prefsManager.shouldShowSwipeToTrackHint && !isTracked {
-                            Text("Swipe right to track")
+                        if prefsManager.shouldShowSwipeToAddFriendHint && !isFriend {
+                            Text("Swipe right to add as friend")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
@@ -305,17 +322,17 @@ struct SectorDetailsView: View {
             }
             .swipeActions(edge: .leading) {
                 Button {
-                    if isTracked {
-                        prefsManager.removeTrackedCID(controller.cid)
+                    if isFriend {
+                        prefsManager.removeFriend(controller.cid)
                     } else {
-                        prefsManager.addTrackedCID(controller.cid)
-                        prefsManager.incrementSwipeToTrackHint()
+                        prefsManager.addFriend(controller.cid)
+                        prefsManager.incrementSwipeToAddFriendHint()
                     }
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 } label: {
-                    Label(isTracked ? "Untrack" : "Track", systemImage: isTracked ? "star.slash" : "star")
+                    Label(isFriend ? "Remove Friend" : "Add Friend", systemImage: isFriend ? "star.slash" : "star")
                 }
-                .tint(isTracked ? .orange : .green)
+                .tint(isFriend ? .orange : .green)
             }
             LabeledContent("Rating", value: ratingLabel(for: controller))
             LabeledContent("Facility", value: facilityLabel(for: controller))
@@ -327,7 +344,7 @@ struct SectorDetailsView: View {
     // MARK: - Helpers
 
     private func coControllerSection(_ co: Controllers) -> some View {
-        let isCoTracked = prefsManager.userPrefs.trackedCIDs.contains(co.cid)
+        let isCoFriend = prefsManager.userPrefs.friendCIDs.contains(co.cid)
         return Section {
             LabeledContent {
                 VStack(alignment: .trailing) {
@@ -340,13 +357,13 @@ struct SectorDetailsView: View {
                         Text(co.callsign).font(.headline).foregroundColor(.primary)
                         Text(co.name).font(.subheadline).foregroundColor(.secondary)
                         Text(String(co.cid)).font(.caption).foregroundColor(.secondary)
-                        if prefsManager.shouldShowSwipeToTrackHint && !isCoTracked {
-                            Text("Swipe right to track")
+                        if prefsManager.shouldShowSwipeToAddFriendHint && !isCoFriend {
+                            Text("Swipe right to add as friend")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
                     }
-                    if isCoTracked {
+                    if isCoFriend {
                         Image(systemName: "star.fill")
                             .font(.caption)
                             .foregroundStyle(.green)
@@ -355,17 +372,17 @@ struct SectorDetailsView: View {
             }
             .swipeActions(edge: .leading) {
                 Button {
-                    if isCoTracked {
-                        prefsManager.removeTrackedCID(co.cid)
+                    if isCoFriend {
+                        prefsManager.removeFriend(co.cid)
                     } else {
-                        prefsManager.addTrackedCID(co.cid)
-                        prefsManager.incrementSwipeToTrackHint()
+                        prefsManager.addFriend(co.cid)
+                        prefsManager.incrementSwipeToAddFriendHint()
                     }
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 } label: {
-                    Label(isCoTracked ? "Untrack" : "Track", systemImage: isCoTracked ? "star.slash" : "star")
+                    Label(isCoFriend ? "Remove Friend" : "Add Friend", systemImage: isCoFriend ? "star.slash" : "star")
                 }
-                .tint(isCoTracked ? .orange : .green)
+                .tint(isCoFriend ? .orange : .green)
             }
             LabeledContent("Frequency", value: co.frequency)
         } header: {
@@ -500,7 +517,7 @@ private let previewOwnerRefs = [
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let manager = PreferencesManager(context: ModelContext(container))
-    // swipeToTrackHintCount defaults to 0, so hint text is visible
+    // swipeToAddFriendHintCount defaults to 0, so hint text is visible
 
     SectorDetailsView(sector: sector, controller: controller, allPositions: previewPositions, allSectors: [sector, approachSector], headerHeight: .constant(0))
         .environment(manager)

@@ -13,8 +13,8 @@ struct PilotDetailsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(PreferencesManager.self) private var prefsManager
 
-    private var isTracked: Bool {
-        prefsManager.userPrefs.trackedCIDs.contains(pilot.cid)
+    private var isFriend: Bool {
+        prefsManager.userPrefs.friendCIDs.contains(pilot.cid)
     }
 
     var body: some View {
@@ -46,10 +46,10 @@ struct PilotDetailsView: View {
                             .foregroundColor(.primary)
                         }
                         Button {
-                            if isTracked {
-                                prefsManager.removeTrackedCID(pilot.cid)
+                            if isFriend {
+                                prefsManager.removeFriend(pilot.cid)
                             } else {
-                                prefsManager.addTrackedCID(pilot.cid)
+                                prefsManager.addFriend(pilot.cid)
                             }
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         } label: {
@@ -57,9 +57,9 @@ struct PilotDetailsView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                             
-                            Image(systemName: isTracked ? "star.fill" : "star")
+                            Image(systemName: isFriend ? "star.fill" : "star")
                                 .font(.subheadline)
-                                .foregroundColor(isTracked ? .green : .primary)
+                                .foregroundColor(isFriend ? .green : .primary)
                             
                         }
                         

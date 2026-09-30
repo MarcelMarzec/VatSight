@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .map
     
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @State private var manager: PreferencesManager?
     @StateObject private var radarViewModel = RadarViewModel()
     
@@ -82,6 +83,18 @@ struct ContentView: View {
                     }
                     radarViewModel.pendingNavigateToSectorId = nil
                     radarViewModel.pendingNavigateToSectorCoordinate = nil
+                }
+                // Drive the refresh timer from scene phase so navigating to Settings
+                // does not stop data updates. Timers only pause when the app is backgrounded.
+                .onChange(of: scenePhase) { _, newPhase in
+                    switch newPhase {
+                    case .active:
+                        radarViewModel.handleForeground()
+                    case .background:
+                        radarViewModel.handleBackground()
+                    default:
+                        break
+                    }
                 }
                 .fullScreenCover(isPresented: Binding(
                     get: { !manager.userPrefs.hasCompletedOnboarding },

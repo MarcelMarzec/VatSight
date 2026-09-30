@@ -51,11 +51,25 @@ final class VatglassesService {
 
     // MARK: - Public API
 
+    /// How old the cached VatGlasses data can be before we bother checking GitHub for an update.
+    /// VatGlasses data is updated infrequently (every few days at most), so checking more
+    /// often than this wastes a GitHub API call on every app launch.
+    private static let cacheMaxAge: TimeInterval = 7 * 24 * 60 * 60 // 7 days
+
     /// Fetches Vatglasses sector data from GitHub.
-    /// Returns cached data immediately if available, then checks for updates in the background.
+    /// - If cached data exists and is less than 7 days old, returns it immediately without
+    ///   hitting the network — VatGlasses data rarely changes more than once a week.
+    /// - If no cache exists, or the cache is older than 7 days, checks GitHub for a new
+    ///   commit and downloads only if the SHA has changed.
     func fetchSectorData(completion: @escaping (Result<VatglassesData, Error>) -> Void) {
         if let cached = cachedData {
             completion(.success(cached))
+
+            // Skip the GitHub commit check if the cache is still fresh.
+            let age = Date().timeIntervalSince(cached.lastUpdated)
+            if age < Self.cacheMaxAge {
+                return
+            }
         }
 
         fetchCommitInfo { [weak self] result in
@@ -66,11 +80,17 @@ final class VatglassesService {
                 if let cached = self.cachedData, cached.commitSHA == commitModel.sha {
                     return
                 }
-                self.downloadAndParseSectors(commitSHA: commitModel.sha, completion: completion)
+                self.downloadAndParseSectors(commitSHA: commitModel.sha, commitDate: commitModel.commitDate, completion: completion)
 
             case .failure(let error):
+                // Always call completion on failure. If we already served cached data above,
+                // the caller will silently ignore this second failure result via its own guard.
+                // If there is no cache, the caller needs this to know the fetch is done.
                 if self.cachedData == nil {
                     completion(.failure(error))
+                } else {
+                    // Re-serve the existing cache so the loading flag is dismissed correctly.
+                    completion(.success(self.cachedData!))
                 }
             }
         }

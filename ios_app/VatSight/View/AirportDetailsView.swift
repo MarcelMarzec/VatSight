@@ -128,8 +128,8 @@ struct AirportDetailsView: View {
             } header: {
                 Text("Online Controllers")
             } footer: {
-                if !controllers.isEmpty && prefsManager.shouldShowSwipeToTrackHint {
-                    Text("Swipe right on a controller to track them.")
+                if !controllers.isEmpty && prefsManager.shouldShowSwipeToAddFriendHint {
+                    Text("Swipe right on a controller to add them as a friend.")
                 }
             }
 
@@ -266,8 +266,8 @@ private struct ControllerRow: View {
 
     @Environment(PreferencesManager.self) private var prefsManager
 
-    private var isTracked: Bool {
-        prefsManager.userPrefs.trackedCIDs.contains(controller.cid)
+    private var isFriend: Bool {
+        prefsManager.userPrefs.friendCIDs.contains(controller.cid)
     }
 
     var positionLabel: String {
@@ -321,7 +321,7 @@ private struct ControllerRow: View {
                         Text(controller.name + " (\(String(controller.cid)))")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
-                        if isTracked {
+                        if isFriend {
                             Image(systemName: "star.fill")
                                 .font(.subheadline)
                                 .foregroundColor(.green)
@@ -346,17 +346,17 @@ private struct ControllerRow: View {
         }
         .swipeActions(edge: .leading) {
             Button {
-                if isTracked {
-                    prefsManager.removeTrackedCID(controller.cid)
+                if isFriend {
+                    prefsManager.removeFriend(controller.cid)
                 } else {
-                    prefsManager.addTrackedCID(controller.cid)
-                    prefsManager.incrementSwipeToTrackHint()
+                    prefsManager.addFriend(controller.cid)
+                    prefsManager.incrementSwipeToAddFriendHint()
                 }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
-                Label(isTracked ? "Untrack" : "Track", systemImage: isTracked ? "star.slash" : "star")
+                Label(isFriend ? "Remove Friend" : "Add Friend", systemImage: isFriend ? "star.slash" : "star")
             }
-            .tint(isTracked ? .orange : .green)
+            .tint(isFriend ? .orange : .green)
         }
     }
 }

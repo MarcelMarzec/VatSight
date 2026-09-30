@@ -13,6 +13,7 @@ struct VATGlassesDataView: View {
     @State private var isRedownloading = false
     @State private var lastUpdatedText = "Loading..."
     @State private var dataVersion = "Loading..."
+    @State private var commitDateText = "Loading..."
     @State private var showingAlert = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
@@ -74,9 +75,10 @@ struct VATGlassesDataView: View {
                             .font(.body)
                     }
                 }
-                LabeledContent("Github Repo", value: viewModel.isUsingCustomVatglassesRepo ? viewModel.vatglassesActiveRepoSlug : "lennycolton/vatglasses-data")
-                LabeledContent("Last Updated", value: lastUpdatedText)
-                LabeledContent("Data Version", value: dataVersion)
+                LabeledContent("GitHub Repo", value: viewModel.isUsingCustomVatglassesRepo ? viewModel.vatglassesActiveRepoSlug : "lennycolton/vatglasses-data")
+                LabeledContent("Commit ID", value: dataVersion)
+                LabeledContent("Commit Pushed", value: commitDateText)
+                LabeledContent("Last Downloaded", value: lastUpdatedText)
                 Button {
                     redownloadData()
                 } label: {
@@ -135,6 +137,16 @@ struct VATGlassesDataView: View {
             // Show short version of commit SHA (first 7 characters)
             dataVersion = String(data.commitSHA.prefix(7))
             
+            // Format the commit push date as an absolute date/time
+            if let date = data.commitDate {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .short
+                commitDateText = formatter.string(from: date)
+            } else {
+                commitDateText = "Unknown"
+            }
+            
             // Count sectors
             sectorCount = data.sectors.count
             
@@ -149,6 +161,7 @@ struct VATGlassesDataView: View {
         } else {
             lastUpdatedText = "No data cached"
             dataVersion = "N/A"
+            commitDateText = "N/A"
             sectorCount = 0
             positionCount = 0
             airportCount = 0

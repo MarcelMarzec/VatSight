@@ -76,55 +76,79 @@ extension VatglassesService {
             }
         }
 
-        // Process Type 1 directories (airspace.json + positions.json + ownership/)
+        // Process Type 1 directories (airspace.json + positions.json + ownership/) in parallel.
+        // Each directory is independent, so we parse them concurrently and accumulate results
+        // on a serial queue to avoid data races.
+        let group = DispatchGroup()
+        let accumulatorQueue = DispatchQueue(label: "com.vatsight.parseAccumulator")
+        let parseQueue = DispatchQueue(label: "com.vatsight.parseWorker", attributes: .concurrent)
+
         for directoryURL in dataDirectories {
-            do {
-                let directoryName = directoryURL.lastPathComponent
-                let (parsedSectors, parsedAirports, positions, callsignLabels) = try parseType1Directory(directoryURL)
-                sectors.append(contentsOf: parsedSectors)
-                airports.append(contentsOf: parsedAirports)
-                // Store positions only under their scoped key to prevent cross-FIR collisions.
-                // ownerRefs in sectors are already prefixed at parse time.
-                for (posKey, position) in positions {
-                    allPositions["\(directoryName.uppercased())/\(posKey)"] = position
-                }
-                // Merge callsign labels (later files may override earlier ones for the same type+middle).
-                for (type, middleMap) in callsignLabels {
-                    for (middle, label) in middleMap {
-                        mergedCallsignLabels[type, default: [:]][middle] = label
+            group.enter()
+            parseQueue.async { [weak self] in
+                defer { group.leave() }
+                guard let self else { return }
+                do {
+                    let directoryName = directoryURL.lastPathComponent
+                    let (parsedSectors, parsedAirports, positions, callsignLabels) = try self.parseType1Directory(directoryURL)
+                    accumulatorQueue.sync {
+                        sectors.append(contentsOf: parsedSectors)
+                        airports.append(contentsOf: parsedAirports)
+                        for (posKey, position) in positions {
+                            allPositions["\(directoryName.uppercased())/\(posKey)"] = position
+                        }
+                        for (type, middleMap) in callsignLabels {
+                            for (middle, label) in middleMap {
+                                mergedCallsignLabels[type, default: [:]][middle] = label
+                            }
+                        }
+                    }
+                } catch {
+                    let msg = error.localizedDescription
+                    print("Failed to parse directory \(directoryURL.lastPathComponent): \(msg)")
+                    accumulatorQueue.sync {
+                        self.parseErrors.append(VatglassesParseError(source: directoryURL.lastPathComponent, message: msg, date: Date()))
                     }
                 }
-            } catch {
-                let msg = error.localizedDescription
-                print("Failed to parse directory \(directoryURL.lastPathComponent): \(msg)")
-                parseErrors.append(VatglassesParseError(source: directoryURL.lastPathComponent, message: msg, date: Date()))
             }
         }
 
-        // Process Type 2 standalone files (combined JSON)
+        // Wait for all concurrent directory parses to complete before continuing.
+        group.wait()
+
+        // Process Type 2 standalone files (combined JSON) — also in parallel
         for fileURL in standaloneFiles {
-            do {
-                let data = try Data(contentsOf: fileURL)
-                let filePrefix = fileURL.deletingPathExtension().lastPathComponent
-                let (parsedSectors, parsedAirports, positions, callsignLabels) = try parseType2File(data: data, filename: fileURL.lastPathComponent)
-                sectors.append(contentsOf: parsedSectors)
-                airports.append(contentsOf: parsedAirports)
-                // Store positions only under their scoped key to prevent cross-FIR collisions.
-                for (posKey, position) in positions {
-                    allPositions["\(filePrefix.uppercased())/\(posKey)"] = position
-                }
-                // Merge callsign labels.
-                for (type, middleMap) in callsignLabels {
-                    for (middle, label) in middleMap {
-                        mergedCallsignLabels[type, default: [:]][middle] = label
+            group.enter()
+            parseQueue.async { [weak self] in
+                defer { group.leave() }
+                guard let self else { return }
+                do {
+                    let data = try Data(contentsOf: fileURL)
+                    let filePrefix = fileURL.deletingPathExtension().lastPathComponent
+                    let (parsedSectors, parsedAirports, positions, callsignLabels) = try self.parseType2File(data: data, filename: fileURL.lastPathComponent)
+                    accumulatorQueue.sync {
+                        sectors.append(contentsOf: parsedSectors)
+                        airports.append(contentsOf: parsedAirports)
+                        for (posKey, position) in positions {
+                            allPositions["\(filePrefix.uppercased())/\(posKey)"] = position
+                        }
+                        for (type, middleMap) in callsignLabels {
+                            for (middle, label) in middleMap {
+                                mergedCallsignLabels[type, default: [:]][middle] = label
+                            }
+                        }
+                    }
+                } catch {
+                    let msg = error.localizedDescription
+                    print("Failed to parse file \(fileURL.lastPathComponent): \(msg)")
+                    accumulatorQueue.sync {
+                        self.parseErrors.append(VatglassesParseError(source: fileURL.lastPathComponent, message: msg, date: Date()))
                     }
                 }
-            } catch {
-                let msg = error.localizedDescription
-                print("Failed to parse file \(fileURL.lastPathComponent): \(msg)")
-                parseErrors.append(VatglassesParseError(source: fileURL.lastPathComponent, message: msg, date: Date()))
             }
         }
+
+        group.wait()
 
         // Process nodata.json — basic-data-only FIR sectors for unimplemented regions.
         // Also extracts positions, airports, and callsign labels from the full schema.

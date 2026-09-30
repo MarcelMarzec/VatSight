@@ -1,20 +1,20 @@
 //
-//  VatsimTrackedView.swift
+//  FriendsView.swift
 //  VatSight
 //
 
 import SwiftUI
 import SwiftData
 
-struct VatsimTrackedView: View {
+struct FriendsView: View {
     @Environment(PreferencesManager.self) private var prefsManager
     @EnvironmentObject private var radarViewModel: RadarViewModel
 
     @State private var yourCIDInputText = ""
-    @State private var newTrackedCIDText = ""
+    @State private var newFriendCIDText = ""
     @FocusState private var focusedField: Field?
 
-    private enum Field { case yourCID, newTracked }
+    private enum Field { case yourCID, newFriend }
 
     /// The saved CID expressed as the same string the text field would show.
     private var savedCIDText: String {
@@ -47,35 +47,35 @@ struct VatsimTrackedView: View {
                 Text("Your CID is shown highlighted on the map.")
             }
 
-            Section("Add CID") {
+            Section("Add Friend") {
                 HStack {
-                    TextField("Vatsim CID", text: $newTrackedCIDText)
+                    TextField("Friend's VATSIM CID", text: $newFriendCIDText)
                         .keyboardType(.numberPad)
-                        .focused($focusedField, equals: .newTracked)
+                        .focused($focusedField, equals: .newFriend)
                     Spacer()
                     Button("Add") {
-                        if let cid = Int(newTrackedCIDText), cid > 0 {
-                            prefsManager.addTrackedCID(cid)
-                            newTrackedCIDText = ""
+                        if let cid = Int(newFriendCIDText), cid > 0 {
+                            prefsManager.addFriend(cid)
+                            newFriendCIDText = ""
                             UINotificationFeedbackGenerator().notificationOccurred(.success)
                         }
                         focusedField = nil
                     }
-                    .disabled(Int(newTrackedCIDText) == nil || newTrackedCIDText.isEmpty)
+                    .disabled(Int(newFriendCIDText) == nil || newFriendCIDText.isEmpty)
                 }
             }
 
-            Section("Tracked CIDs") {
-                if prefsManager.userPrefs.trackedCIDs.isEmpty {
-                    Text("No tracked CIDs.")
+            Section("Friends") {
+                if prefsManager.userPrefs.friendCIDs.isEmpty {
+                    Text("No friends added yet.")
                         .foregroundStyle(.secondary)
                 }
 
-                ForEach(prefsManager.userPrefs.trackedCIDs, id: \.self) { cid in
+                ForEach(prefsManager.userPrefs.friendCIDs, id: \.self) { cid in
                     let pilot = radarViewModel.pilots.first { $0.cid == cid }
                     let controller = radarViewModel.controllers.first { $0.cid == cid }
                     let isOnline = pilot != nil || controller != nil
-                    TrackedCIDRow(cid: cid, pilot: pilot, controller: controller)
+                    FriendRow(cid: cid, pilot: pilot, controller: controller)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             guard isOnline else { return }
@@ -84,11 +84,11 @@ struct VatsimTrackedView: View {
                         }
                 }
                 .onDelete { offsets in
-                    offsets.forEach { prefsManager.removeTrackedCID(prefsManager.userPrefs.trackedCIDs[$0]) }
+                    offsets.forEach { prefsManager.removeFriend(prefsManager.userPrefs.friendCIDs[$0]) }
                 }
             }
         }
-        .navigationTitle("Track Vatsim CIDs")
+        .navigationTitle("Friends")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             let cid = prefsManager.userPrefs.vatsimCID
@@ -103,9 +103,9 @@ struct VatsimTrackedView: View {
     }
 }
 
-// MARK: - Tracked CID Row
+// MARK: - Friend Row
 
-private struct TrackedCIDRow: View {
+private struct FriendRow: View {
     let cid: Int
     let pilot: Pilot?
     let controller: Controllers?
@@ -179,9 +179,9 @@ private struct TrackedCIDRow: View {
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let manager = PreferencesManager(context: ModelContext(container))
     manager.updateCID(1234567)
-    manager.addTrackedCID(9876543)   // pilot
-    manager.addTrackedCID(1111111)   // controller
-    manager.addTrackedCID(5555555)   // offline
+    manager.addFriend(9876543)   // pilot
+    manager.addFriend(1111111)   // controller
+    manager.addFriend(5555555)   // offline
 
     let mockPilot = Pilot(
         cid: 9876543, name: "John Smith", callsign: "BAW442",
@@ -213,7 +213,7 @@ private struct TrackedCIDRow: View {
     vm.controllers = [mockController]
 
     return NavigationStack {
-        VatsimTrackedView()
+        FriendsView()
     }
     .environment(manager)
     .environmentObject(vm)

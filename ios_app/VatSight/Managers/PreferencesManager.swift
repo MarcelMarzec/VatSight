@@ -89,36 +89,35 @@ final class PreferencesManager {
         try? context.save()
     }
 
-    // MARK: - Tracked CIDs
+    // MARK: - Friends
 
-    func addTrackedCID(_ cid: Int) {
-        guard !userPrefs.trackedCIDs.contains(cid) else { return }
-        userPrefs.trackedCIDs.append(cid)
+    func addFriend(_ cid: Int) {
+        guard !userPrefs.friendCIDs.contains(cid) else { return }
+        userPrefs.friendCIDs.append(cid)
         try? context.save()
     }
 
-    func incrementSwipeToTrackHint() {
-        userPrefs.swipeToTrackHintCount += 1
+    func incrementSwipeToAddFriendHint() {
+        userPrefs.swipeToAddFriendHintCount += 1
         try? context.save()
     }
 
-    var shouldShowSwipeToTrackHint: Bool {
-        userPrefs.swipeToTrackHintCount < 3
+    var shouldShowSwipeToAddFriendHint: Bool {
+        userPrefs.swipeToAddFriendHintCount < 3
     }
 
-    func removeTrackedCID(_ cid: Int) {
-        userPrefs.trackedCIDs.removeAll { $0 == cid }
+    func removeFriend(_ cid: Int) {
+        userPrefs.friendCIDs.removeAll { $0 == cid }
         try? context.save()
     }
 
     /// The user's own VATSIM CID (0 if not set).
     var myCID: Int { userPrefs.vatsimCID }
 
-    /// All CIDs that should be treated as "friends" on the map:
-    /// explicitly tracked CIDs only. The user's own CID is handled separately
-    /// as the "self" state so it renders in gold rather than green.
+    /// All CIDs that should be treated as friends on the map.
+    /// The user's own CID is handled separately as the "self" state so it renders in gold rather than green.
     var allFriendCIDs: Set<Int> {
-        Set(userPrefs.trackedCIDs)
+        Set(userPrefs.friendCIDs)
     }
 
     func updateDeveloperMode(_ enabled: Bool) {

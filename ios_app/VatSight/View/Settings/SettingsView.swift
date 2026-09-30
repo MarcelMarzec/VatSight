@@ -14,6 +14,8 @@ struct SettingsView: View {
     @EnvironmentObject private var radarViewModel: RadarViewModel
     @State private var cidInputText = ""
     @State private var showPrivacyPolicy = false
+    @State private var showWebsite = false
+    @State private var showContactForm = false
     @FocusState private var cidFieldFocused: Bool
     private var vatsimDataRefreshRates = ["15s", "30s", "1min"]
 
@@ -36,9 +38,9 @@ struct SettingsView: View {
             List {
                 Section("Settings") {
                     NavigationLink {
-                        VatsimTrackedView()
+                        FriendsView()
                     } label: {
-                        Label("Track Vatsim CIDs", systemImage: "person.2.badge.gearshape").foregroundColor(.primary)
+                        Label("Friends", systemImage: "person.2.badge.gearshape").foregroundColor(.primary)
                     }
                     
                     NavigationLink {
@@ -60,39 +62,64 @@ struct SettingsView: View {
                 
                 Section("External Data"){
                     NavigationLink(value: "vatglasses") {
-                        Image(systemName: "sunglasses")
-                        Text("VATGlasses Sector Data")
+                        Label("VATGlasses Sector Data", systemImage: "sunglasses").foregroundColor(.primary)
                     }
                     NavigationLink(value: "vatsimdata") {
-                        Image(systemName: "airplane.path.dotted")
-                        Text("VATSIM User Data")
+                        Label("VATSIM User Data", systemImage: "airplane.path.dotted").foregroundColor(.primary)
                     }
                 }
                 
-                Section{
-                    Link(destination: URL(string: "mailto:contact@marcelmarzec.com?subject=VatSight App Feedback / Support")!) {
-                        HStack{
-                            Image(systemName: "envelope.fill").foregroundColor(.blue)
-                            VStack(alignment: .leading){
+                Section {
+                    Button {
+                        showContactForm = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "envelope.fill")
+                                .frame(width: 24)
+                                .foregroundColor(.primary)
+                            VStack(alignment: .leading) {
                                 Text("Get in Contact")
-                                Text("Send an Email to the developer about any issues, queries or feedback!").font(.subheadline).foregroundColor(.secondary)
+                                Text("Send an email to the developer about any issues, queries or feedback!").font(.subheadline).foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
                         }
                     }
                     .foregroundColor(.primary)
+                    .sheet(isPresented: $showContactForm) {
+                        ContactFormView()
+                    }
                     
+                    Button {
+                        showWebsite = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "globe")
+                                .frame(width: 24)
+                                .foregroundColor(.primary)
+                            VStack(alignment: .leading) {
+                                Text("VatSight Website")
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
+                        }.foregroundColor(.primary)
+                    }
+                    .sheet(isPresented: $showWebsite) {
+                        if let url = URL(string: "https://vatsight.com") {
+                            SafariView(url: url)
+                                .ignoresSafeArea()
+                        }
+                    }
+
                     if let githubURL = URL(string: "https://github.com/MarcelMarzec/VatSight") {
                         Link(destination: githubURL) {
                             HStack {
                                 Image("githubLogo")
                                     .resizable()
                                     .foregroundStyle(.primary)
-                                    .frame(width: 25, height: 25)
+                                    .frame(width: 24, height: 24)
                                 VStack(alignment: .leading) {
                                     Text("VatSight Github Repository")
-                                    Text("View and contribute to the source code — any help is greatly appreciated!").font(.subheadline).foregroundColor(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
@@ -104,10 +131,11 @@ struct SettingsView: View {
                         showPrivacyPolicy = true
                     } label: {
                         HStack {
-                            Image(systemName: "hand.raised.fill").foregroundColor(.primary)
+                            Image(systemName: "hand.raised.fill")
+                                .frame(width: 24)
+                                .foregroundColor(.primary)
                             VStack(alignment: .leading) {
                                 Text("Privacy Policy")
-                                Text("How VatSight handles your data.").font(.subheadline).foregroundColor(.secondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
@@ -120,18 +148,32 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Miscellaneous")
+                    Text("About")
+                }
+
+                Section {
+                    NavigationLink {
+                        RoadmapView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "map.fill")
+                                .frame(width: 24)
+                                .foregroundColor(.primary)
+                            VStack(alignment: .leading) {
+                                Text("Roadmap & Beta Program")
+                                Text("What's coming next and how to join the beta").font(.subheadline).foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    .foregroundColor(.primary)
                 }
 
                 Section {
                     NavigationLink {
                         DeveloperView()
                     } label: {
-                        Label("Developers", systemImage: "hammer.fill").foregroundColor(.primary)
+                        Label("Sector Maintainers", systemImage: "hammer.fill").foregroundColor(.primary)
                     }
-                }
-
-                Section {
                     if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
                        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String {
                         LabeledContent("Version", value: "\(version) (\(build))")

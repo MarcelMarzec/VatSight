@@ -56,6 +56,7 @@ final class VatsimService {
             }
             
             guard let data = data else {
+                completion(.failure(NSError(domain: "VatsimService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])))
                 return
             }
             

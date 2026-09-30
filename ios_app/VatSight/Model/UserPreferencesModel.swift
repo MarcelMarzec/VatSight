@@ -94,7 +94,7 @@ final class UserPreferencesModel {
     var showAirportLayer: Bool = true
     var altitudeFilterEnabled: Bool = false
     var mergeSectors: Bool = false
-    var trackedCIDs: [Int] = []
+    var friendCIDs: [Int] = []
     var hasCompletedOnboarding: Bool = false
     var developerModeEnabled: Bool = false
     /// Custom GitHub repo slug (e.g. "owner/repo") for Vatglasses data. Empty string = use default.
@@ -111,7 +111,7 @@ final class UserPreferencesModel {
     var searchCategoryRaw: String = "ATC"
     var searchShowInactiveAirports: Bool = false
     /// Hidden after 3 uses.
-    var swipeToTrackHintCount: Int = 0
+    var swipeToAddFriendHintCount: Int = 0
 
     var mapStyle: MapStyle {
         get { MapStyle(rawValue: mapStyleRaw) ?? .system }
@@ -136,7 +136,7 @@ final class UserPreferencesModel {
         showAirportLayer: Bool = true,
         altitudeFilterEnabled: Bool = false,
         mergeSectors: Bool = false,
-        trackedCIDs: [Int] = [],
+        friendCIDs: [Int] = [],
         hasCompletedOnboarding: Bool = false,
         developerModeEnabled: Bool = false,
         vatglassesCustomRepoSlug: String = "",
@@ -157,7 +157,7 @@ final class UserPreferencesModel {
         self.showAirportLayer = showAirportLayer
         self.altitudeFilterEnabled = altitudeFilterEnabled
         self.mergeSectors = mergeSectors
-        self.trackedCIDs = trackedCIDs
+        self.friendCIDs = friendCIDs
         self.hasCompletedOnboarding = hasCompletedOnboarding
         self.developerModeEnabled = developerModeEnabled
         self.vatglassesCustomRepoSlug = vatglassesCustomRepoSlug

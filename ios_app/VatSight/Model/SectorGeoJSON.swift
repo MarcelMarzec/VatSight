@@ -164,7 +164,8 @@ enum SectorGeoJSON {
         let upper = callsign.uppercased()
         for suffix in atcSuffixes {
             if upper.hasSuffix(suffix) {
-                return String(callsign.dropLast(suffix.count))
+                let trimmed = String(callsign.dropLast(suffix.count))
+                return trimmed.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
             }
         }
         return callsign

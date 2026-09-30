@@ -134,14 +134,20 @@ struct RadarView: View {
             }
             .onAppear {
                 viewModel.setPreferencesManager(prefsManager)
+                // On first appear, kick off the initial load if not already running.
+                // Subsequent foreground/background transitions are handled via scenePhase
+                // in ContentView so the timer survives tab switches.
                 viewModel.startAutoRefresh()
                 // Re-evaluate the stale banner every 15 s while the map is visible.
-                stalenessCheckTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { _ in
-                    staleTick.toggle()
+                if stalenessCheckTimer == nil {
+                    stalenessCheckTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { _ in
+                        staleTick.toggle()
+                    }
                 }
             }
             .onDisappear {
-                viewModel.stopAutoRefresh()
+                // Do NOT stop the refresh timer here — it is managed by scenePhase in ContentView.
+                // Only clean up the UI-only staleness banner timer.
                 stalenessCheckTimer?.invalidate()
                 stalenessCheckTimer = nil
             }

@@ -74,7 +74,7 @@ extension VatglassesService {
                   abs(airport.latitude) <= 90,
                   abs(airport.longitude) <= 180 else { continue }
 
-            let geometry = makeCircleGeometry(latitude: airport.latitude, longitude: airport.longitude, radiusNm: 20.0)
+            let geometry = makeCircleGeometry(latitude: airport.latitude, longitude: airport.longitude, radiusNm: 15.0)
 
             let properties = SectorProperties(
                 min: 20,

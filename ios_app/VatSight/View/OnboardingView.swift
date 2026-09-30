@@ -14,12 +14,17 @@ struct OnboardingView: View {
     @Environment(PreferencesManager.self) private var prefsManager
     @State private var cidInputText = ""
     @State private var currentPage = 0
-    @FocusState private var cidFocused: Bool
+    @State private var friendCIDInputText = ""
+    @State private var pendingFriendCIDs: [Int] = []
+    @FocusState private var focusedField: FocusedField?
 
-    // Pages 0–1 are generic, page 2 is the legend, page 3 is tracking + CID entry
+    private enum FocusedField { case myCID, friendCID }
+
+    // Pages 0–1 are generic, page 2 is the legend, page 3 is CID entry, page 4 is friends
     private static let legendPageIndex = 2
     private static let trackingPageIndex = 3
-    private static let totalPageCount = 4
+    private static let friendsPageIndex = 4
+    private static let totalPageCount = 5
 
     private let pages: [OnboardingPage] = [
         OnboardingPage(
@@ -34,8 +39,13 @@ struct OnboardingView: View {
         ),
         OnboardingPage(
             systemImage: "person.2.badge.gearshape",
-            title: "Track Your Friends",
-            description: "Enter your VATSIM CID to highlight your aircraft and controlled airports in green. You can also track other CIDs from Settings."
+            title: "Your VATSIM Identity",
+            description: "Enter your VATSIM CID to highlight your aircraft and controlled airports in gold. Add friends from Settings to see them in green."
+        ),
+        OnboardingPage(
+            systemImage: "person.2.fill",
+            title: "Add Friends",
+            description: "Add your friends' VATSIM CIDs so their aircraft and stations are highlighted in green on the radar."
         )
     ]
 
@@ -53,12 +63,20 @@ struct OnboardingView: View {
                     OnboardingPageView(page: pages[1]).tag(1)
                     OnboardingLegendPageView().tag(Self.legendPageIndex)
                     OnboardingPageView(page: pages[2]).tag(Self.trackingPageIndex)
+                    OnboardingPageView(page: pages[3]).tag(Self.friendsPageIndex)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .frame(height: .infinity)
 
                 if currentPage == Self.trackingPageIndex {
                     cidEntryField
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .animation(.easeInOut(duration: 0.3), value: currentPage)
+                        .padding(.bottom, 20)
+                }
+
+                if currentPage == Self.friendsPageIndex {
+                    friendCIDEntryField
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .animation(.easeInOut(duration: 0.3), value: currentPage)
                         .padding(.bottom, 20)
@@ -71,7 +89,7 @@ struct OnboardingView: View {
             }
         }
         .onTapGesture {
-            cidFocused = false
+            focusedField = nil
         }
     }
 
@@ -100,7 +118,7 @@ struct OnboardingView: View {
 
             TextField("e.g. 1234567", text: $cidInputText)
                 .keyboardType(.numberPad)
-                .focused($cidFocused)
+                .focused($focusedField, equals: .myCID)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(Color.primary.opacity(0.08))
@@ -110,6 +128,73 @@ struct OnboardingView: View {
                         .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                 )
                 .padding(.horizontal, 32)
+        }
+    }
+
+    private var friendCIDEntryField: some View {
+        VStack(spacing: 12) {
+            Text("Add friends' CIDs (optional)") 
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                TextField("e.g. 1234567", text: $friendCIDInputText)
+                    .keyboardType(.numberPad)
+                    .focused($focusedField, equals: .friendCID)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.primary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.primary.opacity(0.15), lineWidth: 1)
+                    )
+
+                Button {
+                    if let cid = Int(friendCIDInputText), cid > 0, !pendingFriendCIDs.contains(cid) {
+                        pendingFriendCIDs.append(cid)
+                        friendCIDInputText = ""
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(Int(friendCIDInputText) != nil && !friendCIDInputText.isEmpty ? Color.accentColor : Color.secondary)
+                }
+                .disabled(Int(friendCIDInputText) == nil || friendCIDInputText.isEmpty)
+            }
+            .padding(.horizontal, 32)
+
+            if !pendingFriendCIDs.isEmpty {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 4) {
+                        ForEach(pendingFriendCIDs, id: \.self) { cid in
+                            HStack {
+                                Image(systemName: "person.fill")
+                                    .foregroundStyle(.green)
+                                    .font(.caption)
+                                Text(String(cid))
+                                    .font(.subheadline)
+                                Spacer()
+                                Button {
+                                    pendingFriendCIDs.removeAll { $0 == cid }
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                        .font(.caption)
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Color.primary.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                    }
+                }
+                .frame(maxHeight: 160)
+                .padding(.horizontal, 32)
+            }
         }
     }
 
@@ -156,6 +241,9 @@ struct OnboardingView: View {
     private func finishOnboarding() {
         if let cid = Int(cidInputText), cid > 0 {
             prefsManager.updateCID(cid)
+        }
+        for cid in pendingFriendCIDs {
+            prefsManager.addFriend(cid)
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         prefsManager.markOnboardingComplete()
@@ -220,27 +308,27 @@ private struct OnboardingLegendPageView: View {
                         .padding(.top, 8)
 
                     LegendSection(title: "Aircraft") {
-                        LegendRow(label: "Airborne aircraft", description: "Any active VATSIM pilot") {
+                        LegendRow(label: "Other Pilots", description: "Any active VATSIM pilot") {
                             pilotIcon(color: .white)
                         }
                         LegendRow(label: "Your aircraft", description: "Highlighted in gold when your CID is set") {
                             pilotIcon(named: "pilot", color: Color(red: 1.0, green: 0.78, blue: 0.0))
                         }
-                        LegendRow(label: "Tracked aircraft", description: "A pilot you are tracking, shown in green") {
+                        LegendRow(label: "Pilot Friends", description: "A pilot you are tracking, shown in green") {
                             pilotIcon(named: "friendPilot", color: Color(red: 0.19, green: 0.90, blue: 0.43))
                         }
-                        LegendRow(label: "Selected aircraft", description: "The aircraft you have tapped on") {
+                        LegendRow(label: "Selected Pilots", description: "The aircraft you have tapped on") {
                             pilotIcon(named: "selectedPilot", color: .red)
                         }
                     }
 
                     LegendSection(title: "Airports") {
-                        LegendRow(label: "Airport", description: "No active ATC coverage") {
+                        LegendRow(label: "Inactive Airport", description: "No active ATC coverage") {
                             Circle()
                                 .strokeBorder(.primary, lineWidth: 1.5)
                                 .frame(width: 10, height: 10)
                         }
-                        LegendRow(label: "Staffed airport", description: "Has active ATC — tap to see controllers and traffic") {
+                        LegendRow(label: "Active airport", description: "Has someone activly flying to / from it or has active ATC") {
                             Circle()
                                 .fill(.primary)
                                 .frame(width: 10, height: 10)
