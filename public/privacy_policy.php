@@ -41,7 +41,7 @@
         <section class="doc-hero">
             <div class="section-inner">
                 <h1>Privacy Policy</h1>
-                <p class="doc-updated">Last updated 23 September 2026</p>
+                <p class="doc-updated">Last updated 7 October 2026</p>
             </div>
         </section>
 
@@ -72,7 +72,7 @@
                     <p>Our lawful basis for this processing is our <strong>legitimate interests</strong> (UK GDPR Article 6(1)(f)) in running a secure, working website. We do not use this data to identify you, build profiles or track you across other sites.</p>
 
                     <h2 id="newsletter">3. The Newsletter</h2>
-                    <p>You can choose to join the VatSight newsletter on the <a href="/phplist/?p=subscribe&amp;id=1" class="link-text">sign-up page</a> or the home page. It is used only to email you about the TestFlight beta, the App Store launch and major VatSight updates.</p>
+                    <p>You can choose to join the VatSight newsletter on the <a href="/phplist/?p=subscribe&amp;id=1" class="link-text">sign-up page</a> or the home page. It is used only to send you your TestFlight open beta invite and to email you about the App Store launch and major VatSight updates.</p>
 
                     <h3>What we store</h3>
                     <div class="table-scroll">

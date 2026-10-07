@@ -6,11 +6,11 @@
     <title>VatSight — Live VATSIM Radar &amp; VatGlasses ATC Sectors for iOS</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="keywords" content="Vatsight, Vatsim, VATSIM radar, VATSIM tracker, VatGlasses, VatGlasses sectors, virtual ATC, flight simulator, iOS VATSIM app" />
-    <meta name="description" content="VatSight is a free, open-source VATSIM radar for iOS. Live traffic, VatGlasses ATC sectors and airport activity on one clean map." />
+    <meta name="description" content="VatSight is a free, open-source VATSIM radar for iOS, now in open beta. Live traffic, VatGlasses ATC sectors and airport activity on one clean map. Join the newsletter to get your TestFlight invite." />
     <meta name="author" content="Marcel Marzec" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#090909" />
-    <meta property="og:description" content="A free, open-source VATSIM radar for iOS. Live traffic, VatGlasses ATC sectors and airport activity on one clean map." />
+    <meta property="og:description" content="A free, open-source VATSIM radar for iOS, now in open beta. Join the newsletter to get your TestFlight invite." />
     <meta property="og:site_name" content="VatSight" />
     <meta property="og:title" content="VatSight — Live VATSIM Radar &amp; VatGlasses ATC Sectors for iOS" />
     <meta property="og:type" content="website" />
@@ -22,7 +22,7 @@
     <meta property="og:image:alt" content="VatSight app icon" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="VatSight — Live VATSIM Radar &amp; VatGlasses ATC Sectors for iOS" />
-    <meta name="twitter:description" content="A free, open-source VATSIM radar for iOS with live traffic and VatGlasses ATC sectors." />
+    <meta name="twitter:description" content="A free, open-source VATSIM radar for iOS, now in open beta. Join the newsletter to get your TestFlight invite." />
     <meta name="twitter:image" content="https://vatsight.com/images/Vatsightlogo.png" />
     <meta name="twitter:image:alt" content="VatSight app icon" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -42,7 +42,7 @@
         "name": "VatSight",
         "url": "https://vatsight.com",
         "image": "https://vatsight.com/images/Vatsightlogo.png",
-        "description": "VatSight is a free, open-source VATSIM radar for iOS. Live traffic, VatGlasses ATC sectors and airport activity on one clean map.",
+        "description": "VatSight is a free, open-source VATSIM radar for iOS, now in open beta. Live traffic, VatGlasses ATC sectors and airport activity on one clean map. Join the newsletter to get your TestFlight invite.",
         "applicationCategory": "UtilitiesApplication",
         "operatingSystem": "iOS",
         "author": {
@@ -106,10 +106,10 @@
             },
             {
                 "@type": "Question",
-                "name": "When will VatSight be available on the App Store?",
+                "name": "How do I join the VatSight open beta?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "VatSight is currently in active development ahead of a public TestFlight beta, followed by a free App Store launch. Follow the project on GitHub for progress updates."
+                    "text": "VatSight v0.5 is now in open beta on TestFlight. Sign up to the VatSight newsletter and confirm your email address, and your TestFlight invite link arrives straight away in your welcome email. A free App Store launch follows the beta."
                 }
             }
         ]
@@ -129,7 +129,7 @@
                 <div class="hero-copy">
                     <a class="hero-kicker" href="#newsletter">
                         <span class="hero-kicker-dot"></span>
-                        TestFlight beta opening soon &mdash; sign up to get an invite
+                        v0.5 open beta is live &mdash; join the newsletter to get access
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                     </a>
                     <h1>See the virtual skies<br>come alive.</h1>
@@ -138,8 +138,8 @@
                         <span class="store-badge">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
                             <span class="store-badge-text">
-                                <small>Coming soon on the</small>
-                                <strong>App Store</strong>
+                                <small>Open beta now on</small>
+                                <strong>TestFlight</strong>
                             </span>
                         </span>
                         <a class="btn-secondary" href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">
@@ -149,6 +149,7 @@
                     </div>
                     <div class="hero-meta">
                         <span>iOS</span><span class="sep">·</span>
+                        <span>Open beta</span><span class="sep">·</span>
                         <span>Free to use</span><span class="sep">·</span>
                         <span>No account required</span>
                     </div>
@@ -400,12 +401,12 @@
                                 </details>
                             </div>
                         </li>
-                        <li class="roadmap-item is-current">
+                        <li class="roadmap-item is-done">
                             <span class="roadmap-marker"></span>
                             <div class="roadmap-content">
-                                <span class="roadmap-date">Now · v0.4.0</span>
+                                <span class="roadmap-date">Sep 2026 · v0.4.0</span>
                                 <h4>Final touches</h4>
-                                <p>Polishing the UI, fixing bugs, and refining the details as VatSight nears its first public test.</p>
+                                <p>Polishing the UI, fixing bugs, and refining the details ahead of VatSight's first public test.</p>
                                 <details class="roadmap-details">
                                     <summary>What's included<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
                                     <ul>
@@ -416,16 +417,16 @@
                                 </details>
                             </div>
                         </li>
-                        <li class="roadmap-item">
+                        <li class="roadmap-item is-current">
                             <span class="roadmap-marker"></span>
                             <div class="roadmap-content">
-                                <span class="roadmap-date">Coming soon · v0.5.0</span>
+                                <span class="roadmap-date">Now · v0.5.0</span>
                                 <h4>Open beta testing</h4>
-                                <p>A public TestFlight beta opens so early users can try VatSight and help shape it before launch.</p>
+                                <p>The public TestFlight beta is open. <a class="link-text" href="#newsletter">Join the newsletter</a> and your invite arrives in your inbox straight away.</p>
                                 <details class="roadmap-details">
                                     <summary>What's included<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
                                     <ul>
-                                        <li>Public TestFlight beta invites</li>
+                                        <li>Public TestFlight beta, invite sent instantly to newsletter subscribers</li>
                                         <li>Bug reports and feedback shape the final release</li>
                                         <li>Wider device and iOS version testing</li>
                                     </ul>
@@ -537,10 +538,10 @@
                         <p>No. VatSight is an independent, open-source project. It is not affiliated with or endorsed by VATSIM or VatGlasses, though it relies on their public data.</p>
                     </details>
                     <details class="faq-item">
-                        <summary>When will VatSight be available on the App Store?
+                        <summary>How do I join the VatSight open beta?
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                         </summary>
-                        <p>VatSight is currently in active development ahead of a public TestFlight beta, followed by a free App Store launch. Follow the project on GitHub for progress updates.</p>
+                        <p>VatSight v0.5 is now in open beta on TestFlight. Sign up to the VatSight newsletter and confirm your email address, and your TestFlight invite link arrives straight away in your welcome email. A free App Store launch follows the beta.</p>
                     </details>
                 </div>
             </div>
@@ -548,9 +549,9 @@
 
         <section class="final-cta" id="newsletter">
             <div class="section-inner">
-                <span class="cta-eyebrow">Newsletter &middot; beta sign-ups open</span>
-                <h2>Be the first to know when TestFlight testing opens</h2>
-                <p>VatSight is heading into closed testing on TestFlight before its free App Store launch. Sign up and we'll email you the moment a beta invite is ready, plus the App Store launch and any major updates. A few emails a year, never spam.</p>
+                <span class="cta-eyebrow">Newsletter &middot; v0.5 open beta</span>
+                <h2>Join the newsletter to get the open beta</h2>
+                <p>VatSight v0.5 is now in open beta on TestFlight. Sign up to the newsletter, confirm your email address, and your TestFlight invite lands in your inbox straight away. After that we'll only email you about the App Store launch and major updates. A few emails a year, never spam.</p>
                 <!-- Newsletter sign-up: posts straight to phpList (public/phplist). Keep list[2] and id=1 in sync with the phpList list and subscribe page IDs. -->
                 <form class="signup-form" action="/phplist/?p=subscribe&amp;id=1" method="post">
                     <input type="hidden" name="list[2]" value="signup">
@@ -561,9 +562,9 @@
                     <div class="signup-row">
                         <label for="signup-email" class="sr-only">Email address</label>
                         <input id="signup-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" maxlength="254" required>
-                        <button type="submit" name="subscribe" value="Subscribe">Notify me</button>
+                        <button type="submit" name="subscribe" value="Subscribe">Get beta access</button>
                     </div>
-                    <p class="signup-legal">We'll email you a link to confirm. Unsubscribe any time with one click. See our <a href="/privacy_policy#newsletter">Privacy Policy</a>.</p>
+                    <p class="signup-legal">We'll email you a link to confirm, then send your TestFlight invite. Unsubscribe any time with one click. See our <a href="/privacy_policy#newsletter">Privacy Policy</a>.</p>
                 </form>
                 <div class="hero-actions">
                     <a class="btn-secondary" href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">
