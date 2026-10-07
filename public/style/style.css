@@ -1085,6 +1085,50 @@ section {
     margin-bottom: 0;
 }
 
+/* ---------- Error page (error.php) ---------- */
+
+.error-page {
+    padding-top: 96px;
+    padding-bottom: 96px;
+}
+
+.error-code {
+    font-size: clamp(96px, 18vw, 168px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    background: linear-gradient(180deg, var(--accent), rgba(134, 203, 14, 0.15));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 20px;
+}
+
+.error-page h1 {
+    font-size: clamp(26px, 3.4vw, 34px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 18px 0 12px;
+}
+
+.error-links {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 22px;
+    margin-top: 36px;
+    font-size: 14px;
+}
+
+.error-links a {
+    color: var(--text-dim);
+}
+
+.error-links a:hover {
+    color: var(--text);
+}
+
 /* ---------- Footer ---------- */
 
 footer {

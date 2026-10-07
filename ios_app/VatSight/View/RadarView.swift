@@ -2,8 +2,6 @@
 //  RadarView.swift
 //  VatSight
 //
-//  Created by Marcel Marzec on 12/05/2026.
-//
 
 import SwiftUI
 import SwiftData
@@ -16,15 +14,14 @@ struct RadarView: View {
     @Namespace private var glassNamespace
     @State private var showingLayerMenu = false
     @State private var showingDebug = false
-    /// Timer used to periodically re-evaluate the stale-data banner.
     @State private var stalenessCheckTimer: Timer? = nil
-    @State private var staleTick = false // toggled to force SwiftUI re-evaluation
+    @State private var staleTick = false
     @State private var pilotDetent: PresentationDetent = .fraction(0.3)
     @State private var airportDetent: PresentationDetent = .fraction(0.3)
     @State private var sectorDetent: PresentationDetent = .height(160)
     // Header height measured from a hidden off-screen render — never inside the sheet itself.
     @State private var sectorHeaderHeight: CGFloat = 160
-    /// Measured height of the top-trailing button stack, used to dynamically position the altitude slider.
+    /// Height of the top-trailing button stack for altitude slider positioning.
     @State private var buttonStackHeight: CGFloat = 120
     
     var body: some View {
@@ -38,8 +35,6 @@ struct RadarView: View {
                     pilotDetent = .fraction(0.3)
                 }
             ) {
-                // Bind directly to the live selectedPilot — content updates in-place when
-                // a new pilot is tapped without dismissing and re-presenting the sheet.
                 if let pilot = viewModel.selectedPilot {
                     PilotDetailsView(
                         pilot: pilot,
@@ -203,7 +198,7 @@ struct RadarView: View {
                         VStack(spacing: 0) {
                             Button {
                                 showingLayerMenu.toggle()
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                             } label: {
                                 Image(systemName: "ellipsis")
                                     .rotationEffect(.degrees(90))
@@ -245,7 +240,7 @@ struct RadarView: View {
                                         Spacer()
                                         Button {
                                             viewModel.togglePilots()
-                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                            HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                                         } label: {
                                             Image(systemName: "airplane")
                                                 .foregroundStyle(viewModel.showPilotsLayer ? Color.primary : Color.red)
@@ -256,7 +251,7 @@ struct RadarView: View {
                                         Spacer()
                                         Button {
                                             viewModel.toggleShowSectors()
-                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                            HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                                         } label: {
                                             Image(systemName: "square.fill.on.circle.fill")
                                                 .foregroundStyle(viewModel.showSectorsLayer ? Color.primary : Color.red)
@@ -267,7 +262,7 @@ struct RadarView: View {
                                         Spacer()
                                         Button {
                                             viewModel.toggleAirportLayer()
-                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                            HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                                         } label: {
                                             Image(systemName: "headphones")
                                                 .foregroundStyle(viewModel.showAirportLayer ? Color.primary : Color.red)
@@ -286,7 +281,7 @@ struct RadarView: View {
                             withAnimation(.spring(duration: 0.3)) {
                                 viewModel.toggleAltitudeFilter()
                             }
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                         } label: {
                             Image(systemName: viewModel.altitudeFilterEnabled
                                   ? "square.2.layers.3d.fill"
@@ -361,10 +356,10 @@ struct RadarView: View {
                                         viewModel.selectedAltitudeFt = newValue
                                         if newValue == 0 || newValue == 60_000 {
                                             if previous != newValue {
-                                                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                                                HapticManager.impact(.rigid, prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                                             }
                                         } else if Int(newValue) != Int(previous) {
-                                            UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.4)
+                                            HapticManager.impact(.light, intensity: 0.4, prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                                         }
                                     }
                                 ),
@@ -401,7 +396,7 @@ struct RadarView: View {
                 GlassEffectContainer {
                     Button {
                         showingDebug = true
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                     } label: {
                         Image(systemName: "ant")
                             .imageScale(.medium)
@@ -427,7 +422,7 @@ struct RadarView: View {
         let myCID = prefsManager.userPrefs.vatsimCID
         guard myCID > 0 else { return }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
 
         if let pilot = viewModel.pilots.first(where: { $0.cid == myCID }) {
             viewModel.selectPilotAndFly(cid: myCID, coordinate: pilot.coordinate, enableTracking: true)
@@ -437,7 +432,7 @@ struct RadarView: View {
             viewModel.selectSector(id: sector.id)
         } else {
             // CID exists but not currently online — brief error haptic
-            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            HapticManager.notification(.warning, prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
         }
     }
     

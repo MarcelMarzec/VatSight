@@ -9,19 +9,24 @@
     <meta name="author" content="Marcel Marzec" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#090909" />
+    <meta property="og:description" content="How VatSight handles your data across vatsight.com, the newsletter and the iOS app. The website and app collect no personal data." />
     <meta property="og:site_name" content="VatSight" />
     <meta property="og:title" content="Privacy Policy — VatSight" />
     <meta property="og:type" content="website" />
-    <meta property="og:locale" content="en" />
+    <meta property="og:locale" content="en_GB" />
     <meta property="og:url" content="https://vatsight.com/privacy_policy" />
-    <meta property="og:image" content="https://vatsight.com/images/Vatsightlogo.png" />
-    <meta property="og:image:width" content="1024" />
-    <meta property="og:image:height" content="1024" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="https://vatsight.com/images/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="VatSight: the VATSIM network, live on your iPhone. Live traffic and VATGlasses ATC sectors on a map." />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Privacy Policy — VatSight" />
-    <meta name="twitter:image" content="https://vatsight.com/images/Vatsightlogo.png" />
+    <meta name="twitter:description" content="How VatSight handles your data across vatsight.com, the newsletter and the iOS app. The website and app collect no personal data." />
+    <meta name="twitter:image" content="https://vatsight.com/images/og-image.jpg" />
+    <meta name="twitter:image:alt" content="VatSight: the VATSIM network, live on your iPhone. Live traffic and VATGlasses ATC sectors on a map." />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" type="text/css" href="style/style.css?v=20260923"/>
+    <link rel="stylesheet" type="text/css" href="style/style.css?v=20261007"/>
     <link rel="canonical" href="https://vatsight.com/privacy_policy" />
     <link rel="icon" type="image/png" href="/images/favicon/favicon-96x96.png?v=20260509" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/images/favicon/favicon.svg?v=20260509" />
@@ -41,7 +46,7 @@
         <section class="doc-hero">
             <div class="section-inner">
                 <h1>Privacy Policy</h1>
-                <p class="doc-updated">Last updated 23 September 2026</p>
+                <p class="doc-updated">Last updated 7 October 2026</p>
             </div>
         </section>
 
@@ -72,7 +77,7 @@
                     <p>Our lawful basis for this processing is our <strong>legitimate interests</strong> (UK GDPR Article 6(1)(f)) in running a secure, working website. We do not use this data to identify you, build profiles or track you across other sites.</p>
 
                     <h2 id="newsletter">3. The Newsletter</h2>
-                    <p>You can choose to join the VatSight newsletter on the <a href="/phplist/?p=subscribe&amp;id=1" class="link-text">sign-up page</a> or the home page. It is used only to email you about the TestFlight beta, the App Store launch and major VatSight updates.</p>
+                    <p>You can choose to join the VatSight newsletter on the <a href="/phplist/?p=subscribe&amp;id=1" class="link-text">sign-up page</a> or the home page. It is used only to send you your invite to the VatSight TestFlight open beta (included in the welcome email you receive once you confirm), and then to email you about the App Store launch and major VatSight updates.</p>
 
                     <h3>What we store</h3>
                     <div class="table-scroll">

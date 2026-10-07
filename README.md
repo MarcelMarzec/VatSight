@@ -1,7 +1,10 @@
 # VatSight
+
+**Website: [vatsight.com](https://vatsight.com)** · Join the open beta on TestFlight by signing up to the newsletter at [vatsight.com](https://vatsight.com/#newsletter)
+
 VatSight in an in development IOS app for visualising live VATSIM traffic. 
 
-Track your own flight, check for ATC coverage, and visualise airspace in real time using the latest Vatglasses Data
+Track your own flight, check for ATC coverage, and visualise airspace in real time using the latest VATGlasses Data
 
 ### Features
 Feature list coming soon...
@@ -50,14 +53,14 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md)
 * Swift / SwiftUI
 * Mapbox IOS Native SDK
 * VATSIM data APIs
-* Vatglasses Sector Data
+* VATGlasses Sector Data
 
 ### AI Assistance
 Parts of VatSight were developed with the help of generative AI tools (e.g. Claude). All code is reviewed, tested and maintained by [@MarcelMarzec](https://github.com/MarcelMarzec).
 
 ### Acknowledgements
 * User data sourced from VATSIM API
-* Airspace data sourced from Vatglassses
+* Airspace data sourced from VATGlasses
 * VatSight is an independent project and is **not affiliated with or endorsed by VATSIM**.
 
 ### Support the Project

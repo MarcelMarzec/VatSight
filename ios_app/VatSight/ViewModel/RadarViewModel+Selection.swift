@@ -31,7 +31,7 @@ extension RadarViewModel {
 
         selectedCID = cid
         isShowingPilotSheet = true
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.impact(prefsEnabled: hapticFeedbackEnabled)
 
         if let coordinate {
             pendingCameraFlyTo = coordinate
@@ -49,7 +49,7 @@ extension RadarViewModel {
         if let airport = airports.first(where: { $0.icao == icao }) {
             pendingCameraFlyTo = CLLocationCoordinate2D(latitude: airport.latitude, longitude: airport.longitude)
         }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.impact(prefsEnabled: hapticFeedbackEnabled)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
             self?.isShowingAirportSheet = true
         }
@@ -69,7 +69,7 @@ extension RadarViewModel {
     }
 
     func selectAirport(icao: String) {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.impact(prefsEnabled: hapticFeedbackEnabled)
         if isShowingPilotSheet || isShowingSectorSheet {
             isShowingPilotSheet = false
             selectedCID = nil
@@ -94,7 +94,7 @@ extension RadarViewModel {
     }
 
     func selectSector(id: String) {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.impact(prefsEnabled: hapticFeedbackEnabled)
         if isShowingPilotSheet || isShowingAirportSheet {
             isShowingPilotSheet = false
             selectedCID = nil
@@ -110,9 +110,8 @@ extension RadarViewModel {
         }
     }
 
-    /// Selects a sector by ID, flies the camera to the given coordinate, and opens the sector sheet.
     func selectSectorAndFly(id: String, coordinate: CLLocationCoordinate2D) {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.impact(prefsEnabled: hapticFeedbackEnabled)
         isShowingPilotSheet = false
         selectedCID = nil
         isShowingAirportSheet = false

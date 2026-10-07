@@ -38,6 +38,20 @@ struct PilotDetailsView: View {
                             Spacer()
                             
                             Button {
+                                if isFriend {
+                                    prefsManager.removeFriend(pilot.cid)
+                                } else {
+                                    prefsManager.addFriend(pilot.cid)
+                                    prefsManager.incrementSwipeToAddFriendHint()
+                                }
+                                HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
+                            } label: {
+                                Image(systemName: isFriend ? "star.fill" : "star")
+                                    .font(.title)
+                                    .foregroundColor(isFriend ? .green : .primary)
+                            }
+                            
+                            Button {
                                 dismiss()
                             } label: {
                                 Image(systemName: "xmark")
@@ -45,23 +59,9 @@ struct PilotDetailsView: View {
                             }
                             .foregroundColor(.primary)
                         }
-                        Button {
-                            if isFriend {
-                                prefsManager.removeFriend(pilot.cid)
-                            } else {
-                                prefsManager.addFriend(pilot.cid)
-                            }
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        } label: {
-                            Text(verbatim: "\(pilot.name) (\(pilot.cid))")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            Image(systemName: isFriend ? "star.fill" : "star")
-                                .font(.subheadline)
-                                .foregroundColor(isFriend ? .green : .primary)
-                            
-                        }
+                        Text(verbatim: "\(pilot.name) (\(pilot.cid))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         
                     }
                     
@@ -196,7 +196,9 @@ private struct ICAOChip: View {
     let icao: String
     let name: String?
     let onTap: (() -> Void)?
-    
+
+    @Environment(PreferencesManager.self) private var prefsManager
+
     var body: some View {
         VStack {
             HStack {
@@ -217,7 +219,7 @@ private struct ICAOChip: View {
         }
         .onTapGesture {
             if onTap != nil {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
             }
             onTap?()
         }

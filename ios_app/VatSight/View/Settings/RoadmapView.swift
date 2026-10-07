@@ -10,6 +10,7 @@ import SafariServices
 
 struct RoadmapView: View {
     @State private var showTestFlightSignup = false
+    @ScaledMetric private var iconSize: CGFloat = 24
 
     var body: some View {
         List {
@@ -38,6 +39,12 @@ struct RoadmapView: View {
                 )
                 
                 RoadmapFeatureRow(
+                    icon: "wind",
+                    title: "Metar Decoder / Apt Weather",
+                    description: "More detailed visual metar decoder with runway crosswind coefficients."
+                )
+                
+                RoadmapFeatureRow(
                     icon: "fireworks",
                     title: "Vatsim Events",
                     description: "See whats going on in the community and where the biggest events are!"
@@ -48,11 +55,17 @@ struct RoadmapView: View {
                     title: "Improved Flight Tracking",
                     description: "Track your own flights, get information on which sector your in and what frequency to expect next."
                 )
+                
+                RoadmapFeatureRow(
+                    icon: "bell.fill",
+                    title: "Flight Notifications",
+                    description: "Get notifications when your flying and ATC logs on / your about to enter controlled airspace."
+                )
 
                 RoadmapFeatureRow(
                     icon: "map.fill",
                     title: "Full Navigraph Integration",
-                    description: "Seamless integration with Navigraph for up-to-date charts and navigation data."
+                    description: "Seamless integration with Navigraph for up-to-date charts and airport data."
                 )
             } header: {
                 Text("Planned Features")
@@ -75,6 +88,7 @@ struct RoadmapView: View {
                 } label: {
                     HStack {
                         Image(systemName: "airplane.departure")
+                            .frame(width: iconSize)
                             .foregroundColor(.primary)
                         Text("Sign Up for TestFlight Beta")
                         Spacer()
@@ -103,12 +117,13 @@ private struct RoadmapFeatureRow: View {
     let icon: String
     let title: String
     let description: String
+    @ScaledMetric private var iconSize: CGFloat = 24
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .foregroundColor(.primary)
-                .frame(width: 24)
+                .frame(width: iconSize)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline)

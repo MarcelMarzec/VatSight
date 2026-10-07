@@ -1,3 +1,11 @@
+# ---------- Error pages ----------
+
+# Branded error page (keeps the real status code, so search engines see a true 404)
+ErrorDocument 403 /error.php
+ErrorDocument 404 /error.php
+ErrorDocument 500 /error.php
+ErrorDocument 503 /error.php
+
 # ---------- Security ----------
 
 # No directory listings (e.g. /images/, /style/, /phplist/config/)

@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var showWebsite = false
     @State private var showContactForm = false
     @FocusState private var cidFieldFocused: Bool
+    @ScaledMetric private var iconSize: CGFloat = 24
     private var vatsimDataRefreshRates = ["15s", "30s", "1min"]
 
     private var displayedCID: String {
@@ -40,13 +41,23 @@ struct SettingsView: View {
                     NavigationLink {
                         FriendsView()
                     } label: {
-                        Label("Friends", systemImage: "person.2.badge.gearshape").foregroundColor(.primary)
+                        HStack {
+                            Image(systemName: "person.2.fill")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("Friends")
+                        }
                     }
                     
                     NavigationLink {
                         AppearanceView()
                     } label: {
-                        Label("Appearance", systemImage: "slider.horizontal.3").foregroundColor(.primary)
+                        HStack {
+                            Image(systemName: "slider.horizontal.3")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("Appearance & Accessibility")
+                        }
                     }
 
                     VStack(alignment: .leading){
@@ -62,10 +73,20 @@ struct SettingsView: View {
                 
                 Section("External Data"){
                     NavigationLink(value: "vatglasses") {
-                        Label("VATGlasses Sector Data", systemImage: "sunglasses").foregroundColor(.primary)
+                        HStack {
+                            Image(systemName: "sunglasses")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("VATGlasses Sector Data")
+                        }
                     }
                     NavigationLink(value: "vatsimdata") {
-                        Label("VATSIM User Data", systemImage: "airplane.path.dotted").foregroundColor(.primary)
+                        HStack {
+                            Image(systemName: "airplane.path.dotted")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("VATSIM User Data")
+                        }
                     }
                 }
                 
@@ -75,11 +96,10 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "envelope.fill")
-                                .frame(width: 24)
+                                .frame(width: iconSize)
                                 .foregroundColor(.primary)
                             VStack(alignment: .leading) {
-                                Text("Get in Contact")
-                                Text("Send an email to the developer about any issues, queries or feedback!").font(.subheadline).foregroundColor(.secondary)
+                                Text("Contact Us")
                             }
                             Spacer()
                             Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
@@ -95,10 +115,10 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "globe")
-                                .frame(width: 24)
+                                .frame(width: iconSize)
                                 .foregroundColor(.primary)
                             VStack(alignment: .leading) {
-                                Text("VatSight Website")
+                                Text("Website")
                             }
                             Spacer()
                             Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
@@ -117,9 +137,9 @@ struct SettingsView: View {
                                 Image("githubLogo")
                                     .resizable()
                                     .foregroundStyle(.primary)
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: iconSize, height: iconSize)
                                 VStack(alignment: .leading) {
-                                    Text("VatSight Github Repository")
+                                    Text("Github Repository")
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
@@ -132,7 +152,7 @@ struct SettingsView: View {
                     } label: {
                         HStack {
                             Image(systemName: "hand.raised.fill")
-                                .frame(width: 24)
+                                .frame(width: iconSize)
                                 .foregroundColor(.primary)
                             VStack(alignment: .leading) {
                                 Text("Privacy Policy")
@@ -150,29 +170,30 @@ struct SettingsView: View {
                 } header: {
                     Text("About")
                 }
-
+                
                 Section {
                     NavigationLink {
                         RoadmapView()
                     } label: {
                         HStack {
-                            Image(systemName: "map.fill")
-                                .frame(width: 24)
+                            Image(systemName: "list.bullet.clipboard")
+                                .frame(width: iconSize)
                                 .foregroundColor(.primary)
                             VStack(alignment: .leading) {
                                 Text("Roadmap & Beta Program")
-                                Text("What's coming next and how to join the beta").font(.subheadline).foregroundColor(.secondary)
                             }
                         }
                     }
                     .foregroundColor(.primary)
-                }
-
-                Section {
                     NavigationLink {
                         DeveloperView()
                     } label: {
-                        Label("Sector Maintainers", systemImage: "hammer.fill").foregroundColor(.primary)
+                        HStack {
+                            Image(systemName: "hammer.fill")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("Sector Maintainers")
+                        }
                     }
                     if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
                        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String {

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct VatsimUserDataView: View {
     @EnvironmentObject var viewModel: RadarViewModel
+    @ScaledMetric private var iconSize: CGFloat = 24
 
     var body: some View {
         List {
@@ -66,6 +67,7 @@ struct VatsimUserDataView: View {
                 Link(destination: URL(string: "https://vatsim.dev/api/data-api/")!) {
                     HStack {
                         Image(systemName: "doc.text.magnifyingglass")
+                            .frame(width: iconSize)
                             .foregroundStyle(.blue)
                         Text("VATSIM API Documentation")
                     }

@@ -2,8 +2,6 @@
 //  VatglassesService.swift
 //  VatSight
 //
-//  Created by Marcel Marzec on 03/06/2026.
-//
 import Foundation
 import ZIPFoundation
 import CoreLocation
@@ -21,20 +19,14 @@ final class VatglassesService {
         return URL(string: "https://api.github.com/repos/\(slug)/zipball/main")!
     }
 
-    /// Set to a non-empty "owner/repo" string to use a custom GitHub repository.
     var customRepoSlug: String = ""
 
     // MARK: - Diagnostics
-    /// Parse errors collected during the most recent data load. Cleared on each new fetch.
     var parseErrors: [VatglassesParseError] = []
-    /// Controllers that were online but matched no Vatglasses position. Updated by getActiveSectors.
     var unmatchedControllers: [UnmatchedController] = []
-    /// Synthetic sectors generated for TWR/APP controllers with no real VATGlasses sector.
     var syntheticSectors: [SyntheticSector] = []
 
-    /// Cache of compiled NSRegularExpression objects keyed by pattern string.
-    /// Avoids recompiling the same regex on every resolvePositionLabel call.
-    var regexCache: [String: NSRegularExpression] = [:]
+    var regexCache: [String: NSRegularExpression] = [:] // compiled regex cache
 
     var cachedData: VatglassesData?
     var lastFetchDate: Date?
@@ -51,16 +43,9 @@ final class VatglassesService {
 
     // MARK: - Public API
 
-    /// How old the cached VatGlasses data can be before we bother checking GitHub for an update.
-    /// VatGlasses data is updated infrequently (every few days at most), so checking more
-    /// often than this wastes a GitHub API call on every app launch.
     private static let cacheMaxAge: TimeInterval = 7 * 24 * 60 * 60 // 7 days
 
-    /// Fetches Vatglasses sector data from GitHub.
-    /// - If cached data exists and is less than 7 days old, returns it immediately without
-    ///   hitting the network — VatGlasses data rarely changes more than once a week.
-    /// - If no cache exists, or the cache is older than 7 days, checks GitHub for a new
-    ///   commit and downloads only if the SHA has changed.
+    /// Serves cache immediately; checks GitHub only when cache is > 7 days old or absent.
     func fetchSectorData(completion: @escaping (Result<VatglassesData, Error>) -> Void) {
         if let cached = cachedData {
             completion(.success(cached))
@@ -83,30 +68,24 @@ final class VatglassesService {
                 self.downloadAndParseSectors(commitSHA: commitModel.sha, commitDate: commitModel.commitDate, completion: completion)
 
             case .failure(let error):
-                // Always call completion on failure. If we already served cached data above,
-                // the caller will silently ignore this second failure result via its own guard.
-                // If there is no cache, the caller needs this to know the fetch is done.
                 if self.cachedData == nil {
                     completion(.failure(error))
                 } else {
-                    // Re-serve the existing cache so the loading flag is dismissed correctly.
+                    // Re-serve cache so the loading flag is dismissed correctly.
                     completion(.success(self.cachedData!))
                 }
             }
         }
     }
 
-    /// Returns cached sector data if available
     func getCachedSectors() -> [VatglassesSector] {
         cachedData?.sectors ?? []
     }
 
-    /// Returns all known positions from the cached vatglasses data.
     func getCachedPositions() -> [String: VatglassesPosition] {
         cachedData?.allPositions ?? [:]
     }
 
-    /// Clears all cached data (both in-memory and on disk).
     func clearCache() {
         cachedData = nil
         lastFetchDate = nil
@@ -116,9 +95,6 @@ final class VatglassesService {
         }
     }
 
-    /// Returns sectors with active controller status based on online VATSIM controllers.
-    /// Also generates synthetic APP circle sectors for approach controllers that have no real
-    /// VATGlasses sector, and updates `unmatchedControllers` and `syntheticSectors`.
     func getActiveSectors(controllers: [Controllers], airports: [VatglassesAirport]) -> [VatglassesSector] {
         guard var sectors = cachedData?.sectors,
               let allPositions = cachedData?.allPositions else { return [] }
@@ -127,7 +103,6 @@ final class VatglassesService {
         let prefixGroupedControllers = buildCallsignPrefixGroupedControllers(from: controllers)
         var positionActiveCache: [String: (isActive: Bool, controller: Controllers?)] = [:]
 
-        // Track which controller CIDs have been matched to at least one sector.
         var matchedCIDs = Set<Int>()
 
         for i in sectors.indices {
@@ -171,9 +146,7 @@ final class VatglassesService {
             }
         }
 
-        // Build the set of ICAOs that already have a matched real APP/DEP sector.
-        // A synthetic APP circle must not be generated for these — a real sector already covers
-        // the approach airspace even if the specific unmatched controller has no sector of their own.
+        // Suppress synthetic circles where a real matched APP/DEP sector already exists.
         var icaosWithRealAppSector = Set<String>()
         for sector in sectors where sector.isActive {
             guard let ctrl = sector.activeController else { continue }
@@ -183,14 +156,11 @@ final class VatglassesService {
             icaosWithRealAppSector.insert(icao)
         }
 
-        // Generate synthetic circle sectors for APP/DEP controllers that had no real sector.
         let synthetic = generateSyntheticSectors(
             unmatchedCIDs: controllers.filter { !matchedCIDs.contains($0.cid) },
             airports: airports,
             icaosWithRealAppSector: icaosWithRealAppSector
         )
-        // Mark synthetic controllers (primary + co-controllers) as matched so they don't
-        // appear in the unmatched list.
         var syntheticCIDs = Set<Int>()
         for s in synthetic {
             if let cid = s.activeController?.cid { syntheticCIDs.insert(cid) }
@@ -198,14 +168,10 @@ final class VatglassesService {
         }
         sectors.append(contentsOf: synthetic)
 
-        // Build the unmatched controller list: online ATC not accounted for by any sector.
-        // No filtering here — filtering is done in the UI so the user can toggle categories.
         unmatchedControllers = controllers
             .filter { !matchedCIDs.contains($0.cid) && !syntheticCIDs.contains($0.cid) }
             .map { UnmatchedController(callsign: $0.callsign, frequency: $0.frequency, cid: $0.cid, name: $0.name) }
 
-        // Record synthetic sector diagnostics for the developer view.
-        // Include both the primary controller and any co-controllers on each sector.
         self.syntheticSectors = synthetic.flatMap { sector -> [SyntheticSector] in
             guard let ctrl = sector.activeController else { return [] }
             let icao = String(ctrl.callsign.prefix(while: { $0 != "_" }))
@@ -224,9 +190,7 @@ final class VatglassesService {
         cachedData?.airports ?? []
     }
 
-    /// Returns all online controllers that cover the given airport via the topdown ownership chain.
-    /// This includes upper positions (APP, CTR, etc.) that provide top-down coverage when lower
-    /// positions (TWR, GND, DEL) are offline.
+    /// Returns all controllers covering the airport via the topdown ownership chain (APP, CTR, etc.).
     func getTopdownControllers(for airport: VatglassesAirport, controllers: [Controllers]) -> [Controllers] {
         guard let allPositions = cachedData?.allPositions else { return [] }
 
@@ -247,27 +211,19 @@ final class VatglassesService {
         return result
     }
 
-    /// Resolves a human-readable position label for a VATSIM callsign using the vatglasses
-    /// `callsigns` definitions parsed from region files.
-    ///
-    /// Callsign structure: `FACILITY_TYPE` or `FACILITY_MIDDLE_TYPE` (e.g. `EGLL_TWR`, `JAX_1_TWR`, `EPWA_P_DEL`).
-    /// The last `_`-delimited component is the position type; any component(s) between the
-    /// facility and the type are the "middle". An empty middle matches callsigns with no middle.
-    ///
-    /// Middle keys in the `callsigns` map may be literal strings or regex patterns (e.g. `^[A-Z]`).
+    /// Maps VATSIM callsign → human label via vatglasses `callsigns` definitions.
+    /// Middle keys may be literal strings or regex patterns (e.g. `^[A-Z]`).
     func resolvePositionLabel(for callsign: String) -> String? {
         guard let labels = cachedData?.callsignLabels else { return nil }
         let parts = callsign.uppercased().components(separatedBy: "_")
         guard parts.count >= 2 else { return nil }
 
         let type = parts.last!
-        // Middle is everything between first part and last part, joined back with "_".
         let middle = parts.count > 2 ? parts[1..<parts.count - 1].joined(separator: "_") : ""
 
         guard let middleMap = labels[type] else { return nil }
 
-        // Exact match first (handles "" for no-middle, and literal middles like "1", "P").
-        if let label = middleMap[middle] { return label }
+        if let label = middleMap[middle] { return label } // exact match first
 
         // Regex fallback for pattern keys like "^[A-Z]".
         for (pattern, label) in middleMap {
@@ -289,10 +245,7 @@ final class VatglassesService {
         return nil
     }
 
-    /// Returns the set of callsign prefixes to try when matching controllers to an airport ICAO.
-    /// VATSIM controllers sometimes use a shortened identifier (e.g. `EWR_GND`) instead of the
-    /// full 4-letter ICAO (e.g. `KEWR_GND`). This returns both the full ICAO and, for 4-character
-    /// ICAOs, the 3-character variant with the leading regional letter stripped.
+    /// Returns the full ICAO and (for 4-char ICAOs) the 3-char variant, e.g. ["KEWR", "EWR"].
     func callsignPrefixes(for icao: String) -> [String] {
         let upper = icao.uppercased()
         if upper.count == 4 {
@@ -301,18 +254,11 @@ final class VatglassesService {
         return [upper]
     }
 
-    /// Returns airports with active controller status.
-    /// Stage 1: any controller whose callsign starts with `{ICAO}_` or the shortened variant
-    ///          (e.g. `EWR_` for `KEWR`) is a direct match — DEL, GND, TWR, APP, etc.
-    /// Stage 2: walk the `ownerRefs` topdown chain to detect APP/CTR covering the airport.
-    ///          This runs in addition to stage 1 to pick up upper-level topdown controllers.
+    /// Stage 1: direct callsign prefix match; Stage 2: topdown ownerRef walk.
     func getActiveAirports(controllers: [Controllers], atis: [ATIS] = []) -> [VatglassesAirport] {
         guard var airports = cachedData?.airports,
               let allPositions = cachedData?.allPositions else { return [] }
 
-        // --- Pre-process controllers once, O(controllers) ---
-        // Key: callsign prefix (first component before '_') → controllers with that prefix.
-        // Covers both "EWR" (from "EWR_GND") and "KEWR" (from "KEWR_GND").
         var byPrefix: [String: [Controllers]] = [:]
         for ctrl in controllers {
             let upper = ctrl.callsign.uppercased()
@@ -321,7 +267,6 @@ final class VatglassesService {
                 byPrefix[prefix, default: []].append(ctrl)
             }
         }
-        // ATIS: same prefix-keyed structure but built from the atis array.
         var atisByPrefix: [String: Bool] = [:]
         for station in atis {
             let upper = station.callsign.uppercased()
@@ -335,15 +280,13 @@ final class VatglassesService {
         let prefixGroupedControllers = buildCallsignPrefixGroupedControllers(from: controllers)
         var positionActiveCache: [String: (isActive: Bool, controller: Controllers?)] = [:]
 
-        // Suffix priority for choosing the most specific direct controller to display.
         let suffixPriority = ["_DEL", "_GND", "_TWR", "_APP", "_DEP", "_CTR"]
 
         for i in airports.indices {
             let icao = airports[i].icao.uppercased()
-            let prefixes = callsignPrefixes(for: icao) // at most 2 strings
+            let prefixes = callsignPrefixes(for: icao)
 
-            // Stage 1: direct match using byPrefix, which handles middle components like JAX_1_TWR.
-            // For each priority suffix, check all controllers sharing the airport prefix.
+            // Stage 1: direct prefix match (also handles middle components like JAX_1_TWR).
             var directMatch: Controllers? = nil
             outer: for suffix in suffixPriority {
                 for prefix in prefixes {
@@ -354,8 +297,7 @@ final class VatglassesService {
                     }
                 }
             }
-            // Fallback: any non-ATIS controller with a matching prefix (e.g. unusual suffixes).
-            if directMatch == nil {
+            if directMatch == nil { // fallback for unusual suffixes
                 for prefix in prefixes {
                     if let candidates = byPrefix[prefix] {
                         directMatch = candidates.first { !$0.callsign.uppercased().hasSuffix("_ATIS") }
@@ -369,8 +311,7 @@ final class VatglassesService {
                 airports[i].activeController = ctrl
             }
 
-            // Stage 2: topdown — walk ownerRefs for APP/CTR covering this airport.
-            // Runs regardless of stage 1 so topdown controllers are always included.
+            // Stage 2: topdown walk (always runs to catch APP/CTR upper coverage).
             var topdownMatch: Controllers? = nil
             for ownerRef in airports[i].ownerRefs {
                 if let cached = positionActiveCache[ownerRef] {
@@ -395,8 +336,6 @@ final class VatglassesService {
                 }
             }
 
-            // An ATIS-only airport has no direct or topdown controller match, but should
-            // still be shown as active since ATC is present.
             let hasAtis = prefixes.contains { atisByPrefix[$0] == true }
 
             if directMatch == nil {
@@ -404,9 +343,7 @@ final class VatglassesService {
                 airports[i].activeController = topdownMatch
             }
 
-            // Ground-service indicators: T=TWR, G=GND, D=DEL, A=ATIS
-            // Uses byPrefix so middle-component callsigns (e.g. JAX_1_TWR) are matched correctly.
-            var indicatorLetters: [String] = []
+            var indicatorLetters: [String] = [] // T=TWR, G=GND, D=DEL, A=ATIS
             for prefix in prefixes {
                 if let candidates = byPrefix[prefix], candidates.contains(where: { $0.callsign.uppercased().hasSuffix("_TWR") }) { indicatorLetters.append("T"); break }
             }

@@ -2,13 +2,9 @@
 //  OnboardingView.swift
 //  VatSight
 //
-//  Created by Marcel Marzec on 24/08/2026.
-//
 
 import SwiftUI
 import SwiftData
-
-// MARK: - Main View
 
 struct OnboardingView: View {
     @Environment(PreferencesManager.self) private var prefsManager
@@ -104,7 +100,7 @@ struct OnboardingView: View {
                     .animation(.spring(duration: 0.35), value: currentPage)
                     .onTapGesture {
                         withAnimation(.spring(duration: 0.35)) { currentPage = i }
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                     }
             }
         }
@@ -154,7 +150,7 @@ struct OnboardingView: View {
                     if let cid = Int(friendCIDInputText), cid > 0, !pendingFriendCIDs.contains(cid) {
                         pendingFriendCIDs.append(cid)
                         friendCIDInputText = ""
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                     }
                 } label: {
                     Image(systemName: "plus.circle.fill")
@@ -178,7 +174,7 @@ struct OnboardingView: View {
                                 Spacer()
                                 Button {
                                     pendingFriendCIDs.removeAll { $0 == cid }
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
                                         .foregroundStyle(.secondary)
@@ -202,7 +198,7 @@ struct OnboardingView: View {
         Button {
             if currentPage < Self.totalPageCount - 1 {
                 withAnimation(.spring(duration: 0.35)) { currentPage += 1 }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
             } else {
                 finishOnboarding()
             }
@@ -245,7 +241,7 @@ struct OnboardingView: View {
         for cid in pendingFriendCIDs {
             prefsManager.addFriend(cid)
         }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
         prefsManager.markOnboardingComplete()
     }
 }

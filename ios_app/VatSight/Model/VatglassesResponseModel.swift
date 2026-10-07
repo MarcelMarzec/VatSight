@@ -2,8 +2,6 @@
 //  VatglassesResponseModel.swift
 //  VatSight
 //
-//  Created by Marcel Marzec on 03/06/2026.
-//
 
 import Foundation
 import Turf
@@ -15,7 +13,6 @@ struct VatglassesComitModel {
 }
 
 extension VatglassesComitModel: Decodable {
-    // Mirrors the GitHub commits API structure: { sha, commit: { committer: { date } } }
     private enum CodingKeys: String, CodingKey { case sha, commit }
     private enum CommitKeys: String, CodingKey { case committer }
     private enum CommitterKeys: String, CodingKey { case date }
@@ -24,7 +21,6 @@ extension VatglassesComitModel: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         sha = try container.decode(String.self, forKey: .sha)
 
-        // Decode nested commit.committer.date
         if let commitContainer = try? container.nestedContainer(keyedBy: CommitKeys.self, forKey: .commit),
            let committerContainer = try? commitContainer.nestedContainer(keyedBy: CommitterKeys.self, forKey: .committer),
            let dateString = try? committerContainer.decode(String.self, forKey: .date) {
@@ -38,18 +34,14 @@ extension VatglassesComitModel: Decodable {
 
 // MARK: - Position Model
 
-/// Represents a controller position in Vatglasses
 struct VatglassesPosition: Codable {
     let callsign: String
-    let frequency: String?  // Optional — some positions (e.g. NAT) omit the frequency field
-    let type: String  // CTR, APP, TWR, GND, DEL, FSS
-    let facilityPrefixes: [String]  // "pre" array in JSON
-    let colors: [String]?  // Hex color codes from "colours" array
-    
-    /// Returns the primary color hex string if available
-    var primaryColorHex: String? {
-        colors?.first
-    }
+    let frequency: String?       // nil for some positions (e.g. NAT)
+    let type: String             // CTR, APP, TWR, GND, DEL, FSS
+    let facilityPrefixes: [String]
+    let colors: [String]?
+
+    var primaryColorHex: String? { colors?.first }
 }
 
 // MARK: - Sector Data Model
@@ -62,18 +54,12 @@ struct VatglassesSector: Codable, Identifiable {
     let properties: SectorProperties?
     
     var isActive: Bool
-    var activeOwnerColorHex: String?  // Color hex from active owner position
-    var activeOwnerRef: String?  // The position ID of the active owner (e.g., "YYD")
-    var activeController: Controllers?  // The actual controller controlling this sector
-    /// Additional controllers sharing this sector (e.g. EGLL_N_TWR + EGLL_S_TWR on a single synthetic circle).
-    var activeCoControllers: [Controllers]
-    /// True for sectors sourced from nodata.json — FIRs with no full VATGlasses data.
-    /// These are matched by callsign prefix and displayed with a "Basic Data Only" indicator.
-    var isBasicDataOnly: Bool
-    /// True for sectors that were dynamically generated because a TWR/APP controller was
-    /// online but had no matching real sector in the VATGlasses data. These are circle
-    /// approximations (5 nm for TWR, 20 nm for APP/DEP) displayed alongside real sectors.
-    var isSynthetic: Bool
+    var activeOwnerColorHex: String?
+    var activeOwnerRef: String?
+    var activeController: Controllers?
+    var activeCoControllers: [Controllers] // co-controllers on a shared synthetic circle
+    var isBasicDataOnly: Bool // from nodata.json — FIRs without full VATGlasses data
+    var isSynthetic: Bool    // dynamically generated circle (5 nm TWR / 20 nm APP/DEP)
 
     init(id: String, ownerRefs: [String], frequency: String, geometry: SectorGeometry, properties: SectorProperties?, isActive: Bool = false, activeOwnerColorHex: String? = nil, activeOwnerRef: String? = nil, activeController: Controllers? = nil, activeCoControllers: [Controllers] = [], isBasicDataOnly: Bool = false, isSynthetic: Bool = false) {
         self.id = id
@@ -97,8 +83,7 @@ struct VatglassesSector: Codable, Identifiable {
         case geometry
         case properties
         case isBasicDataOnly
-        // isSynthetic is intentionally excluded from coding — synthetic sectors are
-        // regenerated from live controller data each session and must not be cached.
+        // isSynthetic excluded — regenerated each session, never cached.
     }
     
     init(from decoder: Decoder) throws {
@@ -109,7 +94,7 @@ struct VatglassesSector: Codable, Identifiable {
         geometry = try container.decode(SectorGeometry.self, forKey: .geometry)
         properties = try container.decodeIfPresent(SectorProperties.self, forKey: .properties)
         isBasicDataOnly = try container.decodeIfPresent(Bool.self, forKey: .isBasicDataOnly) ?? false
-        isSynthetic = false // Never persisted; always regenerated at runtime
+        isSynthetic = false
         isActive = false
         activeOwnerColorHex = nil
         activeOwnerRef = nil
@@ -183,16 +168,15 @@ struct VatglassesAirport: Codable, Identifiable {
     let icao: String
     let latitude: Double
     let longitude: Double
-    let callsign: String?       // Human-readable airport name (e.g., "Okecie")
-    let ownerRefs: [String]     // Ordered list of owner position IDs (hierarchical, "topdown")
-    let runways: [String]       // Available runway identifiers (e.g., ["33", "11", "29", "15"])
+    let callsign: String?       // human-readable name (e.g., "Okecie")
+    let ownerRefs: [String]     // hierarchical topdown owner chain
+    let runways: [String]
     
     var id: String { icao }
     
     var isActive: Bool = false
     var activeController: Controllers?
-    /// Letters representing present ground-service controllers: T=TWR, G=GND, D=DEL, A=ATIS
-    var groundServiceIndicators: String = ""
+    var groundServiceIndicators: String = "" // T=TWR, G=GND, D=DEL, A=ATIS
     
     enum CodingKeys: String, CodingKey {
         case icao
@@ -229,8 +213,7 @@ struct VatglassesAirport: Codable, Identifiable {
 // MARK: - Sector File Collection
 
 struct VatglassesData: Codable {
-    /// Increment this whenever the cache schema changes to force a fresh download.
-    static let currentSchemaVersion = 10
+    static let currentSchemaVersion = 10 // bump to force re-download on schema changes
 
     let schemaVersion: Int
     let sectors: [VatglassesSector]
@@ -238,13 +221,8 @@ struct VatglassesData: Codable {
     let allPositions: [String: VatglassesPosition]
     let lastUpdated: Date
     let commitSHA: String
-    /// The date/time the commit was pushed to GitHub (from commit.committer.date in the GitHub API).
     let commitDate: Date?
-    /// Merged callsign label definitions from all parsed vatglasses region files.
-    /// Structure: positionType → middleComponent → humanLabel
-    /// e.g. ["TWR": ["": "Tower", "I": "Info (AFIS)"], "GND": ["": "Ground", "^[A-Z]": "Ground"]]
-    /// An empty middle key ("") matches callsigns with no middle component (e.g. EGLL_TWR).
-    /// Non-empty keys may be literal strings or regex patterns.
+    /// positionType → middleComponent → humanLabel. Keys may be literals or regex patterns.
     let callsignLabels: [String: [String: String]]
 
     enum CodingKeys: String, CodingKey {

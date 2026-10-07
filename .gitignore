@@ -14,3 +14,6 @@ xcuserdata/
 # phpList install (third-party code + config with database/mailbox passwords)
 public/phplist/
 public/phplist*.zip
+
+# Other files
+CLAUDE.md

@@ -2,8 +2,6 @@
 //  PreferencesManager.swift
 //  VatSight
 //
-//  Created by Marcel Marzec on 14/05/2026.
-//
 
 
 import SwiftUI
@@ -114,8 +112,7 @@ final class PreferencesManager {
     /// The user's own VATSIM CID (0 if not set).
     var myCID: Int { userPrefs.vatsimCID }
 
-    /// All CIDs that should be treated as friends on the map.
-    /// The user's own CID is handled separately as the "self" state so it renders in gold rather than green.
+    /// Friend CIDs. Own CID is handled separately (renders gold, not green).
     var allFriendCIDs: Set<Int> {
         Set(userPrefs.friendCIDs)
     }
@@ -179,6 +176,11 @@ final class PreferencesManager {
 
     func updateSearchShowInactiveAirports(_ value: Bool) {
         userPrefs.searchShowInactiveAirports = value
+        try? context.save()
+    }
+
+    func updateHapticFeedbackEnabled(_ value: Bool) {
+        userPrefs.hapticFeedbackEnabled = value
         try? context.save()
     }
 

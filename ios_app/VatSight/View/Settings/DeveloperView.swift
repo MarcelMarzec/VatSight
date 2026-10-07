@@ -13,6 +13,7 @@ struct DeveloperView: View {
     @Environment(PreferencesManager.self) private var prefsManager
     @EnvironmentObject private var radarViewModel: RadarViewModel
     @Environment(\.dismiss) private var dismiss
+    @ScaledMetric private var iconSize: CGFloat = 24
 
     @State private var repoSlugDraft: String = ""
     @State private var showRepoAppliedBanner = false
@@ -40,7 +41,12 @@ struct DeveloperView: View {
                         }
                     }
                 )) {
-                    Label("Developer Mode", systemImage: "hammer.fill")
+                    HStack {
+                            Image(systemName: "hammer.fill")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("Developer Mode")
+                        }
                 }
                 
                 if prefsManager.userPrefs.developerModeEnabled {

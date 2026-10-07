@@ -13,7 +13,6 @@ struct AppearanceView: View {
 
     var body: some View {
         List {
-            // MARK: - Map Style
             Section {
                 VStack(alignment: .leading) {
                     Text("Map Style")
@@ -23,7 +22,6 @@ struct AppearanceView: View {
                         get: { prefsManager.userPrefs.mapStyle },
                         set: { newStyle in
                             prefsManager.updateMapStyle(newStyle)
-                            // Keep the app theme in sync with the map style choice.
                             prefsManager.updateAppTheme(newStyle.preferredAppTheme)
                         }
                     )) {
@@ -52,7 +50,6 @@ struct AppearanceView: View {
                 Label("Map Styling", systemImage: "map")
             }
             
-            // MARK: - Aircraft Icon Size
             Section {
                 VStack(alignment: .leading) {
                     Text("Aircraft Icon Size")
@@ -87,8 +84,40 @@ struct AppearanceView: View {
             } header: {
                 Label("Icon Styling", systemImage: "paperplane")
             }
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { prefsManager.userPrefs.hapticFeedbackEnabled },
+                    set: { prefsManager.updateHapticFeedbackEnabled($0) }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Haptic Feedback")
+                        Text("Vibration when tapping buttons and map elements")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                // Informational row — reflects the live system setting, read-only.
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Reduce Motion")
+                        Text("When enabled in iOS Settings, haptics and animations are automatically suppressed")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(UIAccessibility.isReduceMotionEnabled ? "On" : "Off")
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Label("Accessibility", systemImage: "accessibility")
+            } footer: {
+                Text("To change Reduce Motion, go to iOS Settings → Accessibility → Motion → Reduce Motion.")
+                    .font(.caption)
+            }
         }
-        .navigationTitle("Appearance")
+        .navigationTitle("Appearance & Accessibility")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

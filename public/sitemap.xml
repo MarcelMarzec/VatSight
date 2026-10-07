@@ -1,14 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://vatsight.com/</loc>
-    <lastmod>2026-09-23</lastmod>
+    <lastmod>2026-10-07</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://vatsight.com/images/og-image.jpg</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://vatsight.com/images/screenshots/uk-overview.webp</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://vatsight.com/images/screenshots/show-inactive-sectors.webp</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://vatsight.com/images/screenshots/zoom-details.webp</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://vatsight.com/images/screenshots/pilot-details.webp</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://vatsight.com/images/screenshots/track-overlay.webp</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://vatsight.com/images/screenshots/merged-sectors.webp</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://vatsight.com/images/screenshots/blended-sectors.webp</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://vatsight.com/images/screenshots/atc-details.webp</image:loc>
+    </image:image>
+    <image:image>
+      <image:loc>https://vatsight.com/images/screenshots/light-mode.webp</image:loc>
+    </image:image>
   </url>
   <url>
     <loc>https://vatsight.com/privacy_policy</loc>
-    <lastmod>2026-09-23</lastmod>
+    <lastmod>2026-10-07</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

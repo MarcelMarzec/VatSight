@@ -11,7 +11,6 @@ struct SectorDetailsView: View {
     let allPositions: [String: VatglassesPosition]
     let allSectors: [VatglassesSector]
     @Binding var headerHeight: CGFloat
-    /// Called when the user taps an online (non-owner) position in the hierarchy.
     var onSectorSelected: ((String) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
@@ -74,9 +73,6 @@ struct SectorDetailsView: View {
         }
     }
 
-    /// Returns the effective altitude band to display.
-    /// - When inactive: the sector's own min/max.
-    /// - When active: the lowest min and highest max across all sectors owned by the same position.
     private func effectiveAltitudeBand(isActive: Bool) -> (min: Int, max: Int)? {
         guard let ownMin = sector.properties?.min, let ownMax = sector.properties?.max else { return nil }
         guard isActive, let ownerRef = sector.activeOwnerRef else {
@@ -164,6 +160,7 @@ struct SectorDetailsView: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         guard isTappable, let targetSector = allSectors.first(where: { $0.activeOwnerRef == ref }) else { return }
+                        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                         onSectorSelected?(targetSector.id)
                     }
                 }
@@ -328,7 +325,7 @@ struct SectorDetailsView: View {
                         prefsManager.addFriend(controller.cid)
                         prefsManager.incrementSwipeToAddFriendHint()
                     }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                 } label: {
                     Label(isFriend ? "Remove Friend" : "Add Friend", systemImage: isFriend ? "star.slash" : "star")
                 }
@@ -378,7 +375,7 @@ struct SectorDetailsView: View {
                         prefsManager.addFriend(co.cid)
                         prefsManager.incrementSwipeToAddFriendHint()
                     }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                 } label: {
                     Label(isCoFriend ? "Remove Friend" : "Add Friend", systemImage: isCoFriend ? "star.slash" : "star")
                 }

@@ -11,9 +11,7 @@ struct AirportDetailsView: View {
     let controllers: [Controllers]
     let atis: [ATIS]
     let traffic: AirportTraffic?
-    /// Resolves a vatglasses-defined human label for a VATSIM callsign, or returns nil to use fallback.
     var labelResolver: ((String) -> String?)? = nil
-    /// Called when the user selects a pilot from the traffic detail view.
     var onPilotSelected: ((Int, Double, Double) -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
@@ -24,7 +22,6 @@ struct AirportDetailsView: View {
 
     var body: some View {
         if showingTraffic, let traffic {
-            // MARK: Traffic view
             AirportDetailsTrafficView(
                 airport: airport,
                 traffic: traffic,
@@ -36,13 +33,10 @@ struct AirportDetailsView: View {
             )
             .transition(.move(edge: .trailing))
         } else {
-            // MARK: Main view
             mainContent
                 .transition(.move(edge: .leading))
         }
     }
-
-    // MARK: - Main content
 
     @ViewBuilder
     private var mainContent: some View {
@@ -101,7 +95,7 @@ struct AirportDetailsView: View {
                         Spacer()
                         Button("More Details >") {
                             withAnimation { showingTraffic = true }
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                         }
                         .buttonStyle(.borderless)
                         .font(.caption)
@@ -352,7 +346,7 @@ private struct ControllerRow: View {
                     prefsManager.addFriend(controller.cid)
                     prefsManager.incrementSwipeToAddFriendHint()
                 }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
             } label: {
                 Label(isFriend ? "Remove Friend" : "Add Friend", systemImage: isFriend ? "star.slash" : "star")
             }

@@ -2,12 +2,9 @@
 //  SearchView.swift
 //  VatSight
 //
-//  Created by Marcel Marzec on 12/08/2026.
-//
 
 import SwiftUI
 
-/// Sort orders available for the airport list.
 private enum AirportSortOrder: String, CaseIterable {
     case totalPilotsHigh   = "Total Pilots: High → Low"
     case controllersHigh   = "Controllers: High → Low"
@@ -26,7 +23,6 @@ private enum AirportSortOrder: String, CaseIterable {
     }
 }
 
-/// The three searchable categories.
 private enum SearchCategory: String, CaseIterable {
     case airport  = "Airport"
     case pilot    = "Pilots"
@@ -45,13 +41,11 @@ private let pageSize = 30
 
 struct SearchView: View {
 
-    // Injected data
     let airports:    [VatglassesAirport]
     let pilots:      [Pilot]
     let controllers: [Controllers]
     let prefiles:    [Prefiles]
 
-    // Callbacks — each handler navigates to the map tab from the caller side
     var onAirportSelected:    (String) -> Void
     var onPilotSelected:      (Int) -> Void
     var onControllerSelected: (Controllers) -> Void
@@ -61,31 +55,23 @@ struct SearchView: View {
     @State private var query:              String = ""
     @State private var category: SearchCategory = .atc
     @State private var visibleCount:       Int = pageSize
-    /// Facility IDs explicitly included (first tap — accent). Empty means no include filter.
     @State private var selectedFacilities: Set<Int> = []
-    /// Facility IDs explicitly excluded (second tap — red). Overrides selectedFacilities.
-    /// ID 0 (Observer) is excluded by default.
+    // Observer excluded by default
     @State private var excludedFacilities: Set<Int> = [0]
-    /// When true, inactive airports are included in the airport list.
     @State private var showInactiveAirports: Bool = false
-    /// Current sort order for the airport list.
     @State private var airportSort: AirportSortOrder = .totalPilotsHigh
 
     // MARK: - Cached pre-computations
 
-    /// Pilots sorted once alphabetically by callsign. Avoids re-sorting on every computed access.
+    /// Sorted once; avoids re-sorting on every access.
     private var sortedPilots: [Pilot] {
         pilots.sorted { $0.callsign < $1.callsign }
     }
 
-    /// Single-pass lookup table: traffic counts + controller count per uppercase ICAO.
-    /// Built once per render so sort comparisons are O(1) dictionary lookups.
-    /// Counting logic mirrors AirportDetailsView / AirportTraffic so numbers match.
+    /// Traffic counts per ICAO, built once per render for O(1) sort comparisons.
     private var airportStats: [String: AirportCounts] {
         var result: [String: AirportCounts] = [:]
-        // Live pilots → airborne deps/arrs and on-ground counts.
-        // On-ground pilots contribute to onGround at BOTH their dep and arr airports
-        // (matching totalOnGround = groundDepartures + groundArrivals in AirportTraffic).
+        // On-ground pilots counted at both dep and arr airports.
         for pilot in pilots {
             guard let fp = pilot.flight_plan else { continue }
             let dep   = fp.departure.uppercased()
@@ -377,6 +363,7 @@ struct SearchView: View {
                     let textColor: Color = (isIncluded || isExcluded) ? .white : .primary
                     Button {
                         visibleCount = pageSize
+                        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                         if isExcluded {
                             // Third tap — reset to neutral
                             excludedFacilities.remove(fac.id)
@@ -411,6 +398,7 @@ struct SearchView: View {
             HStack(spacing: 8) {
                 Button {
                     visibleCount = pageSize
+                    HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                     showInactiveAirports.toggle()
                 } label: {
                     Text("Show uncontrolled (\(airports.filter { !$0.isActive }.count))")
@@ -439,7 +427,7 @@ struct SearchView: View {
         } else {
             ForEach(visibleAirports) { airport in
                 Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                     onAirportSelected(airport.icao)
                 } label: {
                     HStack(spacing: 8) {
@@ -530,7 +518,7 @@ struct SearchView: View {
         } else {
             ForEach(visiblePilots) { pilot in
                 Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                     onPilotSelected(pilot.cid)
                 } label: {
                     HStack {
@@ -575,7 +563,7 @@ struct SearchView: View {
         } else {
             ForEach(visibleControllers) { controller in
                 Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                     onControllerSelected(controller)
                 } label: {
                     HStack {

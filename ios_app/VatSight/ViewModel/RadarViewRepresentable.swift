@@ -13,11 +13,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
 
     let prefsManager: PreferencesManager
 
-    /// The resolved color scheme — used to determine dark/light when the user has chosen System.
     @Environment(\.colorScheme) private var systemColorScheme
 
-    /// Returns true when the map layers should render in dark mode,
-    /// accounting for the System option following the device color scheme.
     private var isDark: Bool {
         switch prefsManager.userPrefs.appTheme {
         case .system: return systemColorScheme == .dark
@@ -316,23 +313,10 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
         }
 
-        /// Enforces the complete layer draw order after every style load or style swap.
-        ///
-        /// Desired stack, bottom → top:
-        ///   Sector polygons (fill / outline / basic-outline)  — installed first, never moved
-        ///   Airport icons
-        ///   Aircraft icons  (airborne + ground)
-        ///   Aircraft labels (airborne + ground)
-        ///   Airport labels
-        ///   Sector dot indicator
-        ///   Sector pill labels  ← topmost
-        ///
-        /// Layers are moved by remove-then-add-at-nil-position (appends to top of stack).
-        /// We move them in bottom-to-top order so the final position is correct.
+        /// Layer order bottom→top: sector fill/outline → airports → aircraft → airport labels → sector dot → sector pill.
         func ensureLabelsOnTop() {
             guard let mapView else { return }
 
-            // Ordered list of layer IDs that need to sit above everything else, bottom first.
             let orderedIds: [String] = [
                 AirportStyleManager.airportLayerId,
                 RadarStyleManager.pilotGroundIconLayerId,
@@ -483,7 +467,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             lastRoutePilotsVersion = pilotsVersion
 
             if let pilot {
-                // A pilot is selected — draw pilot-to-airport lines
                 routeStyleManager.updateRoutes(
                     on: mapView,
                     pilot: pilot,
@@ -492,7 +475,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             } else if let icao = selectedAirportICAO,
                       let traffic = airportTraffic,
                       let airportCoord = airportCoordinates[icao] {
-                // An airport is selected — draw colour-coded airport-to-pilot lines
                 routeStyleManager.updateAirportRoutes(
                     on: mapView,
                     airportCoordinate: airportCoord,
@@ -500,7 +482,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
                     airborneArrivals: traffic.airborneArrivals
                 )
             } else {
-                // Nothing selected — clear all lines
                 routeStyleManager.updateRoutes(
                     on: mapView,
                     pilot: nil,
@@ -597,7 +578,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
             mapView.mapboxMap.addInteraction(pilotGroundLabelInteraction)
 
-            // Airport circle tap
             let airportCircleInteraction = TapInteraction(
                 .layer(AirportStyleManager.airportLayerId)
             ) { [weak self] feature, context in
@@ -611,7 +591,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
             mapView.mapboxMap.addInteraction(airportCircleInteraction)
 
-            // Airport label tap
             let airportLabelInteraction = TapInteraction(
                 .layer(AirportStyleManager.airportLabelLayerId)
             ) { [weak self] feature, context in
@@ -625,7 +604,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
             mapView.mapboxMap.addInteraction(airportLabelInteraction)
 
-            // Sector label tap
             let sectorLabelInteraction = TapInteraction(
                 .layer(SectorStyleManager.sectorLabelLayerId)
             ) { [weak self] feature, context in
@@ -639,7 +617,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
             mapView.mapboxMap.addInteraction(sectorLabelInteraction)
 
-            // Sector dot tap — same behaviour as tapping the pill label
             let sectorDotInteraction = TapInteraction(
                 .layer(SectorStyleManager.sectorDotLayerId)
             ) { [weak self] feature, context in
@@ -653,7 +630,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
             mapView.mapboxMap.addInteraction(sectorDotInteraction)
 
-            // Sector long-press — opens sector details even when no label is visible
             let longPress = UILongPressGestureRecognizer(
                 target: self,
                 action: #selector(Coordinator.handleSectorLongPress(_:))
@@ -688,7 +664,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
                         let jsonValue = feature.queriedFeature.feature.properties?["id"] ?? nil,
                         case let .string(sectorId) = jsonValue
                     else { return }
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    HapticManager.impact(.medium, prefsEnabled: self.viewModel.hapticFeedbackEnabled)
                     DispatchQueue.main.async { self.viewModel.selectSector(id: sectorId) }
                 case .failure:
                     break

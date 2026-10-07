@@ -66,6 +66,8 @@ final class RadarViewModel: ObservableObject {
         prefsManager?.getRefreshIntervalInSeconds() ?? 15
     }
     
+    var hapticFeedbackEnabled: Bool { prefsManager?.userPrefs.hapticFeedbackEnabled ?? true }
+
     func setPreferencesManager(_ manager: PreferencesManager) {
         self.prefsManager = manager
         self.showInactiveSectors = manager.userPrefs.showInactiveSectors
@@ -80,8 +82,6 @@ final class RadarViewModel: ObservableObject {
         self.vatglassesService.customRepoSlug = slug
     }
     
-    /// Called once when the app first becomes active and the data has never been loaded.
-    /// After that, use `handleForeground()` / `handleBackground()` for scene-phase transitions.
     func startAutoRefresh() {
         hasStarted = true
         let hasData = !pilots.isEmpty || !sectors.isEmpty
@@ -96,18 +96,13 @@ final class RadarViewModel: ObservableObject {
         scheduleTimers()
     }
 
-    /// Call when the app moves to the foreground or the user returns to the radar tab.
-    /// Immediately fetches fresh data so the display is never waiting for the next timer tick.
-    /// Guard: no-op until `startAutoRefresh()` has been called so that the scenePhase `.active`
-    /// event that fires on cold launch cannot set `vatsimFetchDone = true` while `sectorFetchDone`
-    /// is still false, which would permanently block `dismissLoadingIfReady()`.
+    /// No-op until `startAutoRefresh()` has run; prevents cold-launch scenePhase from blocking `dismissLoadingIfReady()`.
     func handleForeground() {
         guard hasStarted else { return }
         loadVatsimData()
         scheduleTimers()
     }
 
-    /// Call when the app moves to the background. Stops the polling timers to save resources.
     func handleBackground() {
         cancelTimers()
     }
@@ -117,7 +112,6 @@ final class RadarViewModel: ObservableObject {
         scheduleTimers()
     }
 
-    /// Stops the polling timers without triggering a fetch.
     func stopAutoRefresh() {
         cancelTimers()
     }
@@ -241,7 +235,6 @@ final class RadarViewModel: ObservableObject {
     }
     
     private func updateSectorActiveStatus() {
-        // Snapshot immutable inputs so the background thread has no data races.
         let currentPilots = pilots
         let currentControllers = controllers
         let currentDebugControllers = debugControllers
@@ -417,27 +410,19 @@ final class RadarViewModel: ObservableObject {
         prefsManager?.updateMergeSectors(mergeSectors)
     }
 
-    /// The upper bound for the altitude slider, capped at FL600 (60 000 ft).
-    var maxSectorAltitudeFt: Double { 60_000 }
+    var maxSectorAltitudeFt: Double { 60_000 } // FL600
 
-    /// Pilots to render on the map — empty when the pilots layer is toggled off.
     var pilotsToDisplay: [Pilot] {
         showPilotsLayer ? pilots : []
     }
 
-    /// Sectors filtered by the inactive-sectors toggle and, when `altitudeFilterEnabled`, the selected altitude.
-    /// A sector is included when `selectedAltitudeFt` falls within its [min*100, max*100] range.
-    /// Sectors with no altitude properties are always shown.
-    /// When `showSectors` is off, only inactive sector outlines are returned (so boundaries remain visible).
+    /// Altitude filter: included when `selectedAltitudeFt` is within [min*100, max*100]; no-props sectors always shown.
     var sectorsToDisplay: [VatglassesSector] {
         if !showSectorsLayer {
-            // Active sectors hidden — only show inactive outlines if that toggle is also on.
             return showInactiveSectors ? sectors.filter { !$0.isActive } : []
         }
         if mergeSectors {
-            // In merge mode, merged sectors are always active-only (the union only runs on
-            // active sectors). Inactive sectors are shown unmerged alongside if the toggle
-            // is on — append them from the regular (unmerged) list.
+            // Merge is active-only; inactive sectors appended unmerged when that toggle is on.
             if showInactiveSectors {
                 let inactive = sectors.filter { !$0.isActive }
                 return mergedSectorsToDisplay + inactive
@@ -456,12 +441,8 @@ final class RadarViewModel: ObservableObject {
         }
     }
 
-    /// Returns merged sectors (one dissolved polygon per active controller via GEOSwift union).
-    /// Only active sectors with a matched controller are included — inactive sectors are hidden.
-    /// The result is cached and only recomputed when the active ownership assignment changes.
+    /// Dissolved polygon per active controller (GEOSwift union); cached until ownership changes.
     var mergedSectorsToDisplay: [VatglassesSector] {
-        // Signature over active sectors + their controller assignments.
-        // Changes only when controllers log on/off or ownership transfers.
         let activeSectors = sectors.filter { $0.isActive }
         let signature = activeSectors.reduce(into: 0) { hash, sector in
             hash ^= sector.id.hashValue
@@ -474,9 +455,6 @@ final class RadarViewModel: ObservableObject {
         return cachedMergedSectors
     }
 
-    /// Airports filtered by the show-all-airports and show-airport-layer toggles.
-    /// When `showAirportLayer` is off, no airports are displayed at all.
-    /// When `showAirports` is off, only airports with an active controller or in a flight plan are shown.
     var airportsToDisplay: [VatglassesAirport] {
         guard showAirportLayer else { return [] }
         if showAirports {
@@ -487,7 +465,6 @@ final class RadarViewModel: ObservableObject {
         }
     }
     
-    /// Airport ICAOs that should render as filled circles: those with an active controller or in a flight plan.
     var filledAirportICAOs: Set<String> {
         var filled = Set<String>()
         for airport in airports where airport.isActive || activeFlightPlanICAOs.contains(airport.icao) {
@@ -496,7 +473,6 @@ final class RadarViewModel: ObservableObject {
         return filled
     }
 
-    /// All known airport coordinates keyed by ICAO, used for route line rendering.
     var airportCoordinates: [String: CLLocationCoordinate2D] {
         Dictionary(
             airports.map { ($0.icao, CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)) },

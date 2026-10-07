@@ -8,7 +8,6 @@ import Foundation
 // MARK: - Airport Traffic and Friend CID Helpers
 extension RadarViewModel {
 
-    /// Traffic data for the currently selected airport, derived from live pilots and prefiles.
     var selectedAirportTraffic: AirportTraffic? {
         guard let icao = selectedAirportICAO else { return nil }
         let upperICAO = icao.uppercased()
@@ -50,14 +49,10 @@ extension RadarViewModel {
         )
     }
 
-    /// Returns the set of airport ICAOs where any online friend CID is controlling.
-    /// Checks all controllers whose callsign prefix matches the airport ICAO, not just
-    /// the single `activeController` stored on the airport (which is only the highest-priority one).
+    /// ICAOs where a friend CID is controlling. Checks all prefixes (full ICAO + 3-char variant).
     func friendControlledAirportICAOs(friendCIDs: Set<Int>) -> Set<String> {
         guard !friendCIDs.isEmpty else { return [] }
 
-        // Build a lookup: callsign prefix → set of CIDs with that prefix.
-        // Covers both full ICAO (e.g. "EGKK") and 3-char variant (e.g. "GKK") prefixes.
         var prefixToCIDs: [String: Set<Int>] = [:]
         for ctrl in controllers {
             let upper = ctrl.callsign.uppercased()
@@ -71,7 +66,6 @@ extension RadarViewModel {
         for airport in airports {
             guard airport.isActive else { continue }
             let icao = airport.icao.uppercased()
-            // Check both the full ICAO prefix and the 3-char shortened variant.
             let prefixes: [String] = icao.count == 4 ? [icao, String(icao.dropFirst())] : [icao]
             for prefix in prefixes {
                 if let cids = prefixToCIDs[prefix], !cids.isDisjoint(with: friendCIDs) {
@@ -87,17 +81,11 @@ extension RadarViewModel {
 // MARK: - AirportTraffic
 
 struct AirportTraffic {
-    /// Airborne pilots with this airport as departure (groundspeed >= 40 kt)
-    let airborneDepartures: [Pilot]
-    /// Airborne pilots with this airport as arrival (groundspeed >= 40 kt)
+    let airborneDepartures: [Pilot]  // groundspeed >= 40 kt
     let airborneArrivals: [Pilot]
-    /// On-ground pilots with this airport as departure (groundspeed < 40 kt)
-    let groundDepartures: [Pilot]
-    /// On-ground pilots with this airport as arrival (groundspeed < 40 kt)
+    let groundDepartures: [Pilot]    // groundspeed < 40 kt
     let groundArrivals: [Pilot]
-    /// Prefiled plans departing from this airport (no live position)
     let prefileDepartures: [Prefiles]
-    /// Prefiled plans arriving at this airport (no live position)
     let prefileArrivals: [Prefiles]
 
     var totalDepartures: Int {
@@ -109,7 +97,6 @@ struct AirportTraffic {
     var totalOnGround: Int {
         groundDepartures.count + groundArrivals.count
     }
-    /// All airborne pilots (departures + arrivals) — used to draw airport-to-pilot lines.
     var allAirbornePilots: [Pilot] {
         airborneDepartures + airborneArrivals
     }

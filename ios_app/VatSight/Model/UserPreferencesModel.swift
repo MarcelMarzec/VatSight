@@ -2,18 +2,14 @@
 //  UserPreferencesModel.swift
 //  VatSight
 //
-//  Created by Marcel Marzec on 14/05/2026.
-//
 
 import Foundation
 import SwiftUI
 import SwiftData
 import CoreLocation
 
-/// Available Mapbox map styles.
 enum MapStyle: String, CaseIterable, Codable {
-    /// Follows the device Dark/Light Mode setting automatically (Night for dark OS, Day for light OS).
-    case system = "system"
+    case system = "system" // follows OS dark/light
     case night  = "mapbox://styles/marcelm005/cmtcmn6pd001c01s103yaa658"
     case dark   = "mapbox://styles/marcelm005/cmtbcipzx000n01qs9hurffuj"
     case day    = "mapbox://styles/marcelm005/cmsqqh36z015101pd5ugz3r6a"
@@ -27,8 +23,7 @@ enum MapStyle: String, CaseIterable, Codable {
         }
     }
 
-    /// The Mapbox style URL string for the concrete style,
-    /// or nil for system (which must be resolved at the call site with `resolvedURLString(isDark:)`).
+    /// nil for system — resolve with `resolvedURLString(isDark:)` at the call site.
     var concreteURLString: String? {
         switch self {
         case .system: return nil
@@ -36,7 +31,6 @@ enum MapStyle: String, CaseIterable, Codable {
         }
     }
 
-    /// Returns the URL string for the resolved style, picking Night or Day when System is selected.
     func resolvedURLString(isDark: Bool) -> String? {
         switch self {
         case .system: return isDark ? MapStyle.night.rawValue : MapStyle.day.rawValue
@@ -44,7 +38,6 @@ enum MapStyle: String, CaseIterable, Codable {
         }
     }
 
-    /// The preferred app theme to pair with this map style.
     var preferredAppTheme: AppTheme {
         switch self {
         case .system: return .system
@@ -55,7 +48,6 @@ enum MapStyle: String, CaseIterable, Codable {
     }
 }
 
-/// The app-level color scheme preference.
 enum AppTheme: String, CaseIterable, Codable {
     case system = "system"
     case dark   = "dark"
@@ -69,8 +61,7 @@ enum AppTheme: String, CaseIterable, Codable {
         }
     }
 
-    /// The SwiftUI ColorScheme override for this theme.
-    /// Returns `nil` for `.system` so SwiftUI follows the OS preference.
+    /// nil for `.system` — SwiftUI follows OS.
     var colorScheme: ColorScheme? {
         switch self {
         case .system: return nil
@@ -97,21 +88,17 @@ final class UserPreferencesModel {
     var friendCIDs: [Int] = []
     var hasCompletedOnboarding: Bool = false
     var developerModeEnabled: Bool = false
-    /// Custom GitHub repo slug (e.g. "owner/repo") for Vatglasses data. Empty string = use default.
-    var vatglassesCustomRepoSlug: String = ""
-    /// Raw value of `MapStyle` — stored as String for SwiftData compatibility.
-    var mapStyleRaw: String = MapStyle.system.rawValue
-    /// Raw value of `AppTheme` — stored as String for SwiftData compatibility.
-    var appThemeRaw: String = AppTheme.system.rawValue
+    var vatglassesCustomRepoSlug: String = "" // custom "owner/repo"; empty = default
+    var mapStyleRaw: String = MapStyle.system.rawValue   // String for SwiftData
+    var appThemeRaw: String = AppTheme.system.rawValue   // String for SwiftData
     var planeIconMultiplier: Double = 1.0
     var airportIconMultiplier: Double = 1.0
     var searchSelectedFacilities: [Int] = []
-    /// ID 0 (Observer) excluded by default.
-    var searchExcludedFacilities: [Int] = [0]
+    var searchExcludedFacilities: [Int] = [0] // ID 0 (Observer) excluded by default
     var searchCategoryRaw: String = "ATC"
     var searchShowInactiveAirports: Bool = false
-    /// Hidden after 3 uses.
-    var swipeToAddFriendHintCount: Int = 0
+    var swipeToAddFriendHintCount: Int = 0 // hidden after 3 uses
+    var hapticFeedbackEnabled: Bool = true
 
     var mapStyle: MapStyle {
         get { MapStyle(rawValue: mapStyleRaw) ?? .system }

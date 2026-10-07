@@ -37,7 +37,7 @@ struct FriendsView: View {
                             prefsManager.updateCID(0)
                         }
                         focusedField = nil
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        HapticManager.notification(.success, prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                     }
                     .disabled(yourCIDInputText == savedCIDText)
                 }
@@ -57,7 +57,7 @@ struct FriendsView: View {
                         if let cid = Int(newFriendCIDText), cid > 0 {
                             prefsManager.addFriend(cid)
                             newFriendCIDText = ""
-                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                            HapticManager.notification(.success, prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                         }
                         focusedField = nil
                     }
@@ -79,7 +79,7 @@ struct FriendsView: View {
                         .contentShape(Rectangle())
                         .onTapGesture {
                             guard isOnline else { return }
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
                             radarViewModel.pendingNavigateToCID = cid
                         }
                 }
