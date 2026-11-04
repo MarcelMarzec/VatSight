@@ -8,7 +8,7 @@
                 <a href="/phplist/?p=subscribe&amp;id=1">Newsletter</a>
                 <a href="/privacy_policy">Privacy Policy</a>
                 <a href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">GitHub</a>
-                <a href="https://marcelmarzec.com/contact-me" target="_blank" rel="noopener">Contact</a>
+                <a href="https://marcelmarzec.com/contact" target="_blank" rel="noopener">Contact</a>
             </div>
         </div>
         <p class="footer-disclaimer">VatSight is an independent project and is not affiliated with or endorsed by VATSIM. Flight data is sourced from the VATSIM network; airspace data from VATGlasses.</p>

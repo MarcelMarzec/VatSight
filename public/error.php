@@ -25,7 +25,7 @@ $messages = [
     <meta name="robots" content="noindex, follow" />
     <meta name="theme-color" content="#090909" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" type="text/css" href="/style/style.css?v=20261007"/>
+    <link rel="stylesheet" type="text/css" href="/style/style.css?v=20261104"/>
     <link rel="icon" type="image/png" href="/images/favicon/favicon-96x96.png?v=20260509" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/images/favicon/favicon.svg?v=20260509" />
     <link rel="shortcut icon" href="/images/favicon/favicon.ico?v=20260509" />
@@ -50,7 +50,7 @@ $messages = [
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
                         Back to home
                     </a>
-                    <a class="btn-secondary" href="/#newsletter">Join the open beta</a>
+                    <a class="btn-secondary" href="<?= APP_STORE_URL ?>" target="_blank" rel="noopener">Download on the App Store</a>
                 </div>
                 <ul class="error-links">
                     <li><a href="/#features">Features</a></li>

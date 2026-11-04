@@ -19,11 +19,12 @@
 	-->
 
 	<!--
-		Optional ads are off by default. When a user opts in and allows App Tracking
-		Transparency, the Google Mobile Ads SDK may use the IDFA for tracking.
+		Must stay false while NSPrivacyTrackingDomains is empty (ITMS-91064). IDFA access
+		by the Google Mobile Ads SDK is still gated by the App Tracking Transparency prompt.
+		Listing Google ad domains here would block all ads for users who decline ATT.
 	-->
 	<key>NSPrivacyTracking</key>
-	<true/>
+	<false/>
 
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>

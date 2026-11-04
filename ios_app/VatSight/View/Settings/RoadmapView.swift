@@ -9,8 +9,12 @@ import SwiftUI
 import SafariServices
 
 struct RoadmapView: View {
-    @State private var showTestFlightSignup = false
+    @State private var showNewsletterSignup = false
     @ScaledMetric private var iconSize: CGFloat = 24
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
 
     var body: some View {
         List {
@@ -19,10 +23,10 @@ struct RoadmapView: View {
                     HStack {
                         Image(systemName: "checkmark.seal.fill")
                             .foregroundColor(.green)
-                        Text("V0.5 Public Beta – TestFlight")
+                        Text("VatSight \(appVersion)")
                             .font(.headline)
                     }
-                    Text("You're using the current beta release. Thanks for helping test VatSight before the full launch!")
+                    Text("Thanks for using VatSight! New features are on the way, shaped by feedback from the VATSIM community.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -32,12 +36,6 @@ struct RoadmapView: View {
             }
 
             Section {
-                RoadmapFeatureRow(
-                    icon: "star.fill",
-                    title: "V1.0 - Full Release",
-                    description: "The first full public release of VatSight on the App Store."
-                )
-                
                 RoadmapFeatureRow(
                     icon: "wind",
                     title: "Metar Decoder / Apt Weather",
@@ -75,22 +73,22 @@ struct RoadmapView: View {
 
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Join the TestFlight Beta")
+                    Text("Help Test New Features")
                         .font(.headline)
-                    Text("Get early access to new features before they're publicly released. Beta testers help shape the future of VatSight — sign up to join the program.")
+                    Text("Join the newsletter for release news and a chance to help test new features before they're released.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 .padding(.vertical, 4)
 
                 Button {
-                    showTestFlightSignup = true
+                    showNewsletterSignup = true
                 } label: {
                     HStack {
                         Image(systemName: "airplane.departure")
                             .frame(width: iconSize)
                             .foregroundColor(.primary)
-                        Text("Sign Up for TestFlight Beta")
+                        Text("Join the Newsletter")
                         Spacer()
                         Image(systemName: "chevron.right")
                             .imageScale(.small)
@@ -98,14 +96,14 @@ struct RoadmapView: View {
                     }
                     .foregroundColor(.primary)
                 }
-                .sheet(isPresented: $showTestFlightSignup) {
+                .sheet(isPresented: $showNewsletterSignup) {
                     if let url = URL(string: "https://vatsight.com/phplist/?p=subscribe&id=1") {
                         SafariView(url: url)
                             .ignoresSafeArea()
                     }
                 }
             } header: {
-                Text("Beta Program")
+                Text("Stay Updated")
             }
         }
         .navigationTitle("Roadmap")

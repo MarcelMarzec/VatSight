@@ -1,11 +1,7 @@
 name: Deploy website to server
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'public/**'
+  workflow_dispatch:
 
 permissions:
   contents: read

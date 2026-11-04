@@ -1,33 +1,33 @@
-<?php header("Cache-Control: no-cache"); header("Content-Security-Policy: default-src 'self'; script-src 'none'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"); ?>
+<?php require_once __DIR__ . '/partials/config.php'; header("Cache-Control: no-cache"); header("Content-Security-Policy: default-src 'self'; script-src 'none'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"); ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <title>VatSight — VATSIM Tracker &amp; Live Map App for iPhone</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="keywords" content="VatSight, VATSIM tracker iPhone, VATSIM app iOS, VATSIM map, VATSIM radar, VATSIM live map, VATGlasses, VATGlasses sectors, VATSIM ATC, virtual ATC, flight simulator" />
-    <meta name="description" content="VatSight is a free VATSIM tracker for iPhone: a live map of VATSIM traffic, VATGlasses ATC sectors and airports. Now in open beta on TestFlight." />
+    <meta name="keywords" content="VatSight, VATSIM tracker iPhone, VATSIM app iOS, VATSIM app iPad, VATSIM map, VATSIM radar, VATSIM live map, VATGlasses, VATGlasses sectors, VATSIM ATC, virtual ATC, flight simulator" />
+    <meta name="description" content="VatSight is a free VATSIM tracker for iPhone and iPad: a live map of VATSIM traffic, VATGlasses ATC sectors and airports. Free on the App Store." />
     <meta name="author" content="Marcel Marzec" />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#090909" />
-    <meta property="og:description" content="Free VATSIM tracker and live map for iPhone, with VATGlasses ATC sectors and airport activity. Now in open beta on TestFlight." />
+    <meta property="og:description" content="Free VATSIM tracker and live map for iPhone and iPad, with VATGlasses ATC sectors and airport activity. Available now on the App Store." />
     <meta property="og:site_name" content="VatSight" />
     <meta property="og:title" content="VatSight — VATSIM Tracker &amp; Live Map App for iPhone" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="en_GB" />
     <meta property="og:url" content="https://vatsight.com/" />
-    <meta property="og:image" content="https://vatsight.com/images/og-image.jpg" />
+    <meta property="og:image" content="https://vatsight.com/images/og-image.jpg?v=20261104" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="VatSight: the VATSIM network, live on your iPhone. Live traffic and VATGlasses ATC sectors on a map." />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="VatSight — VATSIM Tracker &amp; Live Map App for iPhone" />
-    <meta name="twitter:description" content="Free VATSIM tracker and live map for iPhone, with VATGlasses ATC sectors and airport activity. Now in open beta on TestFlight." />
-    <meta name="twitter:image" content="https://vatsight.com/images/og-image.jpg" />
+    <meta name="twitter:description" content="Free VATSIM tracker and live map for iPhone and iPad, with VATGlasses ATC sectors and airport activity. Available now on the App Store." />
+    <meta name="twitter:image" content="https://vatsight.com/images/og-image.jpg?v=20261104" />
     <meta name="twitter:image:alt" content="VatSight: the VATSIM network, live on your iPhone. Live traffic and VATGlasses ATC sectors on a map." />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" type="text/css" href="style/style.css?v=20261007"/>
+    <link rel="stylesheet" type="text/css" href="style/style.css?v=20261104"/>
     <link rel="canonical" href="https://vatsight.com/" />
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
     <link rel="icon" type="image/png" href="/images/favicon/favicon-96x96.png?v=20260509" sizes="96x96" />
@@ -49,7 +49,7 @@
                     "VatSight.com",
                     "VatSight VATSIM tracker"
                 ],
-                "description": "VatSight is a free VATSIM tracker for iPhone: a live map of VATSIM traffic, VATGlasses ATC sectors and airports. Now in open beta on TestFlight.",
+                "description": "VatSight is a free VATSIM tracker for iPhone and iPad: a live map of VATSIM traffic, VATGlasses ATC sectors and airports. Free on the App Store.",
                 "inLanguage": "en-GB",
                 "publisher": {
                     "@id": "https://vatsight.com/#organization"
@@ -94,8 +94,10 @@
                 "@id": "https://vatsight.com/#app",
                 "name": "VatSight",
                 "url": "https://vatsight.com/",
-                "description": "VatSight is a free, open-source VATSIM tracker and live map app for iPhone, now in open beta on TestFlight. Live traffic, VATGlasses ATC sectors and airport activity on one clean map.",
-                "image": "https://vatsight.com/images/og-image.jpg",
+                "description": "VatSight is a free, open-source VATSIM tracker and live map app for iPhone and iPad, available on the App Store. Live traffic, VATGlasses ATC sectors and airport activity on one clean map.",
+                "downloadUrl": "<?= APP_STORE_URL ?>",
+                "installUrl": "<?= APP_STORE_URL ?>",
+                "image": "https://vatsight.com/images/og-image.jpg?v=20261104",
                 "screenshot": [
                     "https://vatsight.com/images/screenshots/uk-overview.webp",
                     "https://vatsight.com/images/screenshots/merged-sectors.webp",
@@ -104,9 +106,9 @@
                     "https://vatsight.com/images/screenshots/track-overlay.webp",
                     "https://vatsight.com/images/screenshots/light-mode.webp"
                 ],
-                "softwareVersion": "0.5.0",
+                "softwareVersion": "1.0",
                 "applicationCategory": "UtilitiesApplication",
-                "operatingSystem": "iOS 26 or later",
+                "operatingSystem": "iOS 26 or later, iPadOS 26 or later",
                 "isAccessibleForFree": true,
                 "author": {
                     "@id": "https://vatsight.com/#marcel"
@@ -144,7 +146,7 @@
                 "name": "Is there a VATSIM tracker app for iPhone?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes. VatSight is a free VATSIM app for iOS that works as a live VATSIM tracker and map on your iPhone. Follow any pilot by callsign or CID, see which ATC positions are online with their VATGlasses sectors, and check activity at any airport. It's in open beta on TestFlight now."
+                    "text": "Yes. VatSight is a free VATSIM app for iOS that works as a live VATSIM tracker and map on your iPhone. Follow any pilot by callsign or CID, see which ATC positions are online with their VATGlasses sectors, and check activity at any airport. Download it free on the App Store."
                 }
             },
             {
@@ -152,7 +154,7 @@
                 "name": "Is VatSight free to use?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes. VatSight is completely free, with no account required. Rewarded ads are entirely optional and off by default."
+                    "text": "Yes. VatSight is completely free, with no account required, and every feature is included for everyone. If you want to support development, you can turn on optional ads in the app. They are off by default and never lock or unlock any feature."
                 }
             },
             {
@@ -181,18 +183,18 @@
             },
             {
                 "@type": "Question",
-                "name": "When will VatSight be available on the App Store?",
+                "name": "Where can I download VatSight?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "VatSight is now in open beta on TestFlight (v0.5), with a free App Store launch to follow once testing wraps up. Join the newsletter to get your TestFlight invite and hear about the App Store launch."
+                    "text": "VatSight is available free on the App Store for iPhone and iPad running iOS 26 or iPadOS 26 or later."
                 }
             },
             {
                 "@type": "Question",
-                "name": "How do I join the VatSight open beta?",
+                "name": "Can I try new VatSight features early?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Sign up to the VatSight newsletter at vatsight.com and confirm your email address. Your welcome email includes your TestFlight invite link straight away. Install Apple's free TestFlight app on your iPhone, open the link, and you're in."
+                    "text": "Yes. Sign up to the VatSight newsletter at vatsight.com and confirm your email address. Your welcome email includes an optional invite to the TestFlight beta, where you can try upcoming versions before they reach the App Store."
                 }
             }
         ]
@@ -210,17 +212,11 @@
         <section class="hero" id="top">
             <div class="hero-inner">
                 <div class="hero-copy">
-                    <a class="hero-kicker" href="#newsletter">
-                        <span class="hero-kicker-dot"></span>
-                        Open beta now live &mdash; join the newsletter for your TestFlight invite
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                    </a>
                     <h1>The VATSIM network,<br>live on your iPhone.</h1>
-                    <p class="hero-sub">VatSight is a free, open-source VATSIM tracker and radar map for iPhone — live traffic, VATGlasses ATC sectors, and airport activity, all on one clean map.</p>
+                    <p class="hero-sub">VatSight is a free, open-source VATSIM tracker and radar map for iPhone and iPad — live traffic, VATGlasses ATC sectors, and airport activity, all on one clean map.</p>
                     <div class="hero-actions">
-                        <a class="btn-primary" href="#newsletter">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
-                            Join the open beta
+                        <a class="app-store-badge" href="<?= APP_STORE_URL ?>" target="_blank" rel="noopener">
+                            <img src="images/app-store-badge-black.svg" alt="Download on the App Store" width="150" height="50">
                         </a>
                         <a class="btn-secondary" href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.48v-1.7c-2.78.62-3.37-1.36-3.37-1.36-.46-1.2-1.11-1.52-1.11-1.52-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.36 1.11 2.93.85.09-.67.35-1.11.64-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.9-1.33 2.74-1.05 2.74-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9v2.82c0 .27.18.58.69.48A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
@@ -228,8 +224,8 @@
                         </a>
                     </div>
                     <div class="hero-meta">
-                        <span>iPhone</span><span class="sep">·</span>
-                        <span>Open beta on TestFlight</span><span class="sep">·</span>
+                        <span>iPhone &amp; iPad</span><span class="sep">·</span>
+                        <span>Free on the App Store</span><span class="sep">·</span>
                         <span>Free to use</span><span class="sep">·</span>
                         <span>No account required</span>
                     </div>
@@ -480,28 +476,38 @@
                                 <p>Polished the UI, fixed bugs, and refined the details ready for VatSight's first public test.</p>
                             </div>
                         </li>
+                        <li class="roadmap-item is-done">
+                            <span class="roadmap-marker"></span>
+                            <div class="roadmap-content">
+                                <span class="roadmap-date">Oct 2026 · v0.5.0</span>
+                                <h4>Open beta testing</h4>
+                                <p>A public TestFlight beta, alongside a big performance update and new settings.</p>
+                                <details class="roadmap-details">
+                                    <summary>What's included<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+                                    <ul>
+                                        <li>Public TestFlight beta</li>
+                                        <li>Big performance update</li>
+                                        <li>Friends list for tracking other VATSIM users</li>
+                                        <li>In-app roadmap and contact form</li>
+                                        <li>Haptics and accessibility settings</li>
+                                    </ul>
+                                </details>
+                            </div>
+                        </li>
                         <li class="roadmap-item is-current">
                             <span class="roadmap-marker"></span>
                             <div class="roadmap-content">
-                                <span class="roadmap-date">Now · v0.5.0</span>
-                                <h4>Open beta testing</h4>
-                                <p>The public TestFlight beta is open. <a class="link-text" href="#newsletter">Join the newsletter</a> to get your invite, try VatSight and help shape it before launch.</p>
-                            </div>
-                        </li>
-                        <li class="roadmap-item">
-                            <span class="roadmap-marker"></span>
-                            <div class="roadmap-content">
-                                <span class="roadmap-date">PLANNED · v0.6.0</span>
-                                <h4>Act on your feedback</h4>
-                                <p>Polish and refine features based on user input and community suggestions.</p>
-                            </div>
-                        </li>
-                        <li class="roadmap-item">
-                            <span class="roadmap-marker"></span>
-                            <div class="roadmap-content">
-                                <span class="roadmap-date">Planned · v1.0.0</span>
+                                <span class="roadmap-date">Now · v1.0.0</span>
                                 <h4>Public launch</h4>
-                                <p>VatSight releases on the App Store — free to download, with every current feature included.</p>
+                                <p>VatSight is out on the <a class="link-text" href="<?= APP_STORE_URL ?>" target="_blank" rel="noopener">App Store</a> — free to download, with every feature included for everyone.</p>
+                                <details class="roadmap-details">
+                                    <summary>What's included<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+                                    <ul>
+                                        <li>Free on the App Store for iPhone and iPad</li>
+                                        <li>Optional ads to support development: off by default, and they never lock or unlock a feature</li>
+                                        <li>Support VatSight page with a link to GitHub Sponsors</li>
+                                    </ul>
+                                </details>
                             </div>
                         </li>
                         <li class="roadmap-item">
@@ -574,13 +580,13 @@
                         <summary>Is there a VATSIM tracker app for iPhone?
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                         </summary>
-                        <p>Yes. VatSight is a free VATSIM app for iOS that works as a live VATSIM tracker and map on your iPhone. Follow any pilot by callsign or CID, see which ATC positions are online with their VATGlasses sectors, and check activity at any airport. It's in <a class="link-text" href="#newsletter">open beta on TestFlight</a> now.</p>
+                        <p>Yes. VatSight is a free VATSIM app for iOS that works as a live VATSIM tracker and map on your iPhone. Follow any pilot by callsign or CID, see which ATC positions are online with their VATGlasses sectors, and check activity at any airport. <a class="link-text" href="<?= APP_STORE_URL ?>" target="_blank" rel="noopener">Download it free on the App Store</a>.</p>
                     </details>
                     <details class="faq-item">
                         <summary>Is VatSight free to use?
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                         </summary>
-                        <p>Yes. VatSight is completely free, with no account required. Rewarded ads are entirely optional and off by default.</p>
+                        <p>Yes. VatSight is completely free, with no account required, and every feature is included for everyone. If you want to support development, you can turn on optional ads in the app. They are off by default and never lock or unlock any feature.</p>
                     </details>
                     <details class="faq-item">
                         <summary>What is VATGlasses and how does VatSight use it?
@@ -601,16 +607,16 @@
                         <p>No. VatSight is an independent, open-source project. It is not affiliated with or endorsed by VATSIM or VATGlasses, though it relies on their public data.</p>
                     </details>
                     <details class="faq-item">
-                        <summary>When will VatSight be available on the App Store?
+                        <summary>Where can I download VatSight?
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                         </summary>
-                        <p>VatSight is now in open beta on TestFlight (v0.5), with a free App Store launch to follow once testing wraps up. <a class="link-text" href="#newsletter">Join the newsletter</a> to get your TestFlight invite and hear about the App Store launch.</p>
+                        <p>VatSight is available free on the <a class="link-text" href="<?= APP_STORE_URL ?>" target="_blank" rel="noopener">App Store</a> for iPhone and iPad running iOS 26 or iPadOS 26 or later.</p>
                     </details>
                     <details class="faq-item">
-                        <summary>How do I join the VatSight open beta?
+                        <summary>Can I try new VatSight features early?
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                         </summary>
-                        <p><a class="link-text" href="#newsletter">Sign up to the newsletter</a> and confirm your email address. Your welcome email includes your TestFlight invite link straight away. Install Apple's free TestFlight app on your iPhone, open the link, and you're in.</p>
+                        <p>Yes. <a class="link-text" href="#newsletter">Sign up to the newsletter</a> and confirm your email address. Your welcome email includes an optional invite to the TestFlight beta, where you can try upcoming versions before they reach the App Store.</p>
                     </details>
                 </div>
             </div>
@@ -618,8 +624,8 @@
 
         <section class="final-cta" id="newsletter">
             <div class="section-inner">
-                <h2>Join the VatSight open beta</h2>
-                <p>VatSight 0.5 is now in open beta on TestFlight. Sign up to the newsletter, confirm your email, and your TestFlight invite arrives in your welcome email straight away. After that, we'll only email you about the App Store launch and major updates. A few emails a year, never spam.</p>
+                <h2>Stay in the loop</h2>
+                <p>Get the VatSight newsletter for release news and major updates. A few emails a year, never spam. Want to try new features early? Your welcome email includes an optional invite to the TestFlight beta for upcoming versions.</p>
                 <!-- Newsletter sign-up: posts straight to phpList (public/phplist). Keep list[2] and id=1 in sync with the phpList list and subscribe page IDs. -->
                 <form class="signup-form" action="/phplist/?p=subscribe&amp;id=1" method="post">
                     <input type="hidden" name="list[2]" value="signup">
@@ -630,16 +636,19 @@
                     <div class="signup-row">
                         <label for="signup-email" class="sr-only">Email address</label>
                         <input id="signup-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" maxlength="254" required>
-                        <button type="submit" name="subscribe" value="Subscribe">Get beta access</button>
+                        <button type="submit" name="subscribe" value="Subscribe">Subscribe</button>
                     </div>
-                    <p class="signup-legal">We'll email you a link to confirm. Once you do, your TestFlight invite is in the welcome email. Unsubscribe any time with one click. See our <a href="/privacy_policy#newsletter">Privacy Policy</a>.</p>
+                    <p class="signup-legal">We'll email you a link to confirm your subscription. Unsubscribe any time with one click. See our <a href="/privacy_policy#newsletter">Privacy Policy</a>.</p>
                 </form>
                 <div class="hero-actions">
+                    <a class="app-store-badge" href="<?= APP_STORE_URL ?>" target="_blank" rel="noopener">
+                        <img src="images/app-store-badge-black.svg" alt="Download on the App Store" width="150" height="50">
+                    </a>
                     <a class="btn-secondary" href="https://github.com/MarcelMarzec/VatSight" target="_blank" rel="noopener">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.48v-1.7c-2.78.62-3.37-1.36-3.37-1.36-.46-1.2-1.11-1.52-1.11-1.52-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.36 1.11 2.93.85.09-.67.35-1.11.64-1.37-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.9-1.33 2.74-1.05 2.74-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.79-4.57 5.05.36.32.68.94.68 1.9v2.82c0 .27.18.58.69.48A10.26 10.26 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/></svg>
                         Follow on GitHub
                     </a>
-                    <a class="btn-secondary" href="https://marcelmarzec.com/contact-me" target="_blank" rel="noopener">Get in Contact</a>
+                    <a class="btn-secondary" href="https://marcelmarzec.com/contact" target="_blank" rel="noopener">Get in Contact</a>
                 </div>
             </div>
         </section>

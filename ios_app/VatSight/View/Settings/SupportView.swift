@@ -11,8 +11,6 @@ struct SupportView: View {
     @Environment(AdsManager.self) private var adsManager
     @ScaledMetric private var iconSize: CGFloat = 24
 
-    private let sponsorURL = URL(string: "https://github.com/sponsors/MarcelMarzec")
-
     private var prefs: UserPreferencesModel { prefsManager.userPrefs }
     private var adsOn: Bool { prefs.adsEnabled && AdsManager.isConfigured }
     private var hapticsEnabled: Bool { prefs.hapticFeedbackEnabled }
@@ -21,7 +19,7 @@ struct SupportView: View {
         List {
             thankYouSection
             masterToggleSection
-            sponsorSection
+            privacyChoicesSection
 
             Group {
                 adTypesSection
@@ -218,22 +216,10 @@ struct SupportView: View {
         }
     }
 
-    private var sponsorSection: some View {
-        Section {
-            if let sponsorURL {
-                Link(destination: sponsorURL) {
-                    HStack {
-                        Image("githubLogo")
-                            .resizable()
-                            .frame(width: iconSize, height: iconSize)
-                        Text("Sponsor on GitHub")
-                        Spacer()
-                        Image(systemName: "chevron.right").imageScale(.small).foregroundColor(.secondary)
-                    }
-                    .foregroundColor(.primary)
-                }
-            }
-            if adsManager.privacyOptionsRequired {
+    @ViewBuilder
+    private var privacyChoicesSection: some View {
+        if adsManager.privacyOptionsRequired {
+            Section {
                 Button {
                     Task { await adsManager.presentPrivacyOptions() }
                 } label: {
@@ -245,8 +231,6 @@ struct SupportView: View {
                     .foregroundColor(.primary)
                 }
             }
-        } footer: {
-            Text("Prefer not to see ads? Sponsoring on GitHub supports the project directly.")
         }
     }
 }

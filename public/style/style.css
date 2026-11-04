@@ -347,39 +347,25 @@ section {
     flex-shrink: 0;
 }
 
-.store-badge {
+.app-store-badge {
     display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 18px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px dashed rgba(255, 255, 255, 0.22);
-    color: var(--text-faint);
-    cursor: default;
+    border-radius: 10px;
+    transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-.store-badge svg {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    color: var(--text-faint);
+.app-store-badge:hover {
+    opacity: 0.85;
 }
 
-.store-badge-text {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.25;
+.app-store-badge:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
 }
 
-.store-badge-text small {
-    font-size: 11px;
-}
-
-.store-badge-text strong {
-    font-size: 15px;
-    color: var(--text-dim);
-    font-weight: 600;
+.app-store-badge img {
+    display: block;
+    height: 50px;
+    width: auto;
 }
 
 /* ---------- Hero ---------- */

@@ -10,6 +10,8 @@
 	<false/>
 	<key>MBXAccessToken</key>
 	<string>$(MAPBOX_ACCESS_TOKEN)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>VatSight only uses your location if you choose to show your own position on the radar map. Your location is never stored or shared.</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>Allowing tracking lets Google show more relevant ads, which helps support VatSight. Ads work either way, and tracking is never used unless optional ads are on.</string>
 	<key>SKAdNetworkItems</key>

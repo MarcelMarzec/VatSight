@@ -100,9 +100,10 @@ final class UserPreferencesModel {
     var swipeToAddFriendHintCount: Int = 0 // hidden after 3 uses
     var hapticFeedbackEnabled: Bool = true
     var adsEnabled: Bool = false
-    var nativeAdsEnabled: Bool = false
-    var rewardedAdsEnabled: Bool = false
-    var appOpenAdsEnabled: Bool = false
+    // All types are pre-selected so turning ads on works in one tap; nothing loads until adsEnabled is true
+    var nativeAdsEnabled: Bool = true
+    var rewardedAdsEnabled: Bool = true
+    var appOpenAdsEnabled: Bool = true
     var adsViewedCount: Int = 0
 
     var mapStyle: MapStyle {

@@ -200,7 +200,7 @@ struct SettingsView: View {
                                 .frame(width: iconSize)
                                 .foregroundColor(.primary)
                             VStack(alignment: .leading) {
-                                Text("Roadmap & Beta Program")
+                                Text("Roadmap")
                             }
                         }
                     }

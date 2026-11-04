@@ -1,44 +1,70 @@
 # VatSight
 
-**Website: [vatsight.com](https://vatsight.com)** · Join the open beta on TestFlight by signing up to the newsletter at [vatsight.com](https://vatsight.com/#newsletter)
+**The VATSIM network, live on your iPhone and iPad.**
 
-VatSight in an in development IOS app for visualising live VATSIM traffic. 
+VatSight is a free, source-available VATSIM tracker and radar map for iPhone and iPad: live traffic, VATGlasses ATC sectors and airport activity, all on one clean map.
 
-Track your own flight, check for ATC coverage, and visualise airspace in real time using the latest VATGlasses Data
+<a href="https://apps.apple.com/app/vatsight/id6814842201"><img src="public/images/app-store-badge-black.svg" alt="Download on the App Store" height="50"></a>
+
+**Website: [vatsight.com](https://vatsight.com)** · [Roadmap](https://vatsight.com/#open-source) · [Newsletter](https://vatsight.com/#newsletter)
+
+<img width="250" alt="VatSight radar map showing live VATSIM traffic and ATC sectors over the United Kingdom" src="public/images/screenshots/uk-overview.webp" />
+<img width="250" alt="VatSight flight detail card showing altitude, speed and the filed flight plan" src="public/images/screenshots/pilot-details.webp" />
+<img width="250" alt="VatSight map showing merged ATC sector boundaries over the Netherlands and Belgium" src="public/images/screenshots/merged-sectors.webp" />
 
 ### Features
-Feature list coming soon...
+
+**Live radar**
+* Every pilot and controller on the VATSIM network, updated in real time on a smooth, interactive map
+* More detail appears the further you zoom in
+
+**VATGlasses ATC sectors**
+* Live airspace boundaries for each online controller, powered by VATGlasses
+* Merge overlapping sectors into a single outline
+* Filter sectors by altitude, or show inactive sectors as well
+* Tap any sector for its ownership hierarchy and controller details
+
+**Full flight details**
+* Tap any aircraft for altitude, speed, heading, squawk and the complete filed flight plan
+* Show a selected flight's route and only the sectors relevant to it
+
+**Airports and search**
+* Active controllers, current traffic and the latest ATIS for every airport on the network
+* Jump straight to any callsign, airport or controller in seconds
+
+**Friends and your own flight**
+* Enter your VATSIM CID to highlight your own aircraft and controlled airports
+* Add friends to spot them instantly on the map
+
+**Your map, your way**
+* Dark and light mode, map styles and adjustable icon sizes
+* Haptics and accessibility settings
+
+**Privacy first**
+* No account or sign-in required, and no analytics
+* Optional ads to support development: off by default, and they never lock or unlock a feature
 
 ### Screenshots
-I've continued work on the UI and some features! Here is a preview, you can now merge controllers areas and filter by altitude!
-There are also quite a few features that I haven't talked about, more on them soon!
 
-<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 22 02" src="https://github.com/user-attachments/assets/16a1a16e-b88b-4e3f-97e9-8ac548b38dff" />
-<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 21 54" src="https://github.com/user-attachments/assets/18a0e5dc-f59b-42c6-9439-b8b5ba1578bc" />
-<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 21 11" src="https://github.com/user-attachments/assets/5abf454b-1bbf-47f4-a57b-296588af61f7" />
-<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 54" src="https://github.com/user-attachments/assets/4ee117a3-5607-4d70-8a3b-4fcb78e0c272" />
-<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 35" src="https://github.com/user-attachments/assets/bcf01ccc-b9a9-43e8-b410-638c8299cc2a" />
-<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 10" src="https://github.com/user-attachments/assets/972f9179-8bf8-4ae7-95cf-5042b811cd3a" />
-<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 15" src="https://github.com/user-attachments/assets/ea64e07e-87d0-4ab8-b5f7-f49372f0e699" />
-<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 20 02" src="https://github.com/user-attachments/assets/c2e41903-afb5-4e95-8286-7dd57d34c5f8" />
+<img width="200" alt="VatSight map showing all inactive sectors" src="public/images/screenshots/show-inactive-sectors.webp" />
+<img width="200" alt="VatSight map with more detail when zoomed in" src="public/images/screenshots/zoom-details.webp" />
+<img width="200" alt="VatSight showing a pilot's route and only the sectors relevant to the flight" src="public/images/screenshots/track-overlay.webp" />
+<img width="200" alt="VatSight showing all active sectors blended together" src="public/images/screenshots/blended-sectors.webp" />
+<img width="200" alt="VatSight ATC sector details" src="public/images/screenshots/atc-details.webp" />
+<img width="200" alt="VatSight in light mode" src="public/images/screenshots/light-mode.webp" />
 
-Light mode - Needs more work with the colour scheme
-
-<img width="250" alt="Simulator Screenshot - iPhone 17 - 2026-08-30 at 20 28 59" src="https://github.com/user-attachments/assets/a1d2f6a2-96e4-4a67-a3f6-b5b76d077c08" />
-
-
-### Open Source!
-I believe in the power of community driven projects therefore VatSight is **source-available**, meaning:
+### Source-available
+I believe in the power of community-driven projects, so VatSight is **source-available**, meaning:
 
 * ✅ You can view and scrutinise my work!
 * ✅ You can contribute improvements!
 * ❌ You cannot redistribute or sell it as a competing app!
 
-Please share your thoughts, feedback and future in the repo's Issues / Discussions
+Please share your thoughts and feedback in the repo's Issues / Discussions.
 
 See [LICENSE](./LICENSE)
 
-### What to help out?
+### Want to help out?
 Contributions are welcome and appreciated.
 You can help by:
 
@@ -49,23 +75,30 @@ You can help by:
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
+### Building it yourself
+The app needs an `ios_app/Secrets.xcconfig` file (gitignored) containing `MAPBOX_ACCESS_TOKEN`. The AdMob IDs (`ADMOB_APP_ID`, `ADMOB_NATIVE_UNIT_ID`, `ADMOB_REWARDED_UNIT_ID`, `ADMOB_APP_OPEN_UNIT_ID`) are optional. Without them, ads are disabled in that build. Debug builds always use Google's test ads.
+
 ### Tech Stack
-* Swift / SwiftUI
-* Mapbox IOS Native SDK
-* VATSIM data APIs
-* VATGlasses Sector Data
+* Swift / SwiftUI / SwiftData
+* Mapbox Maps SDK for iOS
+* GEOSwift and ZIPFoundation
+* Google Mobile Ads SDK (optional ads only)
+* VATSIM Data API
+* VATGlasses sector data
 
 ### AI Assistance
 Parts of VatSight were developed with the help of generative AI tools (e.g. Claude). All code is reviewed, tested and maintained by [@MarcelMarzec](https://github.com/MarcelMarzec).
 
 ### Acknowledgements
-* User data sourced from VATSIM API
+* User data sourced from the VATSIM API
 * Airspace data sourced from VATGlasses
 * VatSight is an independent project and is **not affiliated with or endorsed by VATSIM**.
 
 ### Support the Project
 If you find VatSight useful:
 
+* [Sponsor on GitHub](https://github.com/sponsors/MarcelMarzec)
+* Turn on optional ads in the app (Settings → Support VatSight)
 * Share it with the community
 * Contribute or provide feedback
 * Star the repository ⭐

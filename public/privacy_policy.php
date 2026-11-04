@@ -26,7 +26,7 @@
     <meta name="twitter:image" content="https://vatsight.com/images/og-image.jpg" />
     <meta name="twitter:image:alt" content="VatSight: the VATSIM network, live on your iPhone. Live traffic and VATGlasses ATC sectors on a map." />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" type="text/css" href="style/style.css?v=20261007"/>
+    <link rel="stylesheet" type="text/css" href="style/style.css?v=20261104"/>
     <link rel="canonical" href="https://vatsight.com/privacy_policy" />
     <link rel="icon" type="image/png" href="/images/favicon/favicon-96x96.png?v=20260509" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/images/favicon/favicon.svg?v=20260509" />
@@ -54,7 +54,7 @@
             <div class="section-inner">
                 <div class="doc-card">
                     <div class="highlight-box">
-                        <p><strong>Short version:</strong> The VatSight website, newsletter and iOS app are all built to collect as little personal data as possible. The website sets no tracking cookies and runs no analytics. The app collects nothing at all — everything you enter stays on your device, with no accounts required, no analytics, and Mapbox's map telemetry switched off by default.</p>
+                        <p><strong>Short version:</strong> The VatSight website, newsletter and iOS app are all built to collect as little personal data as possible. The website sets no tracking cookies and runs no analytics. The app's own code collects nothing — everything you enter stays on your device, with no accounts required, no analytics, and Mapbox's map telemetry switched off by default. Ads are optional and off by default; only if you turn them on does Google's ad SDK collect data, as described in <a href="#advertising" class="link-text">Section 9</a>.</p>
                         <p class="highlight-follow">The only personal data we ever hold is your email address, and only if you choose to join the <a href="#newsletter" class="link-text">VatSight newsletter</a>. It's used for nothing else, never shared or sold, and you can unsubscribe with one click.</p>
                     </div>
 
@@ -77,7 +77,7 @@
                     <p>Our lawful basis for this processing is our <strong>legitimate interests</strong> (UK GDPR Article 6(1)(f)) in running a secure, working website. We do not use this data to identify you, build profiles or track you across other sites.</p>
 
                     <h2 id="newsletter">3. The Newsletter</h2>
-                    <p>You can choose to join the VatSight newsletter on the <a href="/phplist/?p=subscribe&amp;id=1" class="link-text">sign-up page</a> or the home page. It is used only to send you your invite to the VatSight TestFlight open beta (included in the welcome email you receive once you confirm), and then to email you about the App Store launch and major VatSight updates.</p>
+                    <p>You can choose to join the VatSight newsletter on the <a href="/phplist/?p=subscribe&amp;id=1" class="link-text">sign-up page</a> or the home page. It is used only to email you VatSight news, release announcements and major updates. The welcome email you receive once you confirm also includes an optional invite to the VatSight TestFlight beta, where you can try upcoming versions before they're released.</p>
 
                     <h3>What we store</h3>
                     <div class="table-scroll">
@@ -194,7 +194,7 @@
                     <p>Your VATSIM CID is a publicly visible network identifier — it is not a password or secret credential. VatSight treats it as a reference to look up publicly available data, not as personal information.</p>
 
                     <h2>7. Network Requests</h2>
-                    <p>VatSight makes outbound network requests solely to fetch publicly available data needed to power the radar. No user data is included in any of these requests.</p>
+                    <p>VatSight's own code makes outbound network requests solely to fetch publicly available data needed to power the radar. No user data is included in any of these requests. Google's ad SDK only makes requests if you turn on optional ads (see <a href="#advertising" class="link-text">Section 9</a>).</p>
 
                     <div class="table-scroll">
                         <table class="data-table">
@@ -269,7 +269,7 @@
                     <p>The VATGlasses sector data cache can also be cleared from within the app via Settings → VATGlasses Sector Data → Redownload.</p>
 
                     <h2>13. Children's Privacy</h2>
-                    <p>VatSight is not directed at children under 13. The app collects no personal information from any user, including children. The optional advertising feature described in Section 9 should only be enabled by adult users; VatSight does not knowingly direct ads at children. You must be 13 or older to subscribe to the newsletter. If you believe a child under 13 has subscribed, contact us and we'll delete their details.</p>
+                    <p>VatSight is not directed at children under 13. The app's own code collects no personal information from any user, including children. The optional advertising feature described in Section 9 should only be enabled by adult users; VatSight does not knowingly direct ads at children. You must be 13 or older to subscribe to the newsletter. If you believe a child under 13 has subscribed, contact us and we'll delete their details.</p>
 
                     <h2>14. Security</h2>
                     <p>VatSight's on-device data is stored by SwiftData, which uses the standard iOS data protection mechanisms. All network requests use HTTPS (TLS). The app does not store or transmit any authentication credentials.</p>
