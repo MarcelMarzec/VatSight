@@ -99,6 +99,11 @@ final class UserPreferencesModel {
     var searchShowInactiveAirports: Bool = false
     var swipeToAddFriendHintCount: Int = 0 // hidden after 3 uses
     var hapticFeedbackEnabled: Bool = true
+    var adsEnabled: Bool = false
+    var nativeAdsEnabled: Bool = false
+    var rewardedAdsEnabled: Bool = false
+    var appOpenAdsEnabled: Bool = false
+    var adsViewedCount: Int = 0
 
     var mapStyle: MapStyle {
         get { MapStyle(rawValue: mapStyleRaw) ?? .system }

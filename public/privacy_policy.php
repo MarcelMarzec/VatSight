@@ -46,7 +46,7 @@
         <section class="doc-hero">
             <div class="section-inner">
                 <h1>Privacy Policy</h1>
-                <p class="doc-updated">Last updated 7 October 2026</p>
+                <p class="doc-updated">Last updated 4 November 2026</p>
             </div>
         </section>
 
@@ -247,9 +247,16 @@
                     <p>An open-source Swift library used for geographic polygon operations (merging airspace sectors). It operates entirely on-device and makes no network requests.</p>
 
                     <h2 id="advertising">9. Optional Advertising</h2>
-                    <p>VatSight includes an optional way to support development: watching rewarded ads. Ads are <strong>off by default</strong> and are never shown automatically — you must actively choose to enable them from Settings, and you can turn them off again at any time.</p>
-                    <p>When you choose to watch ads, you decide how many to watch in that session. This is a voluntary way to support the project — it does not unlock any feature, since every feature currently in VatSight remains free whether or not you choose to watch ads.</p>
-                    <p>Ads are served by a third-party advertising SDK. While ads are enabled and being shown, that SDK may collect technical data such as advertising identifiers, IP address, and device information in order to serve and measure ads. Where this involves cross-app tracking, you will be shown Apple's separate App Tracking Transparency permission prompt before any tracking-based identifier is used. If you never enable ads, none of this applies to you.</p>
+                    <p>VatSight includes optional ads as a voluntary way to support development. Ads are <strong>off by default</strong>. You must choose to turn them on, either during onboarding or in Settings → Support VatSight, and you can turn them off again at any time. Ads never unlock or lock any feature: every feature in VatSight is free whether or not you enable ads.</p>
+                    <p>Once ads are enabled, you choose which types to see, and each can be switched off on its own:</p>
+                    <ul>
+                        <li><strong>Settings banner:</strong> a small ad shown at the top of the Settings screen.</li>
+                        <li><strong>Ads on demand:</strong> full-screen video ads that play only when you tap to watch 1, 2 or 5 of them. You can stop between ads.</li>
+                        <li><strong>Ad on app launch:</strong> a full-screen ad when you open VatSight, and at most once every four hours when you return to it.</li>
+                    </ul>
+                    <p>Ads are served by <strong>Google AdMob</strong> (Google Ireland Limited / Google LLC). The Google Mobile Ads SDK is only started after you enable ads; if you never enable them, it makes no network requests and collects nothing. While ads are enabled, Google may collect technical data such as IP address, approximate location derived from it, device information, ad interactions, diagnostics and, only if you allow it, your device's advertising identifier (IDFA), in order to serve, measure and personalise ads and to prevent fraud. You can learn more at <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener" class="link-text">How Google uses information from sites or apps that use its services</a>.</p>
+                    <p><strong>Your choices:</strong> if you are in the UK, EEA or Switzerland, Google's consent form is shown when you turn ads on, and you can change your choices later from Settings → Support VatSight → Ad Privacy Choices. Apple's App Tracking Transparency prompt is also shown when you turn ads on; if you choose "Ask App Not to Track", the IDFA is not used and ads may be less relevant. You can change this at any time in iOS Settings → Privacy &amp; Security → Tracking.</p>
+                    <p>VatSight itself only stores your ad settings and a count of ads viewed, on your device. This count is never sent anywhere.</p>
 
                     <h2 id="location">10. Location Services</h2>
                     <p>VatSight does <strong>not</strong> request access to your device's location. The app does not use <code>CLLocationManager</code> or any GPS / network location API. The map is centred based on your previously saved map position, which is stored only on-device.</p>

@@ -184,6 +184,33 @@ final class PreferencesManager {
         try? context.save()
     }
 
+    // MARK: - Ads
+
+    func updateAdsEnabled(_ value: Bool) {
+        userPrefs.adsEnabled = value
+        try? context.save()
+    }
+
+    func updateNativeAdsEnabled(_ value: Bool) {
+        userPrefs.nativeAdsEnabled = value
+        try? context.save()
+    }
+
+    func updateRewardedAdsEnabled(_ value: Bool) {
+        userPrefs.rewardedAdsEnabled = value
+        try? context.save()
+    }
+
+    func updateAppOpenAdsEnabled(_ value: Bool) {
+        userPrefs.appOpenAdsEnabled = value
+        try? context.save()
+    }
+
+    func incrementAdsViewed() {
+        userPrefs.adsViewedCount += 1
+        try? context.save()
+    }
+
     func getRefreshIntervalInSeconds() -> TimeInterval {
         let rateString = userPrefs.vatsimRefreshRate
         

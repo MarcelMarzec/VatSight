@@ -11,6 +11,7 @@ import SafariServices
 
 struct SettingsView: View {
     @Environment(PreferencesManager.self) private var prefsManager
+    @Environment(AdsManager.self) private var adsManager
     @EnvironmentObject private var radarViewModel: RadarViewModel
     @State private var cidInputText = ""
     @State private var showPrivacyPolicy = false
@@ -37,6 +38,14 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                if prefsManager.userPrefs.adsEnabled, prefsManager.userPrefs.nativeAdsEnabled,
+                   let nativeAd = adsManager.nativeAd {
+                    Section {
+                        NativeAdBannerView(nativeAd: nativeAd)
+                            .frame(height: NativeAdBannerView.height)
+                    }
+                }
+
                 Section("Settings") {
                     NavigationLink {
                         FriendsView()
@@ -167,6 +176,17 @@ struct SettingsView: View {
                                 .ignoresSafeArea()
                         }
                     }
+
+                    NavigationLink {
+                        SupportView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "heart.fill")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("Support VatSight")
+                        }
+                    }
                 } header: {
                     Text("About")
                 }
@@ -211,6 +231,7 @@ struct SettingsView: View {
             }
             .navigationTitle("VatSight")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear { adsManager.loadNativeAdIfNeeded() }
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -238,6 +259,9 @@ struct SafariView: UIViewControllerRepresentable {
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let context = ModelContext(container)
     
+    let prefs = PreferencesManager(context: context)
+
     return SettingsView()
-        .environment(PreferencesManager(context: context))
+        .environment(prefs)
+        .environment(AdsManager(prefs: prefs))
 }

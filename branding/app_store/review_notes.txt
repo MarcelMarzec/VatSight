@@ -1,0 +1,17 @@
+VatSight is a free, read-only viewer for the VATSIM flight simulation network. No account or sign-in is needed, and there are no in-app purchases.
+
+All live data comes from public sources: pilot, controller and ATIS data from the VATSIM Data API (data.vatsim.net), and ATC sector boundaries from the open-source VATGlasses project on GitHub. Maps are rendered with the Mapbox Maps SDK.
+
+How to test:
+1. Open the app. The map shows everyone currently connected to VATSIM.
+2. Tap any aircraft to see its flight details and flight plan.
+3. Tap a coloured ATC sector to see the controller and sector details.
+4. Use Search to find a callsign, controller or airport (for example EGLL or KJFK).
+5. In Settings you can optionally enter a VATSIM CID to highlight that user's aircraft. Any pilot's CID shown in their flight details works for testing.
+
+Optional ads (Google AdMob):
+Ads are off by default and are opt-in only. They can be turned on during onboarding or in Settings > Support VatSight > Enable Optional Ads. Turning them on shows Google's consent form (UK/EEA users) and then Apple's App Tracking Transparency prompt; ads work whether or not tracking is allowed. Once enabled, the app may show a native ad in Settings, an App Open ad on launch, and rewarded ads that the user chooses to watch from the Support VatSight screen. Each ad type can be switched off individually. Ads never lock or unlock any feature. Ad privacy choices can be changed at any time from the Support VatSight screen.
+
+Traffic depends on how many people are connected to VATSIM at the time. Europe and North America are busiest in the evening (UTC).
+
+VatSight is an independent project and is not affiliated with or endorsed by VATSIM.

@@ -11,6 +11,7 @@
 		9522F6CE2FCB118000E31BE6 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 9522F6CD2FCB118000E31BE6 /* ZIPFoundation */; };
 		95357BDC304023650041E014 /* GEOSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 95357BDB304023650041E014 /* GEOSwift */; };
 		958325AF2FACEC020078184B /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 958325AE2FACEC020078184B /* MapboxMaps */; };
+		95AD00032FF0000100A0B001 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 95AD00022FF0000100A0B001 /* GoogleMobileAds */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +48,7 @@
 				958325AF2FACEC020078184B /* MapboxMaps in Frameworks */,
 				9522F6CE2FCB118000E31BE6 /* ZIPFoundation in Frameworks */,
 				95357BDC304023650041E014 /* GEOSwift in Frameworks */,
+				95AD00032FF0000100A0B001 /* GoogleMobileAds in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -93,6 +95,7 @@
 				958325AE2FACEC020078184B /* MapboxMaps */,
 				9522F6CD2FCB118000E31BE6 /* ZIPFoundation */,
 				95357BDB304023650041E014 /* GEOSwift */,
+				95AD00022FF0000100A0B001 /* GoogleMobileAds */,
 			);
 			productName = VatSight;
 			productReference = 954F0C5E2FABC0AE0036E8EC /* VatSight.app */;
@@ -126,6 +129,7 @@
 				958325AD2FACEC020078184B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
 				9522F6CC2FCB118000E31BE6 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 				95357BDA304023650041E014 /* XCRemoteSwiftPackageReference "GEOSwift" */,
+				95AD00012FF0000100A0B001 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 954F0C5F2FABC0AE0036E8EC /* Products */;
@@ -287,7 +291,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 2K39CB5TUU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -303,7 +307,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.5;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelmarzec.VatSight;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -323,7 +327,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = 2K39CB5TUU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -340,7 +344,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.5;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.marcelmarzec.VatSight;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -401,6 +405,14 @@
 				minimumVersion = 11.23.0;
 			};
 		};
+		95AD00012FF0000100A0B001 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.12.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -418,6 +430,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 958325AD2FACEC020078184B /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;
 			productName = MapboxMaps;
+		};
+		95AD00022FF0000100A0B001 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 95AD00012FF0000100A0B001 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

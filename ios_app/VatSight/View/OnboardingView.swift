@@ -8,6 +8,7 @@ import SwiftData
 
 struct OnboardingView: View {
     @Environment(PreferencesManager.self) private var prefsManager
+    @Environment(AdsManager.self) private var adsManager
     @State private var cidInputText = ""
     @State private var currentPage = 0
     @State private var friendCIDInputText = ""
@@ -16,11 +17,12 @@ struct OnboardingView: View {
 
     private enum FocusedField { case myCID, friendCID }
 
-    // Pages 0–1 are generic, page 2 is the legend, page 3 is CID entry, page 4 is friends
+    // Pages 0–1 are generic, page 2 is the legend, page 3 is CID entry, page 4 is friends, page 5 is ads
     private static let legendPageIndex = 2
     private static let trackingPageIndex = 3
     private static let friendsPageIndex = 4
-    private static let totalPageCount = 5
+    private static let adsPageIndex = 5
+    private static let totalPageCount = 6
 
     private let pages: [OnboardingPage] = [
         OnboardingPage(
@@ -42,6 +44,11 @@ struct OnboardingView: View {
             systemImage: "person.2.fill",
             title: "Add Friends",
             description: "Add your friends' VATSIM CIDs so their aircraft and stations are highlighted in green on the radar."
+        ),
+        OnboardingPage(
+            systemImage: "heart",
+            title: "Support VatSight",
+            description: "VatSight is free and open source. If you'd like to help, you can turn on optional ads. They're off by default, and you can change this anytime in Settings."
         )
     ]
 
@@ -60,6 +67,7 @@ struct OnboardingView: View {
                     OnboardingLegendPageView().tag(Self.legendPageIndex)
                     OnboardingPageView(page: pages[2]).tag(Self.trackingPageIndex)
                     OnboardingPageView(page: pages[3]).tag(Self.friendsPageIndex)
+                    OnboardingPageView(page: pages[4]).tag(Self.adsPageIndex)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .frame(height: .infinity)
@@ -73,6 +81,13 @@ struct OnboardingView: View {
 
                 if currentPage == Self.friendsPageIndex {
                     friendCIDEntryField
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .animation(.easeInOut(duration: 0.3), value: currentPage)
+                        .padding(.bottom, 20)
+                }
+
+                if currentPage == Self.adsPageIndex {
+                    adsOptInPanel
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .animation(.easeInOut(duration: 0.3), value: currentPage)
                         .padding(.bottom, 20)
@@ -192,6 +207,54 @@ struct OnboardingView: View {
                 .padding(.horizontal, 32)
             }
         }
+    }
+
+    private var adsOptInPanel: some View {
+        let prefs = prefsManager.userPrefs
+        let adsOn = prefs.adsEnabled && AdsManager.isConfigured
+
+        return VStack(spacing: 10) {
+            Toggle(isOn: Binding(
+                get: { adsOn },
+                set: { newValue in
+                    HapticManager.impact(prefsEnabled: prefs.hapticFeedbackEnabled)
+                    if newValue {
+                        Task { await adsManager.enable() }
+                    } else {
+                        adsManager.disable()
+                    }
+                }
+            )) {
+                Text("Enable Optional Ads").font(.headline)
+            }
+            .disabled(!AdsManager.isConfigured)
+
+            Divider()
+
+            Group {
+                adTypeToggle("Settings Banner", isOn: prefs.nativeAdsEnabled, update: prefsManager.updateNativeAdsEnabled)
+                adTypeToggle("Watch Ads On Demand", isOn: prefs.rewardedAdsEnabled, update: prefsManager.updateRewardedAdsEnabled)
+                adTypeToggle("Ad on App Launch", isOn: prefs.appOpenAdsEnabled, update: prefsManager.updateAppOpenAdsEnabled)
+            }
+            .disabled(!adsOn || adsManager.isEnabling)
+            .opacity(adsOn ? 1 : 0.5)
+        }
+        .padding(16)
+        .background(Color.primary.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal, 32)
+    }
+
+    private func adTypeToggle(_ title: String, isOn: Bool, update: @escaping (Bool) -> Void) -> some View {
+        Toggle(title, isOn: Binding(
+            get: { isOn },
+            set: { newValue in
+                HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
+                update(newValue)
+                adsManager.applyAdTypeSettings()
+            }
+        ))
+        .font(.subheadline)
     }
 
     private var nextButton: some View {
@@ -491,6 +554,9 @@ private struct LegendRow<Icon: View>: View {
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let context = ModelContext(container)
 
+    let prefs = PreferencesManager(context: context)
+
     OnboardingView()
-        .environment(PreferencesManager(context: context))
+        .environment(prefs)
+        .environment(AdsManager(prefs: prefs))
 }

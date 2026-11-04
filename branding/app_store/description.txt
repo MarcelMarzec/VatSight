@@ -1,0 +1,34 @@
+VatSight puts the VATSIM network in your pocket. See every pilot and controller online in real time, with live VATGlasses ATC sectors drawn on one fast, clean map.
+
+VATGLASSES ATC SECTORS
+• See exactly which airspace each online controller is covering, powered by VATGlasses data
+• Merge overlapping sectors into a single outline
+• Filter sectors by altitude, or show inactive sectors as well
+• Tap any sector for its ownership hierarchy and controller details
+
+LIVE RADAR
+• Every pilot and controller on VATSIM, updated in real time
+• Tap any aircraft for altitude, speed, heading, squawk and the full filed flight plan
+• Show the route of a selected flight and only the sectors relevant to it
+• More detail appears the further you zoom in
+
+AIRPORTS AND SEARCH
+• Active controllers, current traffic and the latest ATIS for any airport on the network
+• Jump straight to any callsign, airport or controller in seconds
+
+FRIENDS AND YOUR OWN FLIGHT
+• Enter your VATSIM CID to highlight your own aircraft
+• Add friends to spot them instantly on the map
+
+YOUR MAP, YOUR WAY
+• Dark and light mode
+• Full control over what the map shows you
+
+FREE AND OPEN SOURCE
+VatSight is free to use with no account required, and every feature is included for everyone. If you'd like to support development, you can turn on optional ads in Settings. They're off by default and never lock or unlock any feature. The source code is open on GitHub, so you can read it, report issues and contribute improvements.
+
+ALWAYS IMPROVING
+VatSight is under continuous development and shaped by feedback from the VATSIM community, with new features on the way. Follow the roadmap at vatsight.com.
+
+DATA AND DISCLAIMER
+Live network data comes from the public VATSIM Data API and airspace data from the community-run VATGlasses project. VatSight is an independent project and is not affiliated with or endorsed by VATSIM.

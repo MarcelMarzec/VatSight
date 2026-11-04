@@ -21,11 +21,13 @@ struct ContentView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
     @State private var manager: PreferencesManager?
+    @State private var adsManager: AdsManager?
+    @State private var wasInBackground = false
     @StateObject private var radarViewModel = RadarViewModel()
     
     var body: some View {
         Group {
-            if let manager {
+            if let manager, let adsManager {
                 TabView(selection: $selectedTab) {
 
                     Tab("Map", systemImage: "map.fill", value: AppTab.map) {
@@ -68,6 +70,7 @@ struct ContentView: View {
                     }
                 }
                 .environment(manager)
+                .environment(adsManager)
                 .environmentObject(radarViewModel)
                 .preferredColorScheme(manager.userPrefs.appTheme.colorScheme)
                 .onChange(of: radarViewModel.pendingNavigateToCID) { _, cid in
@@ -90,7 +93,12 @@ struct ContentView: View {
                     switch newPhase {
                     case .active:
                         radarViewModel.handleForeground()
+                        if wasInBackground {
+                            wasInBackground = false
+                            adsManager.handleAppBecameActive(isColdLaunch: false)
+                        }
                     case .background:
+                        wasInBackground = true
                         radarViewModel.handleBackground()
                     default:
                         break
@@ -102,6 +110,11 @@ struct ContentView: View {
                 )) {
                     OnboardingView()
                         .environment(manager)
+                        .environment(adsManager)
+                }
+                .task {
+                    await adsManager.startIfOptedIn()
+                    adsManager.handleAppBecameActive(isColdLaunch: true)
                 }
                 .overlay {
                     if radarViewModel.isLoadingData {
@@ -116,7 +129,9 @@ struct ContentView: View {
         }
         .onAppear {
             if manager == nil {
-                manager = PreferencesManager(context: context)
+                let prefs = PreferencesManager(context: context)
+                manager = prefs
+                adsManager = AdsManager(prefs: prefs)
             }
         }
     }
