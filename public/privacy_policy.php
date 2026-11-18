@@ -1,50 +1,17 @@
-<?php header("Cache-Control: no-cache"); header("Content-Security-Policy: default-src 'self'; script-src 'none'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"); ?>
-<!DOCTYPE html>
-<html lang="en">
+<?php
+require_once __DIR__ . '/partials/config.php';
 
-<head>
-    <title>Privacy Policy — VatSight</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="description" content="How VatSight handles your data across vatsight.com, the VatSight newsletter and the iOS app. The website and app collect no personal data; the newsletter stores only what it needs to email you." />
-    <meta name="author" content="Marcel Marzec" />
-    <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#090909" />
-    <meta property="og:description" content="How VatSight handles your data across vatsight.com, the newsletter and the iOS app. The website and app collect no personal data." />
-    <meta property="og:site_name" content="VatSight" />
-    <meta property="og:title" content="Privacy Policy — VatSight" />
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="en_GB" />
-    <meta property="og:url" content="https://vatsight.com/privacy_policy" />
-    <meta property="og:image" content="https://vatsight.com/images/og-image.jpg" />
-    <meta property="og:image:type" content="image/jpeg" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="VatSight: the VATSIM network, live on your iPhone. Live traffic and VATGlasses ATC sectors on a map." />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Privacy Policy — VatSight" />
-    <meta name="twitter:description" content="How VatSight handles your data across vatsight.com, the newsletter and the iOS app. The website and app collect no personal data." />
-    <meta name="twitter:image" content="https://vatsight.com/images/og-image.jpg" />
-    <meta name="twitter:image:alt" content="VatSight: the VATSIM network, live on your iPhone. Live traffic and VATGlasses ATC sectors on a map." />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" type="text/css" href="style/style.css?v=20261104"/>
-    <link rel="canonical" href="https://vatsight.com/privacy_policy" />
-    <link rel="icon" type="image/png" href="/images/favicon/favicon-96x96.png?v=20260509" sizes="96x96" />
-    <link rel="icon" type="image/svg+xml" href="/images/favicon/favicon.svg?v=20260509" />
-    <link rel="shortcut icon" href="/images/favicon/favicon.ico?v=20260509" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/images/favicon/apple-touch-icon.png?v=20260509" />
-    <meta name="apple-mobile-web-app-title" content="VatSight.com" />
-    <link rel="manifest" href="/images/favicon/site.webmanifest?v=20260509" />
-</head>
-
-<body>
-
-    <a class="skip-link" href="#main-content">Skip to main content</a>
-
-    <?php include __DIR__ . '/partials/header.php'; ?>
-
-    <main id="main-content">
+$page = [
+    'title'       => 'Privacy Policy — VatSight',
+    'description' => 'How VatSight handles your data on vatsight.com, the contact form, the newsletter and the iOS app. No analytics, and the app collects no personal data.',
+    'path'        => '/privacy_policy',
+    'breadcrumbs' => [['name' => 'Privacy policy', 'path' => '/privacy_policy']],
+];
+require __DIR__ . '/partials/head.php';
+?>
         <section class="doc-hero">
             <div class="section-inner">
+                <?= breadcrumbs_html($crumbs) ?>
                 <h1>Privacy Policy</h1>
                 <p class="doc-updated">Last updated 4 November 2026</p>
             </div>
@@ -54,27 +21,35 @@
             <div class="section-inner">
                 <div class="doc-card">
                     <div class="highlight-box">
-                        <p><strong>Short version:</strong> The VatSight website, newsletter and iOS app are all built to collect as little personal data as possible. The website sets no tracking cookies and runs no analytics. The app's own code collects nothing — everything you enter stays on your device, with no accounts required, no analytics, and Mapbox's map telemetry switched off by default. Ads are optional and off by default; only if you turn them on does Google's ad SDK collect data, as described in <a href="#advertising" class="link-text">Section 9</a>.</p>
-                        <p class="highlight-follow">The only personal data we ever hold is your email address, and only if you choose to join the <a href="#newsletter" class="link-text">VatSight newsletter</a>. It's used for nothing else, never shared or sold, and you can unsubscribe with one click.</p>
+                        <p><strong>Short version:</strong> The VatSight website, newsletter and iOS app are all built to collect as little personal data as possible. The website sets no tracking cookies and runs no analytics; the only third-party check is Google reCAPTCHA on the <a href="#contact-form" class="link-text">contact form</a>. The app's own code collects nothing — everything you enter stays on your device, with no accounts required, no analytics, and Mapbox's map telemetry switched off by default. Ads are optional and off by default; only if you turn them on does Google's ad SDK collect data, as described in <a href="#advertising" class="link-text">Section 9</a>.</p>
+                        <p class="highlight-follow">The only personal data we ever hold is what you choose to send us: your email address if you join the <a href="#newsletter" class="link-text">VatSight newsletter</a>, and your name, email and message if you use the <a href="#contact-form" class="link-text">contact form</a>. It's used for nothing else and never shared or sold.</p>
                     </div>
 
                     <h2>1. Overview and Who We Are</h2>
-                    <p>VatSight is a free, open-source project built around a live radar app for the <a href="https://www.vatsim.net" target="_blank" rel="noopener" class="link-text">VATSIM</a> virtual air traffic network, its website and its newsletter. This privacy policy explains what information is used, where it comes from, and how it is handled across all three:</p>
+                    <p>VatSight is a free, source-available project built around a live radar app for the <a href="https://www.vatsim.net" target="_blank" rel="noopener" class="link-text">VATSIM</a> virtual air traffic network, its website and its newsletter. This privacy policy explains what information is used, where it comes from, and how it is handled across all three:</p>
                     <ul>
-                        <li>the website at <code>vatsight.com</code> (<a href="#website" class="link-text">Section 2</a>)</li>
+                        <li>the website at <code>vatsight.com</code>, including its contact form (<a href="#website" class="link-text">Section 2</a>)</li>
                         <li>the VatSight newsletter (<a href="#newsletter" class="link-text">Section 3</a>, plus cookies in <a href="#cookies" class="link-text">Section 4</a>)</li>
                         <li>the VatSight iOS app, covered in full technical detail (Sections 5–12)</li>
                     </ul>
                     <p>VatSight is developed and maintained by Marcel Marzec, an individual based in the United Kingdom. For the purposes of UK data protection law (the UK GDPR and the Data Protection Act 2018), Marcel Marzec is the <strong>controller</strong> of any personal data described in this policy. You can reach him at <a href="mailto:contact@marcelmarzec.com" class="link-text">contact@marcelmarzec.com</a>.</p>
 
                     <h2 id="website">2. The Website</h2>
-                    <p>The <code>vatsight.com</code> website has no user accounts, no analytics, no advertising and no tracking pixels, and it does not set any cookies (the newsletter pages are the one exception; see <a href="#cookies" class="link-text">Section 4</a>). Like almost every website, it still involves some technical processing:</p>
+                    <p>The <code>vatsight.com</code> website has no user accounts, no analytics, no advertising and no tracking pixels, and it does not set any cookies of its own (the newsletter pages and the contact form's reCAPTCHA are the exceptions; see <a href="#cookies" class="link-text">Section 4</a>). Like almost every website, it still involves some technical processing:</p>
                     <ul>
                         <li><strong>Server logs.</strong> When you visit, our web hosting provider's server automatically records standard technical information: your IP address, browser user agent, the page requested, the referring page and the time. These logs are used only to keep the site running and secure, and they are deleted automatically on the hosting provider's rotation schedule.</li>
                         <li><strong>Cloudflare.</strong> The <code>vatsight.com</code> domain uses Cloudflare for DNS. Where traffic is routed through Cloudflare's network, Cloudflare processes your IP address to deliver the site and protect it from attacks. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener" class="link-text">Cloudflare's privacy policy</a>.</li>
                         <li><strong>Google Fonts.</strong> The site's typefaces are loaded from Google Fonts, so your browser connects to Google's servers, which receive your IP address and user agent. See <a href="https://developers.google.com/fonts/faq/privacy" target="_blank" rel="noopener" class="link-text">Google Fonts' privacy FAQ</a>.</li>
                     </ul>
                     <p>Our lawful basis for this processing is our <strong>legitimate interests</strong> (UK GDPR Article 6(1)(f)) in running a secure, working website. We do not use this data to identify you, build profiles or track you across other sites.</p>
+
+                    <h3 id="contact-form">The contact form</h3>
+                    <p>If you send a message through the <a href="/contact" class="link-text">contact page</a>, we receive the name, email address, subject and message you enter, so we can read and reply to it. Nothing is sent unless you press <strong>Send message</strong>.</p>
+                    <ul>
+                        <li><strong>Formspree.</strong> The form is delivered by <a href="https://formspree.io/legal/privacy-policy/" target="_blank" rel="noopener" class="link-text">Formspree</a>, which receives what you type, your IP address and browser details, stores the submission and forwards it to our inbox. Formspree acts as our processor.</li>
+                        <li><strong>Google reCAPTCHA.</strong> To keep out spam, the contact page loads Google reCAPTCHA. Google receives your IP address and some browser and device data, and sets a cookie, to judge whether you are a person. This happens only on the contact page. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" class="link-text">Google's privacy policy</a> and <a href="https://policies.google.com/terms" target="_blank" rel="noopener" class="link-text">terms</a>.</li>
+                    </ul>
+                    <p>The lawful basis for handling your message is your <strong>consent</strong>, given by choosing to send it (UK GDPR Article 6(1)(a)); for reCAPTCHA it is our <strong>legitimate interest</strong> in keeping a public form free of spam (Article 6(1)(f)). We keep correspondence for as long as it is useful to have the thread, usually no more than two years, and then delete it. Ask us and we'll delete yours sooner. Your details are never added to the newsletter or passed to anyone else. If you would rather not use the form, email <a href="mailto:contact@marcelmarzec.com" class="link-text">contact@marcelmarzec.com</a> instead.</p>
 
                     <h2 id="newsletter">3. The Newsletter</h2>
                     <p>You can choose to join the VatSight newsletter on the <a href="/phplist/?p=subscribe&amp;id=1" class="link-text">sign-up page</a> or the home page. It is used only to email you VatSight news, release announcements and major updates. The welcome email you receive once you confirm also includes an optional invite to the VatSight TestFlight beta, where you can try upcoming versions before they're released.</p>
@@ -133,7 +108,7 @@
                     </ul>
 
                     <h2 id="cookies">4. Cookies</h2>
-                    <p>The main VatSight website does not set any cookies. The newsletter's sign-up, confirmation and preferences pages (under <code>vatsight.com/phplist/</code>) set a single session cookie that phpList needs to process your form. It contains no personal information and expires when you close your browser. Because it's strictly necessary for the service you've asked for, it doesn't require consent under PECR.</p>
+                    <p>The main VatSight website does not set any cookies of its own. On the <a href="/contact" class="link-text">contact page</a> only, Google reCAPTCHA sets a cookie to tell people from bots, as described in <a href="#contact-form" class="link-text">Section 2</a>; it is strictly necessary to protect the form you are choosing to use. The newsletter's sign-up, confirmation and preferences pages (under <code>vatsight.com/phplist/</code>) set a single session cookie that phpList needs to process your form. It contains no personal information and expires when you close your browser. Because it's strictly necessary for the service you've asked for, it doesn't require consent under PECR.</p>
 
                     <h2>5. Information the App Does NOT Collect</h2>
                     <p>Mapbox's own SDK telemetry is disabled by default (see <a href="#mapbox-sdk" class="link-text">Section 8</a>), and unless you choose to enable the optional ads described in <a href="#advertising" class="link-text">Section 9</a>, the VatSight app does not collect, transmit, or share any of the following:</p>
@@ -296,14 +271,8 @@
                     <p><strong>Marcel Marzec</strong><br>
                     <a href="mailto:contact@marcelmarzec.com" class="link-text">contact@marcelmarzec.com</a></p>
 
-                    <p class="doc-footnote">VatSight (the app, website and newsletter) is an independent project and is not affiliated with, endorsed by, or sponsored by VATSIM, Mapbox, VATGlasses, or phpList.</p>
+                    <p class="doc-footnote">VatSight (the app, website and newsletter) is an independent project and is not affiliated with, endorsed by, or sponsored by VATSIM, Mapbox, VATGlasses, phpList, Formspree or Google.</p>
                 </div>
             </div>
         </section>
-    </main>
-
-    <?php include __DIR__ . '/partials/footer.php'; ?>
-
-</body>
-
-</html>
+<?php require __DIR__ . '/partials/footer.php'; ?>

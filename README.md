@@ -6,7 +6,7 @@ VatSight is a free, source-available VATSIM tracker and radar map for iPhone and
 
 <a href="https://apps.apple.com/app/vatsight/id6814842201"><img src="public/images/app-store-badge-black.svg" alt="Download on the App Store" height="50"></a>
 
-**Website: [vatsight.com](https://vatsight.com)** · [Roadmap](https://vatsight.com/#open-source) · [Newsletter](https://vatsight.com/#newsletter)
+**Website: [vatsight.com](https://vatsight.com)** · [VATSIM live map](https://vatsight.com/vatsim-map) · [VATGlasses sectors](https://vatsight.com/vatglasses) · [Guides](https://vatsight.com/guides) · [Roadmap](https://vatsight.com/roadmap) · [Newsletter](https://vatsight.com/#newsletter)
 
 <img width="250" alt="VatSight radar map showing live VATSIM traffic and ATC sectors over the United Kingdom" src="public/images/screenshots/uk-overview.webp" />
 <img width="250" alt="VatSight flight detail card showing altitude, speed and the filed flight plan" src="public/images/screenshots/pilot-details.webp" />
@@ -102,3 +102,12 @@ If you find VatSight useful:
 * Share it with the community
 * Contribute or provide feedback
 * Star the repository ⭐
+
+### The website
+The site in `public/` is plain PHP with no build step. To preview it locally (PHP 8.1+), run this from the repository root, then open http://localhost:8080:
+
+```bash
+php -S localhost:8080 -t public tools/dev-router.php
+```
+
+`tools/dev-router.php` mirrors `public/.htaccess` for the built-in server and isn't deployed. Guides are Markdown files in `public/content/guides/`: copy `_template.md`, fill in the front matter (title, description, author, date, updated, tags), and the guide appears on `/guides`, in the sitemap and in the RSS feed. Drafts and future-dated guides are only visible on localhost.

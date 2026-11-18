@@ -45,29 +45,63 @@ Options -Indexes
 RewriteEngine On
 RewriteBase /
 
+# The redirect rules below read THE_REQUEST, which still holds the *original*
+# request line during an ErrorDocument subrequest and after internal rewrites.
+# CLEAN_URLS is only set on the first pass of a real request, so a refused
+# /partials/foo.php comes back as a 403 instead of a redirect.
+RewriteCond %{ENV:REDIRECT_STATUS} ^$
+RewriteRule ^ - [E=CLEAN_URLS:1]
+
 # 1) Force HTTPS and strip a "www." prefix in one hop
 RewriteCond %{HTTPS} off [OR]
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 RewriteRule ^ https://vatsight.com%{REQUEST_URI} [L,R=301]
 
-# 2) Old iOS-specific privacy policy URL -> renamed page
-RewriteRule ^ios_privacy_policy/?$ /privacy_policy [R=301,L]
+# 2) Never serve internals: PHP partials, raw Markdown, the guide template
+RewriteRule ^partials(/|$) - [F,L]
+RewriteRule \.md$ - [F,L]
 
-# 3) Canonicalize /index, /index.html or /index.php -> /
+# 3) Old privacy policy URLs. The iOS app links to /ios_privacy_policy.html,
+#    so match the extension here and redirect in a single hop.
+RewriteRule ^ios_privacy_policy(?:\.html|\.php)?/?$ /privacy_policy [R=301,L]
+
+# 4) Drop a trailing slash on anything that isn't a real directory
+#    (/guides/ -> /guides), so every page has exactly one URL
+RewriteCond %{ENV:CLEAN_URLS} =1
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+)/$ /$1 [R=301,L]
+
+# 5) Canonicalize /index, /index.html or /index.php -> /
+RewriteCond %{ENV:CLEAN_URLS} =1
 RewriteCond %{THE_REQUEST} \s/+index(\.html|\.php)?[\s?] [NC]
 RewriteRule ^ / [R=301,L]
 
-# 4) Canonicalize any other /page.html or /page.php -> /page (drop the extension)
+# 6) The sitemap and the guides feed are PHP behind .xml addresses
+RewriteCond %{ENV:CLEAN_URLS} =1
+RewriteCond %{THE_REQUEST} \s/+sitemap\.php[\s?] [NC]
+RewriteRule ^ /sitemap.xml [R=301,L]
+RewriteCond %{ENV:CLEAN_URLS} =1
+RewriteCond %{THE_REQUEST} \s/+guides-feed(\.php)?[\s?] [NC]
+RewriteRule ^ /guides/feed.xml [R=301,L]
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteRule ^guides/feed\.xml$ guides-feed.php [L]
+
+# 7) Guides: Markdown files in content/guides, rendered by guides.php
+RewriteRule ^guides/tag/([a-z0-9-]+)$ guides.php?tag=$1 [L,QSA]
+RewriteRule ^guides/([a-z0-9-]+)$ guides.php?slug=$1 [L,QSA]
+
+# 8) Canonicalize any other /page.html or /page.php -> /page (drop the extension)
+RewriteCond %{ENV:CLEAN_URLS} =1
 RewriteCond %{THE_REQUEST} \s/+(.+?)\.(?:html|php)[\s?] [NC]
 RewriteRule ^ /%1 [R=301,L,NE]
 
-# 5) Serve the matching .php file for the extensionless URL, without redirecting
+# 9) Serve the matching .php file for the extensionless URL, without redirecting
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}\.php -f
 RewriteRule ^(.*)$ $1.php [L]
 
-# 6) Fall back to a matching plain .html file for the extensionless URL
+# 10) Fall back to a matching plain .html file for the extensionless URL
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}\.html -f
