@@ -21,7 +21,7 @@ const ASSET_VERSION  = '20261104';
 // Formspree). Formspree must allow vatsight.com, and the reCAPTCHA key must
 // list vatsight.com as a domain, or submissions are refused.
 const FORMSPREE_URL      = 'https://formspree.io/f/xjgprwan';
-const RECAPTCHA_SITE_KEY = '6LdbIBAuAAAAAJYQQnysppwKSicr0QI4Dr7Tr3Tj';
+const RECAPTCHA_SITE_KEY = '6LeG6Z8sAAAAAEbvZjFDtfbL03IPVo4wtFpe3ZT3';
 
 // Guide authors. A guide's `author:` front matter names one of these keys
 // (or the display name); anything unknown falls back to the default author.

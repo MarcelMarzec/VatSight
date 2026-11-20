@@ -53,7 +53,6 @@ require __DIR__ . '/partials/head.php';
                         <div class="field">
                             <label for="email">Email address</label>
                             <input type="email" id="email" name="email" autocomplete="email" required>
-                            <p class="field-hint">So I have somewhere to reply to.</p>
                         </div>
 
                         <div class="field">
