@@ -175,10 +175,10 @@ final class VatglassesService {
         self.syntheticSectors = synthetic.flatMap { sector -> [SyntheticSector] in
             guard let ctrl = sector.activeController else { return [] }
             let icao = String(ctrl.callsign.prefix(while: { $0 != "_" }))
-            let primary = SyntheticSector(icao: icao, callsign: ctrl.callsign, frequency: ctrl.frequency, radiusNm: 20.0, cid: ctrl.cid, name: ctrl.name)
+            let primary = SyntheticSector(icao: icao, callsign: ctrl.callsign, frequency: ctrl.frequency, radiusNm: 15.0, cid: ctrl.cid, name: ctrl.name)
             let co = sector.activeCoControllers.map { co in
                 let coIcao = String(co.callsign.prefix(while: { $0 != "_" }))
-                return SyntheticSector(icao: coIcao, callsign: co.callsign, frequency: co.frequency, radiusNm: 20.0, cid: co.cid, name: co.name)
+                return SyntheticSector(icao: coIcao, callsign: co.callsign, frequency: co.frequency, radiusNm: 15.0, cid: co.cid, name: co.name)
             }
             return [primary] + co
         }

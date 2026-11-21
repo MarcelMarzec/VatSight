@@ -105,6 +105,15 @@ final class UserPreferencesModel {
     var rewardedAdsEnabled: Bool = true
     var appOpenAdsEnabled: Bool = true
     var adsViewedCount: Int = 0
+    // Engagement, used to time the App Store review and Support VatSight prompts
+    var launchCount: Int = 0
+    var firstLaunchDate: Date?
+    var detailViewCount: Int = 0
+    var lastReviewRequestVersion: String = ""
+    var lastReviewRequestDate: Date?
+    var supportPromptCount: Int = 0
+    var lastSupportPromptDate: Date?
+    var supportPromptOptedOut: Bool = false
 
     var mapStyle: MapStyle {
         get { MapStyle(rawValue: mapStyleRaw) ?? .system }

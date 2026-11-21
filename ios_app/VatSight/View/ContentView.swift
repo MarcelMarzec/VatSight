@@ -22,12 +22,13 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var manager: PreferencesManager?
     @State private var adsManager: AdsManager?
+    @State private var promptManager: PromptManager?
     @State private var wasInBackground = false
     @StateObject private var radarViewModel = RadarViewModel()
     
     var body: some View {
         Group {
-            if let manager, let adsManager {
+            if let manager, let adsManager, let promptManager {
                 TabView(selection: $selectedTab) {
 
                     Tab("Map", systemImage: "map.fill", value: AppTab.map) {
@@ -71,6 +72,7 @@ struct ContentView: View {
                 }
                 .environment(manager)
                 .environment(adsManager)
+                .environment(promptManager)
                 .environmentObject(radarViewModel)
                 .preferredColorScheme(manager.userPrefs.appTheme.colorScheme)
                 .onChange(of: radarViewModel.pendingNavigateToCID) { _, cid in
@@ -113,6 +115,7 @@ struct ContentView: View {
                         .environment(adsManager)
                 }
                 .task {
+                    promptManager.recordLaunch()
                     await adsManager.startIfOptedIn()
                     adsManager.handleAppBecameActive(isColdLaunch: true)
                 }
@@ -132,6 +135,7 @@ struct ContentView: View {
                 let prefs = PreferencesManager(context: context)
                 manager = prefs
                 adsManager = AdsManager(prefs: prefs)
+                promptManager = PromptManager(prefs: prefs)
             }
         }
     }

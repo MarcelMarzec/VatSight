@@ -1,13 +1,22 @@
 ---
-title: VATSIM ATC Positions Explained: DEL, GND, TWR, APP and CTR
-seo_title: VATSIM ATC Positions: DEL, GND, TWR, APP & CTR
+title: VATSIM ATC Positions Explained - DEL, GND, TWR, APP and CTR
+seo_title: VATSIM ATC Positions - DEL, GND, TWR, APP & CTR
 description: What VATSIM's ATC callsigns mean, what each position does from Delivery to Centre, how top-down coverage works, and which controller to call next.
 summary: What every VATSIM ATC callsign means, what each position does, and how to work out who to call when half of them are offline.
 author: marcel-marzec
 og_shot: atc-details
 date: 2026-11-04
-tags: [ATC, VATSIM, Pilots]
-related: [what-is-vatglasses, track-friends-on-vatsim]
+tags:
+  - ATC
+  - VATSIM
+  - Pilots
+related:
+  - what-is-vatglasses
+  - track-friends-on-vatsim
+slug: VATSIM-ATC-Positions-explained
+updated: 2026-11-21
+toc: true
+draft: false
 ---
 **VATSIM air traffic control is split into positions that mirror the real world: Delivery, Ground, Tower, Approach and Centre, plus ATIS and a few specials.** Each one is a callsign ending in a short suffix like `_TWR` or `_CTR`. Once you can read those suffixes, a VATSIM map tells you exactly who is online, what they do, and who you should be talking to.
 

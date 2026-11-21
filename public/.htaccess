@@ -57,9 +57,12 @@ RewriteCond %{HTTPS} off [OR]
 RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 RewriteRule ^ https://vatsight.com%{REQUEST_URI} [L,R=301]
 
-# 2) Never serve internals: PHP partials, raw Markdown, the guide template
+# 2) Never serve internals: PHP partials, raw Markdown, the guide template,
+#    and dot-folders such as the content vault's .obsidian settings
 RewriteRule ^partials(/|$) - [F,L]
 RewriteRule \.md$ - [F,L]
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule (^|/)\. - [F,L]
 
 # 3) Old privacy policy URLs. The iOS app links to /ios_privacy_policy.html,
 #    so match the extension here and redirect in a single hop.

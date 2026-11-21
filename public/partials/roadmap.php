@@ -1,117 +1,114 @@
 <?php
 defined('SITE') or exit;
-// Roadmap data, shared by the home page and /roadmap. Add a release at the
-// end; mark it 'current' and move the previous one to 'done'.
+// Roadmap, shared by the home page and /roadmap. The releases are written in
+// CONTENT_DIR/roadmap.md (see the comments at the top of that file).
+require_once __DIR__ . '/markdown.php';
+require_once __DIR__ . '/content.php';
 
-function roadmap_releases(): array
+const ROADMAP_FILE = CONTENT_DIR . '/roadmap.md';
+const ROADMAP_STATUSES = ['done', 'current', 'planned'];
+
+// ['updated' => ?int, 'releases' => [...]], releases in file order (newest first).
+function roadmap_data(): array
 {
-    return [
-        [
-            'status'  => 'done',
-            'date'    => 'May 2026',
-            'version' => 'v0.1.0',
-            'title'   => 'Core foundations',
-            'summary' => 'The first version of VatSight: a live Mapbox map with pilot icons, aircraft details, and the app’s own branding.',
-            'items'   => [
-                'Live radar map built with Mapbox',
-                'Pilot icons with live position, heading and details',
-                'App branding and first iOS icon',
-                'Track your own CID and tracked friends’ CIDs',
-            ],
-        ],
-        [
-            'status'  => 'done',
-            'date'    => 'Aug 2026',
-            'version' => 'v0.2.0',
-            'title'   => 'Visualising ATC sectors',
-            'summary' => 'VATGlasses airspace data, controller info, search, and a big pass on UI and airport data.',
-            'items'   => [
-                'VATGlasses ATC sector data',
-                'Controller info',
-                'Search',
-                'Airport data and active controllers at airports',
-                'Light and dark mode, more map styling and UI refinement',
-            ],
-        ],
-        [
-            'status'  => 'done',
-            'date'    => 'Sep 2026',
-            'version' => 'v0.3.0',
-            'title'   => 'Improving tools and UX',
-            'summary' => 'Search refinements, altitude filtering, a debug menu, and merged VATGlasses sectors.',
-            'items'   => [],
-        ],
-        [
-            'status'  => 'done',
-            'date'    => 'Oct 2026',
-            'version' => 'v0.4.0',
-            'title'   => 'Closed beta and UI refinement',
-            'summary' => 'Polished the UI, fixed bugs, and refined the details ready for VatSight’s first public test.',
-            'items'   => [],
-        ],
-        [
-            'status'  => 'done',
-            'date'    => 'Oct 2026',
-            'version' => 'v0.5.0',
-            'title'   => 'Open beta',
-            'summary' => 'A public TestFlight beta, alongside a big performance update and new settings.',
-            'items'   => [
-                'Public TestFlight beta',
-                'Big performance update',
-                'Friends list for tracking other VATSIM users',
-                'In-app roadmap and contact form',
-                'Haptics and accessibility settings',
-            ],
-        ],
-        [
-            'status'  => 'current',
-            'date'    => 'Now',
-            'version' => 'v1.0.0',
-            'title'   => 'Public launch',
-            'summary' => 'VatSight is out on the App Store: free to download, with every feature included for everyone.',
-            'items'   => [
-                'Free on the App Store for iPhone and iPad',
-                'Optional ads to support development: off by default, and they never lock or unlock a feature',
-                'Support VatSight page with a link to GitHub Sponsors',
-            ],
-        ],
-        [
-            'status'  => 'planned',
-            'date'    => 'Planned',
-            'version' => 'v1.1.0',
-            'title'   => 'First major update',
-            'summary' => 'Better flight following, Navigraph integration, METAR and ATIS on the map, and push notifications.',
-            'items'   => [
-                'Follow your flight, with the current sector and a prediction of the next one',
-                'Navigraph integration, including navdata and charts',
-                'Fully rendered routes, including waypoints, airways, SIDs and STARs',
-                'More detailed airport charts displayed directly on the map',
-                'A visual representation of the current weather',
-                'Bug fixing',
-            ],
-        ],
+    static $data = null;
+    if ($data !== null) {
+        return $data;
+    }
+
+    $raw = @file_get_contents(ROADMAP_FILE);
+    [$meta, $body] = content_front_matter($raw === false ? '' : $raw);
+
+    $releases = [];
+    foreach (preg_split('/^##\s+/m', $body) as $i => $chunk) {
+        if ($i === 0 || trim($chunk) === '') {
+            continue; // text before the first release heading
+        }
+        $lines = preg_split('/\R/', rtrim($chunk));
+        $heading = trim(array_shift($lines));
+        [$version, $title] = array_pad(preg_split('/\s+[-–—:]\s+|:\s+/u', $heading, 2), 2, '');
+        if ($title === '') {
+            [$version, $title] = ['', $version];
+        }
+
+        $release = ['status' => 'planned', 'date' => '', 'version' => trim($version), 'title' => trim($title), 'summary' => '', 'items' => []];
+        $paragraph = [];
+        $inFields = true;
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($inFields && preg_match('/^(status|date)\s*:\s*(.*)$/i', $trimmed, $m)) {
+                $release[strtolower($m[1])] = trim($m[2]);
+                continue;
+            }
+            if ($trimmed !== '') {
+                $inFields = false;
+            }
+            if (preg_match('/^[-*+]\s+(.+)$/', $trimmed, $m)) {
+                $release['items'][] = $m[1];
+            } elseif ($trimmed !== '' && !$release['items']) {
+                $paragraph[] = $trimmed;
+            }
+        }
+        $release['status'] = strtolower($release['status']);
+        if (!in_array($release['status'], ROADMAP_STATUSES, true)) {
+            $release['status'] = 'planned';
+        }
+        $release['summary'] = implode(' ', $paragraph);
+        $releases[] = $release;
+    }
+
+    return $data = [
+        'updated'  => strtotime(content_string($meta['updated'] ?? '')) ?: null,
+        'releases' => $releases,
     ];
 }
 
-// $only limits the timeline to some statuses, e.g. ['current', 'planned'].
-function roadmap_timeline(bool $expanded = false, ?array $only = null): string
+function roadmap_releases(): array
 {
+    return roadmap_data()['releases'];
+}
+
+function roadmap_status_label(string $status): string
+{
+    return ['done' => 'Released', 'current' => 'Latest release', 'planned' => 'Planned'][$status] ?? '';
+}
+
+// A vertical timeline, newest first. $only limits it to some statuses, e.g.
+// ['current', 'planned']; $oldestFirst flips the order (the home page reads
+// left to right, now then next).
+function roadmap_timeline(bool $expanded = false, ?array $only = null, bool $oldestFirst = false): string
+{
+    $releases = roadmap_releases();
+    if ($only !== null) {
+        $releases = array_values(array_filter($releases, fn(array $r): bool => in_array($r['status'], $only, true)));
+    }
+    if ($oldestFirst) {
+        $releases = array_reverse($releases);
+    }
+
     $out = '<ol class="roadmap-timeline">';
-    foreach (roadmap_releases() as $release) {
-        if ($only !== null && !in_array($release['status'], $only, true)) {
-            continue;
-        }
-        $class = 'roadmap-item' . ($release['status'] === 'done' ? ' is-done' : '') . ($release['status'] === 'current' ? ' is-current' : '');
-        $out .= '<li class="' . $class . '"><span class="roadmap-marker"></span><div class="roadmap-content">'
-            . '<span class="roadmap-date">' . e($release['date'] . ' · ' . $release['version']) . '</span>'
-            . '<h4>' . e($release['title']) . '</h4>'
-            . '<p>' . e($release['summary']) . '</p>';
+    foreach ($releases as $release) {
+        $status = $release['status'];
+        $id = $release['version'] !== '' ? ' id="' . e(md_slug($release['version'])) . '"' : '';
+        $out .= '<li class="roadmap-item is-' . $status . '"' . $id . '>'
+            . '<span class="roadmap-marker" aria-hidden="true"></span>'
+            . '<div class="roadmap-when">'
+            . '<span class="roadmap-version">' . e($release['version']) . '</span>'
+            . ($release['date'] !== '' ? '<span class="roadmap-date">' . e($release['date']) . '</span>' : '')
+            . '</div>'
+            . '<div class="roadmap-content">'
+            . '<span class="roadmap-status">' . e(roadmap_status_label($status)) . '</span>'
+            . '<h3>' . e($release['title']) . '</h3>'
+            . ($release['summary'] !== '' ? '<p>' . md_inline($release['summary']) . '</p>' : '');
         if ($release['items']) {
-            $out .= '<details class="roadmap-details"' . ($expanded ? ' open' : '') . '><summary>What’s included' . icon('chevron') . '</summary><ul>';
+            $list = '<ul>';
             foreach ($release['items'] as $item) {
-                $out .= '<li>' . e($item) . '</li>';
+                $list .= '<li>' . md_inline($item) . '</li>';
             }
-            $out .= '</ul></details>';
+            $list .= '</ul>';
+            $out .= $expanded
+                ? '<div class="roadmap-items">' . $list . '</div>'
+                : '<details class="roadmap-details"><summary>What’s included' . icon('chevron') . '</summary>' . $list . '</details>';
         }
         $out .= '</div></li>';
     }

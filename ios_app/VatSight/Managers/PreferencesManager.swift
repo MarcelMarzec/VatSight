@@ -211,6 +211,36 @@ final class PreferencesManager {
         try? context.save()
     }
 
+    // MARK: - Engagement Prompts
+
+    func recordLaunch() {
+        userPrefs.launchCount += 1
+        if userPrefs.firstLaunchDate == nil { userPrefs.firstLaunchDate = Date() }
+        try? context.save()
+    }
+
+    func incrementDetailViewCount() {
+        userPrefs.detailViewCount += 1
+        try? context.save()
+    }
+
+    func recordReviewRequest(version: String) {
+        userPrefs.lastReviewRequestVersion = version
+        userPrefs.lastReviewRequestDate = Date()
+        try? context.save()
+    }
+
+    func recordSupportPromptShown() {
+        userPrefs.supportPromptCount += 1
+        userPrefs.lastSupportPromptDate = Date()
+        try? context.save()
+    }
+
+    func optOutOfSupportPrompt() {
+        userPrefs.supportPromptOptedOut = true
+        try? context.save()
+    }
+
     func getRefreshIntervalInSeconds() -> TimeInterval {
         let rateString = userPrefs.vatsimRefreshRate
         

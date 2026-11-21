@@ -197,7 +197,7 @@ require __DIR__ . '/partials/head.php';
                         </div>
                         <a class="btn-secondary" href="/roadmap">Full roadmap <?= icon('arrow') ?></a>
                     </div>
-                    <?= roadmap_timeline(false, ['current', 'planned']) ?>
+                    <?= roadmap_timeline(false, ['current', 'planned'], true) ?>
                 </div>
             </div>
         </section>

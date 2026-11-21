@@ -5,6 +5,7 @@
 require_once __DIR__ . '/partials/config.php';
 require_once __DIR__ . '/partials/markdown.php';
 require_once __DIR__ . '/partials/content.php';
+require_once __DIR__ . '/partials/roadmap.php';
 
 header('Content-Type: application/xml; charset=utf-8');
 header('Cache-Control: public, max-age=3600');
@@ -28,6 +29,8 @@ foreach ($sitemapPages as $path => $meta) {
     $lastmod = $meta['lastmod'];
     if ($path === '/guides') {
         $lastmod = $latestGuide ? date('Y-m-d', $latestGuide) : null;
+    } elseif ($path === '/roadmap' && roadmap_data()['updated']) {
+        $lastmod = date('Y-m-d', roadmap_data()['updated']);
     }
     $static[] = ['loc' => $path, 'lastmod' => $lastmod, 'images' => $meta['images'] ?? []];
 }

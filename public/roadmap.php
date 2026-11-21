@@ -2,6 +2,8 @@
 require_once __DIR__ . '/partials/config.php';
 require_once __DIR__ . '/partials/roadmap.php';
 
+$roadmap = roadmap_data();
+
 $page = [
     'title'       => 'VatSight Roadmap & Release Notes',
     'description' => 'Where VatSight has been and where it’s going: every release of the VATSIM app for iPhone, from the first map to the App Store launch, and what’s planned next.',
@@ -27,12 +29,11 @@ require __DIR__ . '/partials/head.php';
                     <div class="roadmap-head">
                         <div>
                             <h2>Timeline</h2>
-                            <p>From the first map in May 2026 to the App Store.</p>
+                            <p>Newest first: what’s planned next, the latest release, then everything shipped since the first map in May 2026.</p>
                         </div>
-                        <span class="roadmap-scroll-hint" aria-hidden="true">
-                            Scroll for more
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-                        </span>
+                        <?php if ($roadmap['updated']): ?>
+                            <p class="roadmap-updated">Updated <time datetime="<?= e(date('Y-m-d', $roadmap['updated'])) ?>"><?= e(content_date($roadmap['updated'])) ?></time></p>
+                        <?php endif; ?>
                     </div>
                     <?= roadmap_timeline(true) ?>
                 </div>
