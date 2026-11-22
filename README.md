@@ -110,4 +110,4 @@ The site in `public/` is plain PHP with no build step. To preview it locally (PH
 php -S localhost:8080 -t public tools/dev-router.php
 ```
 
-`tools/dev-router.php` mirrors `public/.htaccess` for the built-in server and isn't deployed. Guides are Markdown files in `public/content/guides/`: copy `_template.md`, fill in the front matter (title, description, author, date, updated, tags), and the guide appears on `/guides`, in the sitemap and in the RSS feed. Drafts and future-dated guides are only visible on localhost.
+`tools/dev-router.php` mirrors `public/.htaccess` for the built-in server and isn't deployed. Site content lives in `public/content/`, an Obsidian vault. Guides are Markdown files in its `guides/` folder: copy `_template.md`, fill in the front matter (title, description, author, date, updated, tags), and the guide appears on `/guides`, in the sitemap and in the RSS feed. Drafts and future-dated guides are only visible on localhost. The roadmap on `/roadmap` and the home page is built from `roadmap.md` in the same folder; the comments at the top of that file explain the format.

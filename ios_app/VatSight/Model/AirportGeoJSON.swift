@@ -19,7 +19,9 @@ enum AirportGeoJSON {
         from airports: [VatglassesAirport],
         filledICAOs: Set<String>,
         selectedICAO: String? = nil,
-        friendControlledICAOs: Set<String> = []
+        friendControlledICAOs: Set<String> = [],
+        highlights: [String: AirportHighlight] = [:],
+        connectedICAOs: Set<String>? = nil
     ) -> FeatureCollection {
         let features: [Feature] = airports.map { airport in
             let coordinate = CLLocationCoordinate2D(
@@ -34,6 +36,8 @@ enum AirportGeoJSON {
             properties["isActive"] = .boolean(airport.isActive)
             properties["isFilled"] = .boolean(filledICAOs.contains(airport.icao))
             properties["isSelected"] = .boolean(airport.icao == selectedICAO)
+            // With an airport selected, airports without traffic to/from it are faded.
+            properties["isDimmed"] = .boolean(connectedICAOs.map { !$0.contains(airport.icao.uppercased()) } ?? false)
             properties["isFriendControlled"] = .boolean(friendControlledICAOs.contains(airport.icao))
             
             if let controller = airport.activeController {
@@ -43,6 +47,15 @@ enum AirportGeoJSON {
 
             if !airport.groundServiceIndicators.isEmpty {
                 properties["groundServiceIndicators"] = .string(airport.groundServiceIndicators)
+            }
+
+            let highlight = highlights[airport.icao]
+            properties["highlight"] = .number(Double(highlight?.rawValue ?? 0))
+            if let key = AirportStyleManager.indicatorImageKey(
+                highlight: highlight,
+                letters: airport.groundServiceIndicators
+            ) {
+                properties["indicatorKey"] = .string(key)
             }
             
             feature.properties = properties

@@ -14,7 +14,7 @@ const NEWSLETTER_URL = '/phplist/?p=subscribe&id=1';
 const CONTACT_EMAIL  = 'contact@marcelmarzec.com';
 
 // Bump when style.css or the images change, so browsers fetch the new copy.
-const ASSET_VERSION  = '20261104';
+const ASSET_VERSION  = '20261121';
 
 // Contact form: the same Formspree form as marcelmarzec.com/contact, with
 // VatSight's own reCAPTCHA site key (public by design; the secret stays in

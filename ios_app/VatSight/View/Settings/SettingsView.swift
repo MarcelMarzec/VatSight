@@ -59,6 +59,28 @@ struct SettingsView: View {
                     }
                     
                     NavigationLink {
+                        EventsSettingsView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "calendar.badge.clock")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("Events & Bookings")
+                        }
+                    }
+
+                    NavigationLink {
+                        MapLegendView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "map")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("Map Legend")
+                        }
+                    }
+
+                    NavigationLink {
                         AppearanceView()
                     } label: {
                         HStack {
@@ -264,4 +286,5 @@ struct SafariView: UIViewControllerRepresentable {
     return SettingsView()
         .environment(prefs)
         .environment(AdsManager(prefs: prefs))
+        .environment(EventsManager(prefs: prefs))
 }

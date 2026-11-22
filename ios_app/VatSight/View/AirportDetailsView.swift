@@ -11,14 +11,28 @@ struct AirportDetailsView: View {
     let controllers: [Controllers]
     let atis: [ATIS]
     let traffic: AirportTraffic?
+    /// Bookings at this airport (and covering top-down positions) active now or starting
+    /// within the user's booking window. Already excludes callsigns that are online.
+    var bookings: [AtcBooking] = []
+    /// Live and upcoming events involving this airport.
+    var events: [VatsimEvent] = []
     var labelResolver: ((String) -> String?)? = nil
     var onPilotSelected: ((Int, Double, Double) -> Void)? = nil
+    /// Selects another airport on the map (from an event's airport list).
+    var onAirportSelected: ((String) -> Void)? = nil
+    /// Lookups for the event detail sheet (names, bookings, map navigation).
+    var eventContext = EventMapContext()
 
     @Environment(\.dismiss) private var dismiss
     @Environment(PreferencesManager.self) private var prefsManager
     @State private var metar: String? = nil
     @State private var metarLoading = true
     @State private var showingTraffic = false
+    @State private var bookingsExpanded = false
+    @State private var selectedEvent: VatsimEvent?
+
+    /// Shown in the airport's event section; the rest are a tap away in the Events tab.
+    private static let maxEventsShown = 3
 
     var body: some View {
         if showingTraffic, let traffic {
@@ -107,10 +121,14 @@ struct AirportDetailsView: View {
         .textSelection(.enabled)
 
         List {
+            eventsSection
+
             // Controllers section
             Section {
                 if controllers.isEmpty {
-                    Text("No controllers online at this airport.")
+                    Text(bookings.isEmpty
+                         ? "No controllers online at this airport."
+                         : "No controllers online. Booked ATC is listed below.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
@@ -126,6 +144,8 @@ struct AirportDetailsView: View {
                     Text("Swipe right on a controller to add them as a friend.")
                 }
             }
+
+            bookingsSection
 
             // ATIS section
             let atisStations = atis.filter {
@@ -187,6 +207,99 @@ struct AirportDetailsView: View {
         .textSelection(.enabled)
         .task {
             await fetchMetar()
+        }
+        .sheet(item: $selectedEvent) { event in
+            NavigationStack {
+                EventDetailView(event: event, context: sheetEventContext)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { selectedEvent = nil }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The event context with "Show on Map" closing this nested sheet first.
+    private var sheetEventContext: EventMapContext {
+        var context = eventContext
+        context.onShowAirport = { icao in
+            selectedEvent = nil
+            guard icao.uppercased() != airport.icao.uppercased() else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                onAirportSelected?(icao)
+            }
+        }
+        return context
+    }
+
+    // MARK: - Events
+
+    @ViewBuilder
+    private var eventsSection: some View {
+        if !events.isEmpty {
+            Section {
+                ForEach(events.prefix(Self.maxEventsShown)) { event in
+                    Button {
+                        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
+                        selectedEvent = event
+                    } label: {
+                        AirportEventRow(event: event, timeDisplay: prefsManager.userPrefs.eventTimeDisplay)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } header: {
+                Text(events.count == 1 ? "Event" : "Events")
+            } footer: {
+                if events.count > Self.maxEventsShown {
+                    Text("\(events.count - Self.maxEventsShown) more in the Events tab.")
+                }
+            }
+        }
+    }
+
+    // MARK: - ATC Bookings
+
+    /// One booking: shown inline. Several: a collapsible "ATC Bookings" group, opened
+    /// automatically when nobody is online so the booked positions are visible straight away.
+    @ViewBuilder
+    private var bookingsSection: some View {
+        if bookings.count == 1, let booking = bookings.first {
+            Section("ATC Booking") {
+                AtcBookingRow(booking: booking, labelResolver: labelResolver)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            }
+        } else if bookings.count > 1 {
+            if controllers.isEmpty {
+                Section {
+                    bookingRows
+                } header: {
+                    Text("ATC Bookings")
+                }
+            } else {
+                Section {
+                    DisclosureGroup(isExpanded: $bookingsExpanded) {
+                        bookingRows
+                    } label: {
+                        HStack {
+                            Label("ATC Bookings", systemImage: "headphones")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(bookings.count)")
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            }
+        }
+    }
+
+    private var bookingRows: some View {
+        ForEach(bookings) { booking in
+            AtcBookingRow(booking: booking, labelResolver: labelResolver)
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
         }
     }
 
@@ -250,6 +363,42 @@ struct AirportDetailsView: View {
             Text("\(count)")
                 .font(.title2.bold())
         }
+    }
+}
+
+private struct AirportEventRow: View {
+    let event: VatsimEvent
+    let timeDisplay: EventTimeDisplay
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if let banner = event.banner {
+                Color.clear
+                    .frame(width: 72, height: 40.5)
+                    .overlay { RemoteImage(url: banner, maxPixelSize: 300) }
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(event.name)
+                    .font(.headline)
+                    .lineLimit(2)
+                Text(EventTimeFormatting.dateLine(start: event.startTime, end: event.endTime, display: timeDisplay)
+                     + " · "
+                     + EventTimeFormatting.range(start: event.startTime, end: event.endTime, display: timeDisplay).primary)
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 4)
+            EventStatusPill(start: event.startTime, end: event.endTime)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(event.accessibilitySummary(display: timeDisplay))
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -453,4 +602,5 @@ private struct ControllerRow: View {
         )
     )
     .environment(manager)
+    .environment(EventsManager(prefs: manager))
 }

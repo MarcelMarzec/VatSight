@@ -6,8 +6,16 @@ summary: Find your friends on the network whenever they’re online, flying or c
 author: marcel-marzec
 og_shot: track-overlay
 date: 2026-11-04
-tags: [Tracking, VATSIM, VatSight]
-related: [vatsim-atc-positions-explained]
+tags:
+  - Tracking
+  - VATSIM
+  - VatSight
+related:
+  - vatsim-atc-positions-explained
+slug: track-friends-on-vatsim
+updated: 2026-11-21
+toc: true
+draft: false
 ---
 **To track a friend on VATSIM you need one thing: their VATSIM CID.** Callsigns change from flight to flight, but a CID is a member’s permanent ID number, so once you have it you can find them whenever they connect, whether they’re flying or controlling. This guide shows how to get it and how to follow them on your iPhone with [VatSight](/vatsim-tracker).
 
@@ -29,6 +37,7 @@ Open **Settings → Friends** and enter your own CID under **Your CID**. It’s 
 - Your aircraft shows in **gold** on the map, so you can always find yourself.
 - While you’re connected, a **locate** button appears on the map that flies straight to your aircraft, or to your airport or sector when you’re controlling.
 
+>[!note] More self tracking features coming to this soon!
 ## Step 3: Add your friends
 
 There are three ways to add someone:
@@ -61,4 +70,4 @@ On the map itself, friends stand out in **green**: their aircraft, the labels of
 
 ## What’s next
 
-Notifications when a friend connects, and better following of a single flight, are planned for VatSight’s first major update. You can see what’s coming on the [roadmap](/roadmap). In the meantime, if you’re new to reading the map, [VATSIM ATC positions explained](vatsim-atc-positions-explained.md) covers who all those controllers are.
+Notifications when a friend connects, and better following of a single flight, are planned for a future VatSight update. You can see what’s coming on the [roadmap](/roadmap). In the meantime, if you’re new to reading the map, [VATSIM ATC positions explained](vatsim-atc-positions-explained.md) covers who all those controllers are.

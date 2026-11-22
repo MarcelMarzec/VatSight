@@ -135,11 +135,15 @@ struct RadarViewRepresentable: UIViewRepresentable {
 
         let myCID = prefsManager.myCID
 
+        let fadeICAO = context.coordinator.appliedFadeICAO
+
         context.coordinator.updatePilots(
             viewModel.pilotsToDisplay,
+            revision: viewModel.pilotsRevision,
             selectedCID: viewModel.selectedCID,
             friendCIDs: friendCIDs,
-            myCID: myCID
+            myCID: myCID,
+            dimAirportICAO: fadeICAO
         )
         
         context.coordinator.updateSectors(
@@ -155,7 +159,17 @@ struct RadarViewRepresentable: UIViewRepresentable {
             viewModel.airportsToDisplay,
             filledICAOs: viewModel.filledAirportICAOs,
             selectedICAO: viewModel.selectedAirportICAO,
-            friendControlledICAOs: friendControlledICAOs
+            friendControlledICAOs: friendControlledICAOs,
+            highlights: viewModel.airportHighlights,
+            connectedICAOs: viewModel.airportConnections(for: fadeICAO),
+            activitySignature: viewModel.airportActivitySignature
+        )
+
+        context.coordinator.updateBookedSectors(
+            viewModel.bookedSectorsToDisplay,
+            approximateBookingIDs: viewModel.approximateBookingIDs,
+            airports: viewModel.airportsToDisplay,
+            timeDisplay: prefsManager.userPrefs.eventTimeDisplay
         )
 
         context.coordinator.updateRoutes(
@@ -164,6 +178,9 @@ struct RadarViewRepresentable: UIViewRepresentable {
             selectedAirportICAO: viewModel.selectedAirportICAO,
             airportTraffic: viewModel.selectedAirportTraffic
         )
+
+        // Fade airports and aircraft not connected to the selected airport (animated).
+        context.coordinator.updateFadeTarget(viewModel.selectedAirportICAO)
 
         if let coordinate = viewModel.pendingCameraFlyTo {
             context.coordinator.flyTo(coordinate: coordinate)
@@ -183,6 +200,21 @@ struct RadarViewRepresentable: UIViewRepresentable {
         private let sectorStyleManager = SectorStyleManager()
         private let airportStyleManager = AirportStyleManager()
         private let routeStyleManager = FlightRouteStyleManager()
+        private let bookedSectorStyleManager = BookedSectorStyleManager()
+        private var didInstallBookedSectorStyle = false
+        private var lastBookedSectorSignature: [String] = []
+        private var lastBookedTimeDisplay: EventTimeDisplay?
+        private var lastAirportHighlights: [String: AirportHighlight] = [:]
+        private var lastConnectedICAOs: Set<String>? = nil
+        private var lastPilotDimICAO: String? = nil
+
+        // MARK: Fade state
+        /// The airport the map's faded/unfaded split currently reflects. Lags the selection
+        /// while a fade-out runs, so features never jump between faded and unfaded mid-fade.
+        fileprivate private(set) var appliedFadeICAO: String? = nil
+        private var fadeTargetICAO: String? = nil
+        private var fadeProgress: Double = 0
+        private let fadeAnimator = MapFadeAnimator()
         fileprivate var didInstallPilotStyle = false
         fileprivate var didInstallSectorStyle = false
         fileprivate var didInstallAirportStyle = false
@@ -194,15 +226,21 @@ struct RadarViewRepresentable: UIViewRepresentable {
         fileprivate var lastResolvedStyleURIString: String = ""
         fileprivate var currentIsDark: Bool = true
 
-        private var lastPilots: [Pilot] = []
+        private var lastPilotCount: Int = -1
+        private var lastPilotsRevision: Int = -1
         private var lastSelectedCID: Int? = nil
-        private var lastFriendCIDs: Set<Int> = []
-        private var lastMyCID: Int = 0
-        private var lastSectors: [VatglassesSector] = []
+        // Pilots and sectors track friends/self separately: sharing them meant whichever
+        // updated first consumed the change and the other never redrew.
+        private var lastPilotFriendCIDs: Set<Int> = []
+        private var lastPilotMyCID: Int = 0
+        private var lastSectorFriendCIDs: Set<Int> = []
+        private var lastSectorMyCID: Int = 0
+        private var lastSectorCount: Int = -1
         private var lastActiveSectorCount: Int = -1
         private var lastOwnershipSignature: Int = 0
         private var lastSelectedControllerCID: Int? = nil
-        private var lastAirports: [VatglassesAirport] = []
+        private var lastAirportCount: Int = -1
+        private var lastAirportActivitySignature: Int = 0
         private var lastFilledICAOs: Set<String> = []
         private var lastSelectedAirportICAO: String? = nil
         private var lastFriendControlledICAOs: Set<String> = []
@@ -229,12 +267,14 @@ struct RadarViewRepresentable: UIViewRepresentable {
             do {
                 try pilotStyleManager.configurePilots(on: mapView, isDark: isDark, planeIconMultiplier: planeIconMultiplier)
                 didInstallPilotStyle = true
+                pilotStyleManager.applyDimProgress(fadeProgress, on: mapView)
                 pilotStyleManager.updatePilots(
                     on: mapView,
                     pilots: viewModel.pilotsToDisplay,
                     selectedCID: viewModel.selectedCID,
                     friendCIDs: prefsManager.allFriendCIDs,
-                    myCID: prefsManager.myCID
+                    myCID: prefsManager.myCID,
+                    dimAirportICAO: appliedFadeICAO
                 )
             } catch { }
         }
@@ -245,6 +285,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
             do {
                 try sectorStyleManager.configureSectors(on: mapView, isDark: isDark)
                 didInstallSectorStyle = true
+                installBookedSectorStyle(on: mapView, isDark: isDark)
                 sectorStyleManager.updateSectors(
                     on: mapView,
                     sectors: viewModel.sectorsToDisplay,
@@ -256,6 +297,47 @@ struct RadarViewRepresentable: UIViewRepresentable {
             } catch { }
         }
         
+        /// Booked-sector layers sit directly above the live sector layers and below airports.
+        private func installBookedSectorStyle(on mapView: MapView, isDark: Bool) {
+            bookedSectorStyleManager.removeLayers(from: mapView)
+            do {
+                try bookedSectorStyleManager.configure(on: mapView, isDark: isDark)
+                didInstallBookedSectorStyle = true
+                lastBookedSectorSignature = []
+                lastBookedTimeDisplay = nil
+                updateBookedSectors(
+                    viewModel.bookedSectorsToDisplay,
+                    approximateBookingIDs: viewModel.approximateBookingIDs,
+                    airports: viewModel.airportsToDisplay,
+                    timeDisplay: prefsManager.userPrefs.eventTimeDisplay
+                )
+            } catch {
+                didInstallBookedSectorStyle = false
+            }
+        }
+
+        func updateBookedSectors(
+            _ bookedSectors: [BookedSector],
+            approximateBookingIDs: Set<Int>,
+            airports: [VatglassesAirport],
+            timeDisplay: EventTimeDisplay
+        ) {
+            guard let mapView, didInstallBookedSectorStyle else { return }
+            let signature = bookedSectors.map {
+                "\($0.sector.id)#\($0.booking.id)\(approximateBookingIDs.contains($0.booking.id) ? "~" : "")"
+            }
+            guard signature != lastBookedSectorSignature || timeDisplay != lastBookedTimeDisplay else { return }
+            lastBookedSectorSignature = signature
+            lastBookedTimeDisplay = timeDisplay
+            bookedSectorStyleManager.update(
+                on: mapView,
+                bookedSectors: bookedSectors,
+                approximateBookingIDs: approximateBookingIDs,
+                airports: airports,
+                timeDisplay: timeDisplay
+            )
+        }
+
         func installAirportStyleIfNeeded() {
             guard let mapView, !didInstallAirportStyle else { return }
             let isDark = currentIsDark
@@ -268,8 +350,12 @@ struct RadarViewRepresentable: UIViewRepresentable {
                     on: mapView,
                     airports: viewModel.airportsToDisplay,
                     filledICAOs: viewModel.filledAirportICAOs,
-                    friendControlledICAOs: viewModel.friendControlledAirportICAOs(friendCIDs: friendCIDs)
+                    friendControlledICAOs: viewModel.friendControlledAirportICAOs(friendCIDs: friendCIDs),
+                    highlights: viewModel.airportHighlights,
+                    connectedICAOs: viewModel.airportConnections(for: appliedFadeICAO)
                 )
+                airportStyleManager.applyDimProgress(fadeProgress, on: mapView)
+                lastAirportHighlights = viewModel.airportHighlights
             } catch { }
         }
         
@@ -299,6 +385,9 @@ struct RadarViewRepresentable: UIViewRepresentable {
             if didInstallSectorStyle {
                 sectorStyleManager.applyTheme(on: mapView, isDark: isDark)
             }
+            if didInstallBookedSectorStyle {
+                bookedSectorStyleManager.applyTheme(on: mapView, isDark: isDark)
+            }
         }
 
         func applyPlaneIconSize(on mapView: MapView, multiplier: Double) {
@@ -318,6 +407,9 @@ struct RadarViewRepresentable: UIViewRepresentable {
             guard let mapView else { return }
 
             let orderedIds: [String] = [
+                BookedSectorStyleManager.labelLayerId,
+                AirportStyleManager.airportHaloLayerId,
+                AirportStyleManager.airportEventRingLayerId,
                 AirportStyleManager.airportLayerId,
                 RadarStyleManager.pilotGroundIconLayerId,
                 RadarStyleManager.pilotIconLayerId,
@@ -332,7 +424,9 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 guard mapView.mapboxMap.layerExists(withId: layerId) else { continue }
                 do {
                     switch layerId {
-                    case AirportStyleManager.airportLayerId:
+                    case AirportStyleManager.airportLayerId,
+                         AirportStyleManager.airportHaloLayerId,
+                         AirportStyleManager.airportEventRingLayerId:
                         let l = try mapView.mapboxMap.layer(withId: layerId, type: CircleLayer.self)
                         try mapView.mapboxMap.removeLayer(withId: layerId)
                         try mapView.mapboxMap.addLayer(l, layerPosition: nil)
@@ -368,16 +462,25 @@ struct RadarViewRepresentable: UIViewRepresentable {
 
         func updatePilots(
             _ pilots: [Pilot],
+            revision: Int,
             selectedCID: Int?,
             friendCIDs: Set<Int> = [],
-            myCID: Int = 0
+            myCID: Int = 0,
+            dimAirportICAO: String? = nil
         ) {
             guard let mapView, didInstallPilotStyle else { return }
-            guard pilots.count != lastPilots.count || selectedCID != lastSelectedCID || friendCIDs != lastFriendCIDs || myCID != lastMyCID else { return }
-            lastPilots = pilots
+            guard pilots.count != lastPilotCount
+                    || revision != lastPilotsRevision
+                    || selectedCID != lastSelectedCID
+                    || friendCIDs != lastPilotFriendCIDs
+                    || myCID != lastPilotMyCID
+                    || dimAirportICAO != lastPilotDimICAO else { return }
+            lastPilotDimICAO = dimAirportICAO
+            lastPilotCount = pilots.count
+            lastPilotsRevision = revision
             lastSelectedCID = selectedCID
-            lastFriendCIDs = friendCIDs
-            lastMyCID = myCID
+            lastPilotFriendCIDs = friendCIDs
+            lastPilotMyCID = myCID
             pilotsVersion += 1
 
             pilotStyleManager.updatePilots(
@@ -385,7 +488,79 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 pilots: pilots,
                 selectedCID: selectedCID,
                 friendCIDs: friendCIDs,
-                myCID: myCID
+                myCID: myCID,
+                dimAirportICAO: dimAirportICAO
+            )
+        }
+
+        // MARK: - Fading
+
+        /// Moves the faded split towards `target` (the selected airport, or nil):
+        /// nothing faded → fade in; faded → fade out, then swap to the new airport and fade in.
+        func updateFadeTarget(_ target: String?) {
+            let target = target?.uppercased()
+            guard target != fadeTargetICAO else { return }
+            fadeTargetICAO = target
+            runFadeTransition()
+        }
+
+        private func runFadeTransition() {
+            let target = fadeTargetICAO
+            if appliedFadeICAO == target {
+                animateFade(to: target == nil ? 0 : 1)
+                return
+            }
+            if appliedFadeICAO == nil || fadeProgress == 0 {
+                // Nothing visibly faded yet: switch the split now, then fade in.
+                appliedFadeICAO = target
+                pushFadeSplit()
+                if target != nil { animateFade(to: 1) }
+                return
+            }
+            animateFade(to: 0) { [weak self] in
+                guard let self else { return }
+                self.appliedFadeICAO = self.fadeTargetICAO
+                self.pushFadeSplit()
+                if self.fadeTargetICAO != nil { self.animateFade(to: 1) }
+            }
+        }
+
+        private func animateFade(to value: Double, completion: (() -> Void)? = nil) {
+            fadeAnimator.animate(
+                from: fadeProgress,
+                to: value,
+                duration: 0.3,
+                update: { [weak self] progress in self?.setFadeProgress(progress) },
+                completion: completion
+            )
+        }
+
+        private func setFadeProgress(_ progress: Double) {
+            fadeProgress = progress
+            guard let mapView else { return }
+            if didInstallAirportStyle { airportStyleManager.applyDimProgress(progress, on: mapView) }
+            if didInstallPilotStyle { pilotStyleManager.applyDimProgress(progress, on: mapView) }
+        }
+
+        /// Rebuilds the airport and aircraft sources with the current faded/unfaded split.
+        private func pushFadeSplit() {
+            let friendCIDs = prefsManager.allFriendCIDs
+            updatePilots(
+                viewModel.pilotsToDisplay,
+                revision: viewModel.pilotsRevision,
+                selectedCID: viewModel.selectedCID,
+                friendCIDs: friendCIDs,
+                myCID: prefsManager.myCID,
+                dimAirportICAO: appliedFadeICAO
+            )
+            updateAirports(
+                viewModel.airportsToDisplay,
+                filledICAOs: viewModel.filledAirportICAOs,
+                selectedICAO: viewModel.selectedAirportICAO,
+                friendControlledICAOs: viewModel.friendControlledAirportICAOs(friendCIDs: friendCIDs),
+                highlights: viewModel.airportHighlights,
+                connectedICAOs: viewModel.airportConnections(for: appliedFadeICAO),
+                activitySignature: viewModel.airportActivitySignature
             )
         }
         
@@ -399,22 +574,28 @@ struct RadarViewRepresentable: UIViewRepresentable {
         ) {
             guard let mapView, didInstallSectorStyle else { return }
             let activeSectorCount = sectors.filter { $0.isActive }.count
-            let ownershipSignature = sectors.reduce(into: 0) { hash, sector in
-                hash ^= sector.id.hashValue
-                hash ^= (sector.activeController?.cid ?? -1).hashValue
+            // Ordered hash of everything the sector layers draw. (The previous XOR fold cancelled
+            // out whenever one controller owned an even number of sectors.)
+            var hasher = Hasher()
+            for sector in sectors {
+                hasher.combine(sector.id)
+                hasher.combine(sector.activeController?.cid)
+                hasher.combine(sector.activeController?.callsign)
+                hasher.combine(sector.activeController?.frequency)
             }
-            guard sectors.count != lastSectors.count
+            let ownershipSignature = hasher.finalize()
+            guard sectors.count != lastSectorCount
                     || activeSectorCount != lastActiveSectorCount
                     || ownershipSignature != lastOwnershipSignature
                     || selectedControllerCID != lastSelectedControllerCID
-                    || friendCIDs != lastFriendCIDs
-                    || myCID != lastMyCID else { return }
-            lastSectors = sectors
+                    || friendCIDs != lastSectorFriendCIDs
+                    || myCID != lastSectorMyCID else { return }
+            lastSectorCount = sectors.count
             lastActiveSectorCount = activeSectorCount
             lastOwnershipSignature = ownershipSignature
             lastSelectedControllerCID = selectedControllerCID
-            lastFriendCIDs = friendCIDs
-            lastMyCID = myCID
+            lastSectorFriendCIDs = friendCIDs
+            lastSectorMyCID = myCID
 
             sectorStyleManager.updateSectors(
                 on: mapView,
@@ -431,23 +612,34 @@ struct RadarViewRepresentable: UIViewRepresentable {
             _ airports: [VatglassesAirport],
             filledICAOs: Set<String>,
             selectedICAO: String? = nil,
-            friendControlledICAOs: Set<String> = []
+            friendControlledICAOs: Set<String> = [],
+            highlights: [String: AirportHighlight] = [:],
+            connectedICAOs: Set<String>? = nil,
+            activitySignature: Int = 0
         ) {
             guard let mapView else { return }
-            guard airports.count != lastAirports.count
+            guard airports.count != lastAirportCount
+                    || activitySignature != lastAirportActivitySignature
                     || filledICAOs != lastFilledICAOs
                     || selectedICAO != lastSelectedAirportICAO
-                    || friendControlledICAOs != lastFriendControlledICAOs else { return }
-            lastAirports = airports
+                    || friendControlledICAOs != lastFriendControlledICAOs
+                    || highlights != lastAirportHighlights
+                    || connectedICAOs != lastConnectedICAOs else { return }
+            lastAirportCount = airports.count
+            lastAirportActivitySignature = activitySignature
             lastFilledICAOs = filledICAOs
             lastSelectedAirportICAO = selectedICAO
             lastFriendControlledICAOs = friendControlledICAOs
+            lastAirportHighlights = highlights
+            lastConnectedICAOs = connectedICAOs
             airportStyleManager.updateAirports(
                 on: mapView,
                 airports: airports,
                 filledICAOs: filledICAOs,
                 selectedICAO: selectedICAO,
-                friendControlledICAOs: friendControlledICAOs
+                friendControlledICAOs: friendControlledICAOs,
+                highlights: highlights,
+                connectedICAOs: connectedICAOs
             )
         }
 

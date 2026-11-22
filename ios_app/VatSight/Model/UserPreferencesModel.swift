@@ -71,6 +71,55 @@ enum AppTheme: String, CaseIterable, Codable {
     }
 }
 
+enum EventTimeDisplay: String, CaseIterable, Codable {
+    case utc = "utc"
+    case local = "local"
+    case both = "both"
+
+    var displayName: String {
+        switch self {
+        case .utc:   return "UTC"
+        case .local: return "Local"
+        case .both:  return "Both"
+        }
+    }
+}
+
+enum EventsViewMode: String, CaseIterable, Codable {
+    case list = "list"
+    case timeline = "timeline"
+
+    /// Reads stored values, mapping the retired "threeDay" / "week" calendars to the timeline.
+    init(storedValue: String) {
+        switch storedValue {
+        case "threeDay", "week": self = .timeline
+        default: self = EventsViewMode(rawValue: storedValue) ?? .list
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .list:     return "List"
+        case .timeline: return "Timeline"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .list:     return "rectangle.grid.1x2"
+        case .timeline: return "calendar.day.timeline.left"
+        }
+    }
+}
+
+/// Look-ahead windows (hours) for highlighting upcoming events and bookings on the map.
+enum EventHighlightWindows {
+    static let eventOptions = [6, 12, 24, 48, 72]
+    static let defaultEventHours = 24
+    static let bookingOptions = [1, 2, 6, 24, 48]
+    static let defaultBookingHours = 1
+}
+
 @Model
 final class UserPreferencesModel {
     var vatsimCID: Int
@@ -105,6 +154,28 @@ final class UserPreferencesModel {
     var rewardedAdsEnabled: Bool = true
     var appOpenAdsEnabled: Bool = true
     var adsViewedCount: Int = 0
+    // Engagement, used to time the App Store review and Support VatSight prompts
+    var launchCount: Int = 0
+    var firstLaunchDate: Date?
+    var detailViewCount: Int = 0
+    var lastReviewRequestVersion: String = ""
+    var lastReviewRequestDate: Date?
+    var supportPromptCount: Int = 0
+    var lastSupportPromptDate: Date?
+    var supportPromptOptedOut: Bool = false
+    // Events & ATC bookings
+    var upcomingEventWindowHours: Int = 24 // EventHighlightWindows.defaultEventHours
+    var upcomingBookingWindowHours: Int = 1 // EventHighlightWindows.defaultBookingHours
+    var showEventAirportHighlights: Bool = true
+    var showBookingAirportHighlights: Bool = true
+    var showBookedSectors: Bool = true
+    var eventTimeDisplayRaw: String = "utc"
+    var eventsViewModeRaw: String = "list"
+    // Persisted Events filters (empty = no filter)
+    var eventFilterTypes: [String] = []
+    var eventFilterRegion: String = ""
+    var eventFilterDivision: String = ""
+    var eventFilterVatsimOnly: Bool = false
 
     var mapStyle: MapStyle {
         get { MapStyle(rawValue: mapStyleRaw) ?? .system }
@@ -115,6 +186,22 @@ final class UserPreferencesModel {
         get { AppTheme(rawValue: appThemeRaw) ?? .dark }
         set { appThemeRaw = newValue.rawValue }
     }
+
+    var eventTimeDisplay: EventTimeDisplay {
+        get { EventTimeDisplay(rawValue: eventTimeDisplayRaw) ?? .utc }
+        set { eventTimeDisplayRaw = newValue.rawValue }
+    }
+
+    var eventsViewMode: EventsViewMode {
+        get { EventsViewMode(storedValue: eventsViewModeRaw) }
+        set { eventsViewModeRaw = newValue.rawValue }
+    }
+
+    /// Seconds ahead of now that an event counts as "upcoming" on the map.
+    var upcomingEventWindow: TimeInterval { TimeInterval(max(upcomingEventWindowHours, 1)) * 3600 }
+
+    /// Seconds ahead of now that an ATC booking counts as "upcoming" on the map and airport sheet.
+    var upcomingBookingWindow: TimeInterval { TimeInterval(max(upcomingBookingWindowHours, 1)) * 3600 }
 
     init(
         vatsimCID: Int,

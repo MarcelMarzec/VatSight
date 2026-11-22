@@ -211,6 +211,91 @@ final class PreferencesManager {
         try? context.save()
     }
 
+    // MARK: - Engagement Prompts
+
+    func recordLaunch() {
+        userPrefs.launchCount += 1
+        if userPrefs.firstLaunchDate == nil { userPrefs.firstLaunchDate = Date() }
+        try? context.save()
+    }
+
+    func incrementDetailViewCount() {
+        userPrefs.detailViewCount += 1
+        try? context.save()
+    }
+
+    func recordReviewRequest(version: String) {
+        userPrefs.lastReviewRequestVersion = version
+        userPrefs.lastReviewRequestDate = Date()
+        try? context.save()
+    }
+
+    func recordSupportPromptShown() {
+        userPrefs.supportPromptCount += 1
+        userPrefs.lastSupportPromptDate = Date()
+        try? context.save()
+    }
+
+    func optOutOfSupportPrompt() {
+        userPrefs.supportPromptOptedOut = true
+        try? context.save()
+    }
+
+    // MARK: - Events & Bookings
+
+    func updateUpcomingEventWindowHours(_ hours: Int) {
+        userPrefs.upcomingEventWindowHours = hours
+        try? context.save()
+    }
+
+    func updateUpcomingBookingWindowHours(_ hours: Int) {
+        userPrefs.upcomingBookingWindowHours = hours
+        try? context.save()
+    }
+
+    func updateShowEventAirportHighlights(_ value: Bool) {
+        userPrefs.showEventAirportHighlights = value
+        try? context.save()
+    }
+
+    func updateShowBookingAirportHighlights(_ value: Bool) {
+        userPrefs.showBookingAirportHighlights = value
+        try? context.save()
+    }
+
+    func updateShowBookedSectors(_ value: Bool) {
+        userPrefs.showBookedSectors = value
+        try? context.save()
+    }
+
+    func updateEventTimeDisplay(_ value: EventTimeDisplay) {
+        userPrefs.eventTimeDisplay = value
+        try? context.save()
+    }
+
+    func updateEventsViewMode(_ value: EventsViewMode) {
+        userPrefs.eventsViewMode = value
+        try? context.save()
+    }
+
+    /// The Events tab filter as last chosen by the user.
+    var eventFilter: EventFilter {
+        EventFilter(
+            types: Set(userPrefs.eventFilterTypes.map(VatsimEventType.init(rawValue:))),
+            region: userPrefs.eventFilterRegion.isEmpty ? nil : userPrefs.eventFilterRegion,
+            division: userPrefs.eventFilterDivision.isEmpty ? nil : userPrefs.eventFilterDivision,
+            vatsimOrganisedOnly: userPrefs.eventFilterVatsimOnly
+        )
+    }
+
+    func updateEventFilter(_ filter: EventFilter) {
+        userPrefs.eventFilterTypes = filter.types.map(\.rawValue).sorted()
+        userPrefs.eventFilterRegion = filter.region ?? ""
+        userPrefs.eventFilterDivision = filter.division ?? ""
+        userPrefs.eventFilterVatsimOnly = filter.vatsimOrganisedOnly
+        try? context.save()
+    }
+
     func getRefreshIntervalInSeconds() -> TimeInterval {
         let rateString = userPrefs.vatsimRefreshRate
         

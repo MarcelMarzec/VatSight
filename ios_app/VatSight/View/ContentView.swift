@@ -11,6 +11,7 @@ import MapboxMaps
 
 private enum AppTab: Hashable {
     case map
+    case events
     case settings
     case search
 }
@@ -22,16 +23,27 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var manager: PreferencesManager?
     @State private var adsManager: AdsManager?
+    @State private var promptManager: PromptManager?
+    @State private var eventsManager: EventsManager?
     @State private var wasInBackground = false
     @StateObject private var radarViewModel = RadarViewModel()
     
     var body: some View {
         Group {
-            if let manager, let adsManager {
+            if let manager, let adsManager, let promptManager, let eventsManager {
                 TabView(selection: $selectedTab) {
 
                     Tab("Map", systemImage: "map.fill", value: AppTab.map) {
                         RadarView()
+                    }
+
+                    Tab("Events", systemImage: "calendar", value: AppTab.events) {
+                        EventsView(
+                            context: radarViewModel.eventMapContext(onShowAirport: { icao in
+                                selectedTab = .map
+                                radarViewModel.selectAirportAndFly(icao: icao)
+                            })
+                        )
                     }
 
                     Tab("Settings", systemImage: "gearshape.fill", value: AppTab.settings) {
@@ -71,6 +83,8 @@ struct ContentView: View {
                 }
                 .environment(manager)
                 .environment(adsManager)
+                .environment(promptManager)
+                .environment(eventsManager)
                 .environmentObject(radarViewModel)
                 .preferredColorScheme(manager.userPrefs.appTheme.colorScheme)
                 .onChange(of: radarViewModel.pendingNavigateToCID) { _, cid in
@@ -93,6 +107,7 @@ struct ContentView: View {
                     switch newPhase {
                     case .active:
                         radarViewModel.handleForeground()
+                        eventsManager.handleForeground()
                         if wasInBackground {
                             wasInBackground = false
                             adsManager.handleAppBecameActive(isColdLaunch: false)
@@ -100,6 +115,7 @@ struct ContentView: View {
                     case .background:
                         wasInBackground = true
                         radarViewModel.handleBackground()
+                        eventsManager.handleBackground()
                     default:
                         break
                     }
@@ -113,6 +129,8 @@ struct ContentView: View {
                         .environment(adsManager)
                 }
                 .task {
+                    eventsManager.start()
+                    promptManager.recordLaunch()
                     await adsManager.startIfOptedIn()
                     adsManager.handleAppBecameActive(isColdLaunch: true)
                 }
@@ -132,6 +150,8 @@ struct ContentView: View {
                 let prefs = PreferencesManager(context: context)
                 manager = prefs
                 adsManager = AdsManager(prefs: prefs)
+                promptManager = PromptManager(prefs: prefs)
+                eventsManager = EventsManager(prefs: prefs)
             }
         }
     }

@@ -52,6 +52,31 @@ final class RadarViewModel: ObservableObject {
     @Published var vatglassesDiagnostics = VatglassesDiagnostics()
 
     var activeFlightPlanICAOs: Set<String> = []
+
+    /// Bumped on every successful VATSIM fetch. Positions change every refresh even when the
+    /// pilot count doesn't, so the map compares this rather than counts.
+    private(set) var pilotsRevision = 0
+    /// Hash of what airport dots display (active state, T/G/D/A badges, controller label).
+    /// Lets the map skip rebuilding the airport source when nothing visible changed.
+    private(set) var airportActivitySignature = 0
+
+    // MARK: - Events & bookings overlays (see RadarViewModel+EventOverlays)
+    /// ICAO → highlight for the airport dots. Already honours the user's toggles.
+    @Published var airportHighlights: [String: AirportHighlight] = [:]
+    /// Sectors that booked (not yet online) controllers will own.
+    @Published var bookedSectors: [BookedSector] = []
+    /// Bookings shown in the airport sheet for the selected airport.
+    @Published var bookingsAtSelectedAirport: [AtcBooking] = []
+    var eventOverlay = EventOverlayInputs.empty
+    /// VATGlasses position key → the earliest pending booking for it.
+    var bookedPositionIndex: [String: AtcBooking] = [:]
+    var bookingIndexCache = BookingPositionIndexCache()
+    var bookedSectorsSignature: [String] = []
+    /// Bookings whose airspace was placed by the approximate fallback ("≈" on the map).
+    var approximateBookingIDs: Set<Int> = []
+    var mergedBookedSectorsCache: (signature: [String], sectors: [BookedSector])?
+    /// Callsign → positions learned from live controllers; improves booking matches.
+    let learnedPositions = LearnedPositionStore()
     
     private let vatsimService = VatsimService()
     let vatglassesService = VatglassesService()
@@ -105,6 +130,7 @@ final class RadarViewModel: ObservableObject {
 
     func handleBackground() {
         cancelTimers()
+        learnedPositions.flush()
     }
 
     func restartAutoRefresh() {
@@ -138,6 +164,7 @@ final class RadarViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     VatsimRatingsRegistry.shared.populate(from: response)
                     self?.general = response.general
+                    self?.pilotsRevision &+= 1
                     self?.pilots = response.pilots
                     self?.prefiles = response.prefiles
                     self?.controllers = response.controllers
@@ -261,6 +288,14 @@ final class RadarViewModel: ObservableObject {
             }
 
             let updatedAirports = self.vatglassesService.getActiveAirports(controllers: mergedControllers, atis: currentATIS)
+            var activityHasher = Hasher()
+            for airport in updatedAirports where airport.isActive {
+                activityHasher.combine(airport.icao)
+                activityHasher.combine(airport.groundServiceIndicators)
+                activityHasher.combine(airport.activeController?.callsign)
+                activityHasher.combine(airport.activeController?.frequency)
+            }
+            let activitySignature = activityHasher.finalize()
 
             var updatedSectors: [VatglassesSector]? = nil
             var diagnostics: VatglassesDiagnostics? = nil
@@ -277,10 +312,12 @@ final class RadarViewModel: ObservableObject {
 
             DispatchQueue.main.async {
                 self.activeFlightPlanICAOs = icaos
+                self.airportActivitySignature = activitySignature
                 self.airports = updatedAirports
                 if let s = updatedSectors { self.sectors = s }
                 if let d = diagnostics { self.vatglassesDiagnostics = d }
                 self.updateControllersAtSelectedAirport()
+                self.refreshEventOverlays()
             }
         }
     }
@@ -444,10 +481,13 @@ final class RadarViewModel: ObservableObject {
     /// Dissolved polygon per active controller (GEOSwift union); cached until ownership changes.
     var mergedSectorsToDisplay: [VatglassesSector] {
         let activeSectors = sectors.filter { $0.isActive }
-        let signature = activeSectors.reduce(into: 0) { hash, sector in
-            hash ^= sector.id.hashValue
-            hash ^= (sector.activeController?.cid ?? -1).hashValue
+        // Ordered hash: an XOR fold cancels out when one controller owns an even number of sectors.
+        var hasher = Hasher()
+        for sector in activeSectors {
+            hasher.combine(sector.id)
+            hasher.combine(sector.activeController?.cid)
         }
+        let signature = hasher.finalize()
         if signature != mergedSectorsOwnershipSignature {
             mergedSectorsOwnershipSignature = signature
             cachedMergedSectors = SectorGeoJSON.mergedByController(from: sectors)
@@ -461,7 +501,9 @@ final class RadarViewModel: ObservableObject {
             return airports
         }
         return airports.filter { airport in
-            airport.isActive || activeFlightPlanICAOs.contains(airport.icao)
+            airport.isActive
+                || activeFlightPlanICAOs.contains(airport.icao)
+                || airportHighlights[airport.icao] != nil
         }
     }
     

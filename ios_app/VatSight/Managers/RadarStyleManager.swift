@@ -19,6 +19,10 @@ final class RadarStyleManager {
     static let pilotGroundLabelLayerId = "pilot-ground-label-layer"
 
     private var isDarkTheme: Bool = true
+    /// 0 = nothing faded, 1 = features marked `isDimmed` fully faded. Animated by the map coordinator.
+    private var dimProgress: Double = 0
+    private static let dimmedOpacity: Double = 0.2
+    private static let iconLayerIds = [pilotIconLayerId, pilotGroundIconLayerId]
 
     enum RadarStyleError: Error {
         case missingPilotAsset
@@ -67,9 +71,41 @@ final class RadarStyleManager {
 
     // MARK: - Update Source
 
-    func updatePilots(on mapView: MapView, pilots: [Pilot], selectedCID: Int?, friendCIDs: Set<Int> = [], myCID: Int = 0) {
-        let collection = PilotGeoJSON.featureCollection(from: pilots, selectedCID: selectedCID, friendCIDs: friendCIDs, myCID: myCID)
+    func updatePilots(on mapView: MapView, pilots: [Pilot], selectedCID: Int?, friendCIDs: Set<Int> = [], myCID: Int = 0, dimAirportICAO: String? = nil) {
+        let collection = PilotGeoJSON.featureCollection(from: pilots, selectedCID: selectedCID, friendCIDs: friendCIDs, myCID: myCID, dimAirportICAO: dimAirportICAO)
         mapView.mapboxMap.updateGeoJSONSource(withId: Self.pilotSourceId, geoJSON: .featureCollection(collection))
+    }
+
+    // MARK: - Fading
+
+    /// Opacity for `isDimmed` features, interpolated by `dimProgress`.
+    private func dimmableOpacity() -> Exp {
+        Exp(.switchCase) {
+            Exp(.eq) { Exp(.get) { "isDimmed" }; true }
+            1.0 + (Self.dimmedOpacity - 1.0) * dimProgress
+            1.0
+        }
+    }
+
+    private func airborneLabelOpacity() -> Exp {
+        Exp(.step) { Exp(.zoom); 0.0; 7; dimmableOpacity() }
+    }
+
+    /// Called every animation frame while the fade runs.
+    func applyDimProgress(_ progress: Double, on mapView: MapView) {
+        dimProgress = progress
+        let iconOpacity = dimmableOpacity()
+        for layerId in Self.iconLayerIds {
+            try? mapView.mapboxMap.updateLayer(withId: layerId, type: SymbolLayer.self) { layer in
+                layer.iconOpacity = .expression(iconOpacity)
+            }
+        }
+        try? mapView.mapboxMap.updateLayer(withId: Self.pilotLabelLayerId, type: SymbolLayer.self) { layer in
+            layer.textOpacity = .expression(airborneLabelOpacity())
+        }
+        try? mapView.mapboxMap.updateLayer(withId: Self.pilotGroundLabelLayerId, type: SymbolLayer.self) { layer in
+            layer.textOpacity = .expression(iconOpacity)
+        }
     }
 
     // MARK: - Add Image
@@ -109,6 +145,7 @@ final class RadarStyleManager {
             }
         )
         layer.iconColor = .expression(pilotIconColorExpression())
+        layer.iconOpacity = .expression(dimmableOpacity())
         layer.iconSize = .constant(0.65 * planeIconMultiplier)
         layer.iconRotate = .expression(Exp(.get) { "heading" })
         layer.filter = Exp(.eq) { Exp(.get) { "isOnGround" }; false }
@@ -136,7 +173,7 @@ final class RadarStyleManager {
         layer.textHaloWidth = .constant(1.0)
         layer.textFont = .constant(["Arial Unicode MS Regular"])
         layer.textPadding = .constant(2)
-        layer.textOpacity = .expression(Exp(.step) { Exp(.zoom); 0.0; 7; 1.0 })
+        layer.textOpacity = .expression(airborneLabelOpacity())
         layer.symbolSortKey = .constant(1000)
         layer.symbolZOrder = .constant(.auto)
         try mapView.mapboxMap.addLayer(layer)
@@ -156,6 +193,7 @@ final class RadarStyleManager {
             }
         )
         layer.iconColor = .expression(pilotIconColorExpression())
+        layer.iconOpacity = .expression(dimmableOpacity())
         layer.iconSize = .constant(0.65 * planeIconMultiplier)
         layer.iconRotate = .expression(Exp(.get) { "heading" })
         layer.iconAllowOverlap = .constant(true)
@@ -183,6 +221,7 @@ final class RadarStyleManager {
         layer.textHaloWidth = .constant(1.0)
         layer.textFont = .constant(["Arial Unicode MS Regular"])
         layer.textPadding = .constant(2)
+        layer.textOpacity = .expression(dimmableOpacity())
         layer.symbolSortKey = .constant(1000)
         layer.symbolZOrder = .constant(.auto)
         layer.minZoom = 10

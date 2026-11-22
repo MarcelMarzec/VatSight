@@ -6,14 +6,22 @@
 import SwiftUI
 import SwiftData
 import MapboxMaps
+import StoreKit
 
 struct RadarView: View {
 
     @Environment(PreferencesManager.self) private var prefsManager
+    @Environment(AdsManager.self) private var adsManager
+    @Environment(PromptManager.self) private var promptManager
+    @Environment(EventsManager.self) private var eventsManager
+    @Environment(\.requestReview) private var requestReview
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var viewModel: RadarViewModel
     @Namespace private var glassNamespace
     @State private var showingLayerMenu = false
     @State private var showingDebug = false
+    @State private var showingSupportPrompt = false
+    @State private var isVisible = false
     @State private var stalenessCheckTimer: Timer? = nil
     @State private var staleTick = false
     @State private var pilotDetent: PresentationDetent = .fraction(0.3)
@@ -33,6 +41,7 @@ struct RadarView: View {
                 onDismiss: {
                     viewModel.onPilotSheetDismissed()
                     pilotDetent = .fraction(0.3)
+                    detailSheetDismissed()
                 }
             ) {
                 if let pilot = viewModel.selectedPilot {
@@ -59,6 +68,7 @@ struct RadarView: View {
                 onDismiss: {
                     viewModel.dismissAirportSheet()
                     airportDetent = .fraction(0.3)
+                    detailSheetDismissed()
                 }
             ) {
                 if let airport = viewModel.selectedAirport {
@@ -67,6 +77,8 @@ struct RadarView: View {
                         controllers: viewModel.controllersAtSelectedAirport,
                         atis: viewModel.atis,
                         traffic: viewModel.selectedAirportTraffic,
+                        bookings: viewModel.bookingsAtSelectedAirport,
+                        events: eventsManager.events(atAirport: airport.icao),
                         labelResolver: { viewModel.resolvePositionLabel(for: $0) },
                         onPilotSelected: { cid, lat, lon in
                             viewModel.selectPilotAndFly(
@@ -74,7 +86,9 @@ struct RadarView: View {
                                 coordinate: .init(latitude: lat, longitude: lon),
                                 enableTracking: true
                             )
-                        }
+                        },
+                        onAirportSelected: { icao in viewModel.selectAirportAndFly(icao: icao) },
+                        eventContext: viewModel.eventMapContext(onShowAirport: nil)
                     )
                     .clipShape(
                         UnevenRoundedRectangle(
@@ -95,6 +109,7 @@ struct RadarView: View {
                     viewModel.dismissSectorSheet()
                     sectorHeaderHeight = 160
                     sectorDetent = .height(sectorHeaderHeight)
+                    detailSheetDismissed()
                 }
             ) {
                 if let sector = viewModel.selectedSector {
@@ -128,6 +143,7 @@ struct RadarView: View {
                 }
             }
             .onAppear {
+                isVisible = true
                 viewModel.setPreferencesManager(prefsManager)
                 // On first appear, kick off the initial load if not already running.
                 // Subsequent foreground/background transitions are handled via scenePhase
@@ -141,6 +157,7 @@ struct RadarView: View {
                 }
             }
             .onDisappear {
+                isVisible = false
                 // Do NOT stop the refresh timer here — it is managed by scenePhase in ContentView.
                 // Only clean up the UI-only staleness banner timer.
                 stalenessCheckTimer?.invalidate()
@@ -148,6 +165,11 @@ struct RadarView: View {
             }
             .onChange(of: prefsManager.userPrefs.vatsimRefreshRate) { _, _ in
                 viewModel.restartAutoRefresh()
+            }
+            // Events & bookings reach the map only through this Equatable value,
+            // which changes at most once a minute.
+            .onChange(of: eventsManager.overlay, initial: true) { _, overlay in
+                viewModel.applyEventOverlay(overlay)
             }
             .onChange(of: viewModel.pendingNavigateToCID) { _, cid in
                 guard let cid else { return }
@@ -225,6 +247,17 @@ struct RadarView: View {
                                         set: { _ in viewModel.toggleSectors() }
                                     )) {
                                         Label("Inactive sectors", systemImage: "map")
+                                    }
+                                    .padding()
+                                    Divider()
+                                    Toggle(isOn: Binding(
+                                        get: { prefsManager.userPrefs.showBookedSectors },
+                                        set: { value in
+                                            prefsManager.updateShowBookedSectors(value)
+                                            eventsManager.recomputeOverlay()
+                                        }
+                                    )) {
+                                        Label("Booked sectors", systemImage: "calendar.badge.clock")
                                     }
                                     .padding()
                                     Divider()
@@ -415,6 +448,34 @@ struct RadarView: View {
                 .presentationDragIndicator(.visible)
                 .presentationBackgroundInteraction(.enabled)
         }
+        .sheet(isPresented: $showingSupportPrompt) {
+            SupportPromptView()
+                .environment(prefsManager)
+                .environment(adsManager)
+                .presentationDetents([.large])
+        }
+    }
+
+    // MARK: - Engagement Prompts
+
+    /// Closing a details sheet is a natural pause after a successful lookup, so prompts only appear then.
+    private func detailSheetDismissed() {
+        promptManager.recordDetailViewed()
+        Task { @MainActor in
+            // Wait for the dismissal to settle; a dismissal is often just a switch to another sheet
+            try? await Task.sleep(for: .seconds(1.5))
+            guard isVisible, scenePhase == .active, !isAnySheetShowing else { return }
+            switch promptManager.nextPrompt() {
+            case .review: requestReview()
+            case .support: showingSupportPrompt = true
+            case nil: break
+            }
+        }
+    }
+
+    private var isAnySheetShowing: Bool {
+        viewModel.isShowingPilotSheet || viewModel.isShowingAirportSheet || viewModel.isShowingSectorSheet
+            || showingDebug || showingLayerMenu || showingSupportPrompt || adsManager.rewardedSession != nil
     }
     
     /// Flies the camera to the user's own aircraft or, if controlling, their airport/sector.
@@ -488,7 +549,12 @@ private struct StaleBanner: View {
     let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
     let context = ModelContext(container)
 
+    let prefs = PreferencesManager(context: context)
+
     return RadarView()
-        .environment(PreferencesManager(context: context))
+        .environment(prefs)
+        .environment(AdsManager(prefs: prefs))
+        .environment(PromptManager(prefs: prefs))
+        .environment(EventsManager(prefs: prefs))
         .environmentObject(RadarViewModel())
 }

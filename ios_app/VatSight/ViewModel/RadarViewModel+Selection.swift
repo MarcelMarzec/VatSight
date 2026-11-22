@@ -156,5 +156,6 @@ extension RadarViewModel {
 
         controllersAtSelectedAirport = (directControllers + topdownControllers)
             .sorted { positionOrder($0.callsign) > positionOrder($1.callsign) }
+        updateBookingsAtSelectedAirport()
     }
 }

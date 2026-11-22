@@ -45,7 +45,7 @@ if ($slug !== null) {
     }
 
     $author = $guide['author'];
-    $html = md_to_html($guide['body'], ['dropFirstH1' => true, 'assetBase' => '/content/guides', 'linkBase' => GUIDES_BASE]);
+    $html = md_to_html($guide['body'], ['dropFirstH1' => true, 'assetBase' => GUIDES_ASSETS, 'linkBase' => GUIDES_BASE]);
     $toc = $guide['toc'] ? guide_toc($guide['body']) : [];
     $related = guides_related($guide);
     $canonical = abs_url($guide['url']);

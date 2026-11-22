@@ -36,16 +36,57 @@ struct RoadmapView: View {
             }
 
             Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "hammer.fill")
+                            .foregroundColor(.orange)
+                        Text("v1.1.1 · Events and Bookings Update")
+                            .font(.headline)
+                    }
+                    Text("VATSIM events and ATC bookings, in the app and on the map.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 4)
+
+                RoadmapFeatureRow(
+                    icon: "calendar",
+                    title: "Events Tab",
+                    description: "Every current and upcoming VATSIM event as a list or a timeline, with filters for type, region and division."
+                )
+
+                RoadmapFeatureRow(
+                    icon: "doc.text.image",
+                    title: "Event Details",
+                    description: "Banner, times, airports, routes, organisers and the ATC booked for the event."
+                )
+
+                RoadmapFeatureRow(
+                    icon: "star.circle.fill",
+                    title: "Events on the Map",
+                    description: "Live and upcoming event airports stand out on the map."
+                )
+
+                RoadmapFeatureRow(
+                    icon: "headphones",
+                    title: "ATC Bookings",
+                    description: "Booked controllers in each airport's details, and booked airspace outlined on the map."
+                )
+
+                RoadmapFeatureRow(
+                    icon: "map",
+                    title: "Map Legend & Focus",
+                    description: "A legend for every map symbol, and fading of airports and aircraft that aren't connected to the airport you've selected."
+                )
+            } header: {
+                Text("In Development")
+            }
+
+            Section {
                 RoadmapFeatureRow(
                     icon: "wind",
                     title: "Metar Decoder / Apt Weather",
                     description: "More detailed visual metar decoder with runway crosswind coefficients."
-                )
-                
-                RoadmapFeatureRow(
-                    icon: "fireworks",
-                    title: "Vatsim Events",
-                    description: "See whats going on in the community and where the biggest events are!"
                 )
                 
                 RoadmapFeatureRow(

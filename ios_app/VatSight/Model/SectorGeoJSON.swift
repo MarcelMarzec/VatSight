@@ -305,45 +305,36 @@ enum SectorGeoJSON {
                 continue
             }
 
-            // buffer(0) is the GEOS technique for fixing self-intersecting rings before union.
-            var geoPolygons: [GEOSwift.Polygon] = []
-            for sector in group {
-                let raw = sector.geometry.toGEOSwiftPolygons()
-                for poly in raw {
-                    let repaired: GEOSwift.Polygon
-                    if let buffered = try? poly.buffer(by: 0),
-                       case .polygon(let p) = buffered {
-                        repaired = p
-                    } else {
-                        repaired = poly
-                    }
-                    geoPolygons.append(repaired)
-                }
-            }
-
-            guard !geoPolygons.isEmpty else {
-                merged.append(syntheticSector(id: first, geometry: .collected(from: group), group: group))
-                continue
-            }
-
-            let unionedGeometry: SectorGeometry
-            do {
-                let multiPoly = GEOSwift.MultiPolygon(polygons: geoPolygons)
-                let result = try multiPoly.unaryUnion()
-                guard let sectorGeom = SectorGeometry(from: result) else {
-                    unionedGeometry = SectorGeometry.collected(from: group)
-                    merged.append(syntheticSector(id: first, geometry: unionedGeometry, group: group))
-                    continue
-                }
-                unionedGeometry = sectorGeom
-            } catch {
-                unionedGeometry = SectorGeometry.collected(from: group) // fallback
-            }
-
-            merged.append(syntheticSector(id: first, geometry: unionedGeometry, group: group))
+            merged.append(syntheticSector(id: first, geometry: unionGeometry(of: group), group: group))
         }
 
         return merged
+    }
+
+    /// Dissolves a group of sectors into one geometry (GEOS unary union). Falls back to a
+    /// plain MultiPolygon of the parts if the union fails. Shared by live and booked sectors.
+    static func unionGeometry(of group: [VatglassesSector]) -> SectorGeometry {
+        guard group.count > 1 else { return group.first?.geometry ?? SectorGeometry(type: "MultiPolygon", coordinates: []) }
+
+        // buffer(0) is the GEOS technique for fixing self-intersecting rings before union.
+        var geoPolygons: [GEOSwift.Polygon] = []
+        for sector in group {
+            for poly in sector.geometry.toGEOSwiftPolygons() {
+                if let buffered = try? poly.buffer(by: 0), case .polygon(let repaired) = buffered {
+                    geoPolygons.append(repaired)
+                } else {
+                    geoPolygons.append(poly)
+                }
+            }
+        }
+        guard !geoPolygons.isEmpty else { return .collected(from: group) }
+
+        do {
+            let result = try GEOSwift.MultiPolygon(polygons: geoPolygons).unaryUnion()
+            return SectorGeometry(from: result) ?? .collected(from: group)
+        } catch {
+            return .collected(from: group)
+        }
     }
 
     private static func syntheticSector(id first: VatglassesSector, geometry: SectorGeometry, group: [VatglassesSector] = []) -> VatglassesSector {

@@ -1,11 +1,16 @@
 <?php
 defined('SITE') or exit;
-// Reads the guides: one Markdown file per guide in content/guides, with
-// front matter at the top (see content/guides/_template.md for every field).
+// Reads the guides: one Markdown file per guide in CONTENT_DIR/guides, with
+// front matter at the top (see guides/_template.md there for every field).
 // Files starting with an underscore are ignored. Nothing is cached: at this
 // number of files the reads cost less than the machinery to avoid them.
 
-const GUIDES_DIR  = __DIR__ . '/../content/guides';
+// The Markdown content lives in an Obsidian vault inside public/. Guide images
+// are served from it directly, so CONTENT_URL must match the folder name.
+const CONTENT_DIR = __DIR__ . '/../content';
+const CONTENT_URL = '/content';
+const GUIDES_DIR  = CONTENT_DIR . '/guides';
+const GUIDES_ASSETS = CONTENT_URL . '/guides';
 const GUIDES_BASE = '/guides';
 
 // Drafts and future-dated guides are visible on a local dev server only, so
@@ -134,7 +139,7 @@ function guide_read(string $path): ?array
     }
 
     $tags = content_list($meta['tags'] ?? []);
-    $assetBase = '/content/guides';
+    $assetBase = GUIDES_ASSETS;
 
     // The social preview and card image. Only set explicitly: the phone
     // screenshots in most guides are too tall to make good previews, so

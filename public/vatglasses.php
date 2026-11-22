@@ -132,7 +132,7 @@ require __DIR__ . '/partials/head.php';
                         <li><strong>Parse errors.</strong> Any file in the dataset that failed to load, and why.</li>
                         <li><strong>A sector debug panel</strong> on the map for checking positions one by one.</li>
                     </ul>
-                    <p>Questions about the data format belong with the VATGlasses team; questions about how VatSight draws it are <a href="/contact">welcome here</a>.</p>
+                    <p>The <a href="/guides/test-vatglasses-data-on-live-traffic">maintainer’s guide</a> walks through each tool step by step. Questions about the data format belong with the VATGlasses team; questions about how VatSight draws it are <a href="/contact">welcome here</a>.</p>
                 </div>
                 <div class="split-visual">
                     <?= phone_shot('show-inactive-sectors') ?>

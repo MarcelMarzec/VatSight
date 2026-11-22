@@ -14,12 +14,13 @@ enum PilotGeoJSON {
         from pilots: [Pilot],
         selectedCID: Int?,
         friendCIDs: Set<Int> = [],
-        myCID: Int = 0
+        myCID: Int = 0,
+        dimAirportICAO: String? = nil
     ) -> FeatureCollection {
-
-        FeatureCollection(
+        let dimICAO = dimAirportICAO?.uppercased()
+        return FeatureCollection(
             features: pilots.map {
-                feature(from: $0, selectedCID: selectedCID, friendCIDs: friendCIDs, myCID: myCID)
+                feature(from: $0, selectedCID: selectedCID, friendCIDs: friendCIDs, myCID: myCID, dimAirportICAO: dimICAO)
             }
         )
     }
@@ -28,7 +29,8 @@ enum PilotGeoJSON {
         from pilot: Pilot,
         selectedCID: Int?,
         friendCIDs: Set<Int> = [],
-        myCID: Int = 0
+        myCID: Int = 0,
+        dimAirportICAO: String? = nil
     ) -> Feature {
 
         var feature = Feature(
@@ -46,6 +48,15 @@ enum PilotGeoJSON {
         let isOnGround = pilot.groundspeed < 40
         let isFriend = friendCIDs.contains(pilot.cid)
         let isSelf = myCID > 0 && pilot.cid == myCID
+        // With an airport selected, aircraft not departing from or arriving at it are faded.
+        let isDimmed: Bool
+        if let icao = dimAirportICAO {
+            let departure = pilot.flight_plan?.departure.uppercased()
+            let arrival = pilot.flight_plan?.arrival.uppercased()
+            isDimmed = departure != icao && arrival != icao && !isSelected
+        } else {
+            isDimmed = false
+        }
 
         feature.properties = [
             "cid": .number(Double(pilot.cid)),
@@ -54,7 +65,8 @@ enum PilotGeoJSON {
             "isSelected": .boolean(isSelected),
             "isOnGround": .boolean(isOnGround),
             "isFriend": .boolean(isFriend),
-            "isSelf": .boolean(isSelf)
+            "isSelf": .boolean(isSelf),
+            "isDimmed": .boolean(isDimmed)
         ]
 
         return feature
