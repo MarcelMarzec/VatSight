@@ -1,4 +1,4 @@
-# Secrets — never commit these
+# Secrets
 ios_app/Secrets.xcconfig
 
 # macOS
@@ -17,3 +17,5 @@ public/phplist*.zip
 
 # Other files
 CLAUDE.md
+.claude/
+.obsidian/

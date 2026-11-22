@@ -441,7 +441,7 @@ extension RadarViewModel {
             }
             guard let airport = airportByICAO[icao],
                   abs(airport.latitude) <= 90, abs(airport.longitude) <= 180 else { continue }
-            let geometry = SectorGeoJSON.circleGeometry(
+            let geometry = SectorGeometry.circleGeometry(
                 centre: CLLocationCoordinate2D(latitude: airport.latitude, longitude: airport.longitude),
                 radiusNm: 15
             )
