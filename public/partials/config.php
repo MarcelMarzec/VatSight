@@ -12,16 +12,18 @@ const APP_STORE_URL  = 'https://apps.apple.com/app/vatsight/id6814842201';
 const GITHUB_URL     = 'https://github.com/MarcelMarzec/VatSight';
 const NEWSLETTER_URL = '/phplist/?p=subscribe&id=1';
 const CONTACT_EMAIL  = 'contact@marcelmarzec.com';
+// Affiliate link to the host, in the footer. Disclosed wherever it appears.
+const HOST_URL       = 'https://portal.fyfeweb.com/aff.php?aff=80';
 
 // Bump when style.css or the images change, so browsers fetch the new copy.
-const ASSET_VERSION  = '20261121';
+const ASSET_VERSION  = '20261124';
 
 // Contact form: the same Formspree form as marcelmarzec.com/contact, with
 // VatSight's own reCAPTCHA site key (public by design; the secret stays in
 // Formspree). Formspree must allow vatsight.com, and the reCAPTCHA key must
 // list vatsight.com as a domain, or submissions are refused.
 const FORMSPREE_URL      = 'https://formspree.io/f/xjgprwan';
-const RECAPTCHA_SITE_KEY = '6LeG6Z8sAAAAAEbvZjFDtfbL03IPVo4wtFpe3ZT3';
+const RECAPTCHA_SITE_KEY = '6LeG6Z8sAAAAAE91PEaUTmqzJdFf2kn0sQ8vNUFj';
 
 // Guide authors. A guide's `author:` front matter names one of these keys
 // (or the display name); anything unknown falls back to the default author.
@@ -140,11 +142,31 @@ function csp_header(array $extra = []): string
         }
         $policy[$directive] = array_values(array_unique(array_merge($current, $sources)));
     }
+    // On the local dev server only (DEV_SERVER is defined by
+    // tools/dev-router.php, which is never deployed): let Five Server's
+    // live-reload script and its WebSocket through, and leave out
+    // upgrade-insecure-requests, which would send the stylesheet and images
+    // of a plain http://localhost page to an https:// address that is not there.
+    $dev = defined('DEV_SERVER');
+    if ($dev) {
+        $policy['script-src'] = array_values(array_unique(array_merge(
+            array_diff($policy['script-src'], ["'none'"]),
+            ["'self'"]
+        )));
+        // Five Server styles its own reload notices inline.
+        $policy['style-src'][] = "'unsafe-inline'";
+        $policy['connect-src'] = array_values(array_unique(array_merge(
+            $policy['connect-src'] ?? ["'self'"],
+            ['ws://localhost:*', 'ws://127.0.0.1:*']
+        )));
+    }
     $parts = [];
     foreach ($policy as $directive => $sources) {
         $parts[] = $directive . ' ' . implode(' ', $sources);
     }
-    $parts[] = 'upgrade-insecure-requests';
+    if (!$dev) {
+        $parts[] = 'upgrade-insecure-requests';
+    }
     return implode('; ', $parts);
 }
 

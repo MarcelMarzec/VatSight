@@ -15,7 +15,7 @@
 //      ICAO fragment plus the middle (EDDM_ND_APP → "DMND", EGLL_N_APP → "LLN").
 //   4. Bandbox callsigns without a middle (EDGG_CTR): the position covering most sectors.
 //   5. Approximate: a split callsign that matched nothing above falls back to the bandbox
-//      position and is labelled "≈" on the map, rather than not being drawn at all.
+//      position rather than not being drawn at all.
 //  A sector is "booked" when the first booked position in its owner chain is reached before
 //  any online one, mirroring how live ownership is resolved top-down.
 //

@@ -235,10 +235,10 @@ struct RadarView: View {
                             .popover(isPresented: $showingLayerMenu, arrowEdge: .trailing) {
                                 VStack(alignment: .leading, spacing: 0) {
                                     Toggle(isOn: Binding(
-                                        get: { viewModel.mergeSectors },
-                                        set: { _ in viewModel.toggleMergeSectors() }
+                                        get: { viewModel.showAirports },
+                                        set: { _ in viewModel.toggleAirports() }
                                     )) {
-                                        Label("Merge sectors", systemImage: "square.on.square")
+                                        Label("All airports", systemImage: "airplane.ticket")
                                     }
                                     .padding()
                                     Divider()
@@ -247,6 +247,14 @@ struct RadarView: View {
                                         set: { _ in viewModel.toggleSectors() }
                                     )) {
                                         Label("Inactive sectors", systemImage: "map")
+                                    }
+                                    .padding()
+                                    Divider()
+                                    Toggle(isOn: Binding(
+                                        get: { viewModel.mergeSectors },
+                                        set: { _ in viewModel.toggleMergeSectors() }
+                                    )) {
+                                        Label("Merge sectors", systemImage: "square.on.square")
                                     }
                                     .padding()
                                     Divider()
@@ -262,10 +270,10 @@ struct RadarView: View {
                                     .padding()
                                     Divider()
                                     Toggle(isOn: Binding(
-                                        get: { viewModel.showAirports },
-                                        set: { _ in viewModel.toggleAirports() }
+                                        get: { prefsManager.userPrefs.fadeUnrelatedTraffic },
+                                        set: { prefsManager.updateFadeUnrelatedTraffic($0) }
                                     )) {
-                                        Label("All airports", systemImage: "airplane.ticket")
+                                        Label("Focus selected airport", systemImage: "scope")
                                     }
                                     .padding()
                                     Divider()

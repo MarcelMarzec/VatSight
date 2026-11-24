@@ -263,15 +263,6 @@ nonisolated struct VatsimEvent: Codable, Identifiable, Hashable, Sendable {
     func overlaps(_ start: Date, _ end: Date) -> Bool {
         startTime < end && endTime > start
     }
-
-    /// Case-insensitive match against name, airports and organisers.
-    func matches(search: String) -> Bool {
-        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return true }
-        if name.localizedCaseInsensitiveContains(query) { return true }
-        if allICAOs.contains(where: { $0.localizedCaseInsensitiveContains(query) }) { return true }
-        return organisers.contains { $0.summary.localizedCaseInsensitiveContains(query) }
-    }
 }
 
 // MARK: - Response Wrappers

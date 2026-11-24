@@ -5,7 +5,8 @@
 //  One day at a time on a 24-hour timeline. Every event of the day is drawn: overlapping
 //  events cascade on top of each other, each one indented a step further so all of them stay
 //  visible and tappable. Events of 24 hours or more sit in a strip above the timeline.
-//  Only events are shown (no ATC bookings).
+//  Only events are shown (no ATC bookings). Not scrollable itself: it sits inside the Events
+//  page's scroll view, whose toolbar also has a day menu (`EventDayMenu`).
 //
 
 import SwiftUI
@@ -13,10 +14,16 @@ import SwiftUI
 struct EventTimelineView: View {
     let events: [VatsimEvent]
     let timeDisplay: EventTimeDisplay
+    /// Start of the selected day; nil follows today. Shared with the day menu in the page's toolbar.
+    @Binding var selectedDay: Date?
+    /// Scrolls the Events page to a content offset; used to bring the day's first relevant hour into view.
+    var onScrollTo: ((CGFloat) -> Void)?
     let onSelect: (VatsimEvent) -> Void
 
-    /// Start of the selected day; nil follows today.
-    @State private var selectedDay: Date?
+    /// The day the page was last scrolled for, so it only happens once per day shown.
+    @State private var scrolledDay: Date?
+    @State private var scrolledAt = Date.distantPast
+
     @ScaledMetric(relativeTo: .caption) private var hourHeight: CGFloat = 64
     @ScaledMetric(relativeTo: .caption2) private var rulerWidth: CGFloat = 50
     @Environment(PreferencesManager.self) private var prefsManager
@@ -27,8 +34,8 @@ struct EventTimelineView: View {
 
     var body: some View {
         let today = calendar.startOfDay(for: Date())
-        let days = availableDays(today: today)
-        let day = selectedDay.flatMap { days.contains($0) ? $0 : nil } ?? today
+        let days = Self.availableDays(events: events, today: today, calendar: calendar)
+        let day = Self.resolvedDay(selectedDay, days: days, today: today)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: day) ?? day
         let dayEvents = events.filter { $0.overlaps(day, dayEnd) }
         let longEvents = dayEvents.filter { $0.duration >= Self.longEventThreshold }
@@ -41,9 +48,9 @@ struct EventTimelineView: View {
                 today: today,
                 calendar: calendar,
                 display: timeDisplay,
-                counts: eventCounts(days: days)
+                counts: Self.eventCounts(events: events, days: days, calendar: calendar)
             ) { newDay in
-                select(newDay)
+                Self.select(newDay, in: $selectedDay, calendar: calendar, haptics: prefsManager.userPrefs.hapticFeedbackEnabled)
             }
 
             if !longEvents.isEmpty {
@@ -58,13 +65,12 @@ struct EventTimelineView: View {
                 } description: {
                     Text("Nothing scheduled on \(EventTimeFormatting.longDate(day, display: timeDisplay)).")
                 }
-                .frame(maxHeight: .infinity)
+                .padding(.vertical, 32)
             } else {
                 timeline(day: day, dayEnd: dayEnd, events: timedEvents, isToday: day == today)
-                    .id(day) // reset the scroll position per day
+                    .id(day) // re-runs the scroll to the day's first hour
             }
         }
-        .background(Color(.systemBackground))
         .simultaneousGesture(
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
@@ -74,21 +80,28 @@ struct EventTimelineView: View {
                           let index = days.firstIndex(of: day) else { return }
                     let next = dx < 0 ? index + 1 : index - 1
                     guard days.indices.contains(next) else { return }
-                    select(days[next])
+                    Self.select(days[next], in: $selectedDay, calendar: calendar, haptics: prefsManager.userPrefs.hapticFeedbackEnabled)
                 }
         )
     }
 
-    private func select(_ day: Date) {
-        guard day != selectedDay else { return }
-        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
+    // MARK: - Days
+
+    static func select(_ day: Date, in selection: Binding<Date?>, calendar: Calendar, haptics: Bool) {
+        guard day != selection.wrappedValue else { return }
+        HapticManager.impact(prefsEnabled: haptics)
         withAnimation(.snappy) {
-            selectedDay = day == calendar.startOfDay(for: Date()) ? nil : day
+            selection.wrappedValue = day == calendar.startOfDay(for: Date()) ? nil : day
         }
     }
 
+    /// The selected day if it still has events, otherwise today.
+    static func resolvedDay(_ selected: Date?, days: [Date], today: Date) -> Date {
+        selected.flatMap { days.contains($0) ? $0 : nil } ?? today
+    }
+
     /// Today plus every day that has an event, in order.
-    private func availableDays(today: Date) -> [Date] {
+    static func availableDays(events: [VatsimEvent], today: Date, calendar: Calendar) -> [Date] {
         var days: Set<Date> = [today]
         for event in events {
             var cursor = max(calendar.startOfDay(for: event.startTime), today)
@@ -105,7 +118,7 @@ struct EventTimelineView: View {
         return days.sorted()
     }
 
-    private func eventCounts(days: [Date]) -> [Date: Int] {
+    static func eventCounts(events: [VatsimEvent], days: [Date], calendar: Calendar) -> [Date: Int] {
         var counts: [Date: Int] = [:]
         for day in days {
             let end = calendar.date(byAdding: .day, value: 1, to: day) ?? day
@@ -128,53 +141,103 @@ struct EventTimelineView: View {
         let firstHour = events.map { max($0.startTime, day) }.min().map { calendar.component(.hour, from: $0) } ?? 8
         let scrollHour = isToday ? max(0, calendar.component(.hour, from: Date()) - 1) : max(0, firstHour - 1)
 
-        return ScrollViewReader { proxy in
-            ScrollView(.vertical) {
-                HStack(alignment: .top, spacing: 0) {
-                    HourRuler(hourHeight: hourHeight, width: rulerWidth, timeDisplay: timeDisplay)
+        return HStack(alignment: .top, spacing: 0) {
+            HourRuler(hourHeight: hourHeight, width: rulerWidth, timeDisplay: timeDisplay)
 
-                    CascadeLayout(totalHeight: totalHeight, minimumBlockHeight: max(46, hourHeight * 0.72)) {
-                        // Lower levels first so each indented event draws over the one it overlaps.
-                        ForEach(layout.placements.sorted { $0.column < $1.column }, id: \.id) { placement in
-                            if let event = lookup[placement.id] {
-                                TimelineEventBlock(event: event, timeDisplay: timeDisplay, isIndented: placement.column > 0)
-                                    .layoutValue(key: CascadeSlotKey.self, value: CascadeSlot(
-                                        start: placement.startFraction,
-                                        end: placement.endFraction,
-                                        level: placement.column,
-                                        levels: placement.columnCount
-                                    ))
-                                    .zIndex(Double(placement.column))
-                                    .onTapGesture { onSelect(event) }
-                                    .accessibilityAction(.default) { onSelect(event) }
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: totalHeight)
-                    .padding(.trailing, 12)
-                    .overlay(alignment: .top) {
-                        if isToday {
-                            NowLine(dayStart: day, dayEnd: dayEnd, totalHeight: totalHeight)
-                        }
+            CascadeLayout(totalHeight: totalHeight, minimumBlockHeight: max(46, hourHeight * 0.72)) {
+                // Lower levels first so each indented event draws over the one it overlaps.
+                ForEach(layout.placements.sorted { $0.column < $1.column }, id: \.id) { placement in
+                    if let event = lookup[placement.id] {
+                        TimelineEventBlock(event: event, timeDisplay: timeDisplay, isIndented: placement.column > 0)
+                            .layoutValue(key: CascadeSlotKey.self, value: CascadeSlot(
+                                start: placement.startFraction,
+                                end: placement.endFraction,
+                                level: placement.column,
+                                levels: placement.columnCount
+                            ))
+                            .zIndex(Double(placement.column))
+                            .onTapGesture { onSelect(event) }
+                            .accessibilityAction(.default) { onSelect(event) }
                     }
                 }
-                .frame(height: totalHeight)
-                .background(alignment: .topLeading) {
-                    HourGrid(hourHeight: hourHeight)
-                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                        .padding(.leading, rulerWidth)
-                }
-                .padding(.vertical, 12)
             }
-            .onAppear {
-                proxy.scrollTo("hour-\(scrollHour)", anchor: .top)
+            .frame(maxWidth: .infinity)
+            .frame(height: totalHeight)
+            .padding(.trailing, 12)
+            .overlay(alignment: .top) {
+                if isToday {
+                    NowLine(dayStart: day, dayEnd: dayEnd, totalHeight: totalHeight)
+                }
             }
         }
+        .frame(height: totalHeight)
+        .background(alignment: .topLeading) {
+            HourGrid(hourHeight: hourHeight)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                .padding(.leading, rulerWidth)
+        }
+        // Measured in page coordinates: the hour sits in a lazy section, out of reach of ScrollViewReader.
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.frame(in: .named(EventsView.pageCoordinateSpace)).minY
+        } action: { top in
+            // Layout may still be animating (e.g. switching from List), so follow it briefly.
+            let isSettling = Date().timeIntervalSince(scrolledAt) < 0.6
+            guard scrolledDay != day || isSettling else { return }
+            if scrolledDay != day {
+                scrolledDay = day
+                scrolledAt = Date()
+            }
+            onScrollTo?(max(0, top + hourHeight * CGFloat(scrollHour) - 8))
+        }
+        .padding(.vertical, 12)
     }
 }
 
 // MARK: - Day Strip
+
+/// Toolbar menu for jumping to a timeline day, so the day stays reachable once the strip scrolls away.
+struct EventDayMenu: View {
+    let events: [VatsimEvent]
+    let timeDisplay: EventTimeDisplay
+    @Binding var selectedDay: Date?
+    @Environment(PreferencesManager.self) private var prefsManager
+
+    var body: some View {
+        let calendar = EventTimeFormatting.calendar(for: timeDisplay)
+        let today = calendar.startOfDay(for: Date())
+        let days = EventTimelineView.availableDays(events: events, today: today, calendar: calendar)
+        let counts = EventTimelineView.eventCounts(events: events, days: days, calendar: calendar)
+        Menu {
+            Picker("Day", selection: Binding(
+                get: { EventTimelineView.resolvedDay(selectedDay, days: days, today: today) },
+                set: { EventTimelineView.select($0, in: $selectedDay, calendar: calendar, haptics: prefsManager.userPrefs.hapticFeedbackEnabled) }
+            )) {
+                ForEach(days, id: \.self) { day in
+                    Text("\(Self.title(day, today: today, calendar: calendar, display: timeDisplay)) (\(counts[day] ?? 0))")
+                        .tag(day)
+                }
+            }
+        } label: {
+            Label("Day", systemImage: "calendar")
+        }
+    }
+
+    /// "Today", "Tomorrow" or "Mon 23 Nov".
+    static func title(_ day: Date, today: Date, calendar: Calendar, display: EventTimeDisplay) -> String {
+        if day == today { return "Today" }
+        if day == calendar.date(byAdding: .day, value: 1, to: today) { return "Tomorrow" }
+        return EventTimeFormatting.shortDate(day, display: display)
+    }
+
+    /// Subtitle for the selected day.
+    static func subtitle(events: [VatsimEvent], selectedDay: Date?, display: EventTimeDisplay) -> String {
+        let calendar = EventTimeFormatting.calendar(for: display)
+        let today = calendar.startOfDay(for: Date())
+        let days = EventTimelineView.availableDays(events: events, today: today, calendar: calendar)
+        let day = EventTimelineView.resolvedDay(selectedDay, days: days, today: today)
+        return title(day, today: today, calendar: calendar, display: display)
+    }
+}
 
 private struct DayStrip: View {
     let days: [Date]
@@ -418,7 +481,6 @@ private struct HourRuler: View {
                     .frame(width: width - 8, height: hourHeight, alignment: .topTrailing)
                     .padding(.trailing, 8)
                     .offset(y: -6)
-                    .id("hour-\(hour)")
             }
         }
         .accessibilityHidden(true)

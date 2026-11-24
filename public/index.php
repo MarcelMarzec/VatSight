@@ -48,7 +48,7 @@ $faqs = [
     ],
 ];
 
-$latestGuides = array_slice(guides_all(), 0, 3);
+$latestGuides = array_slice(guides_all(), 0, 4);
 
 $page = [
     'title'       => 'VatSight — Free VATSIM Map & Tracker App for iPhone',

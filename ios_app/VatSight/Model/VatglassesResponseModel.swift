@@ -120,29 +120,33 @@ struct SectorGeometry: Codable {
 
     var turfGeometry: Geometry? {
         if type == "Polygon", let firstPolygon = coordinates.first {
-            let rings = firstPolygon.map { ring in
-                ring.compactMap { coord -> CLLocationCoordinate2D? in
-                    guard coord.count >= 2 else { return nil }
-                    return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
-                }
-            }.filter { !$0.isEmpty }
-            guard !rings.isEmpty else { return nil }
-            return .polygon(Polygon(rings))
+            return Self.turfPolygon(from: firstPolygon).map { .polygon($0) }
         } else if type == "MultiPolygon" {
-            let polygons = coordinates.compactMap { polygonCoords -> Polygon? in
-                let rings = polygonCoords.map { ring in
-                    ring.compactMap { coord -> CLLocationCoordinate2D? in
-                        guard coord.count >= 2 else { return nil }
-                        return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
-                    }
-                }.filter { !$0.isEmpty }
-                guard !rings.isEmpty else { return nil }
-                return Polygon(rings)
-            }
+            let polygons = coordinates.compactMap(Self.turfPolygon(from:))
             guard !polygons.isEmpty else { return nil }
             return .multiPolygon(MultiPolygon(polygons))
         }
         return nil
+    }
+
+    /// Returns nil if the exterior ring is degenerate; degenerate holes are dropped.
+    private static func turfPolygon(from rawRings: [[[Double]]]) -> Polygon? {
+        guard let exteriorRaw = rawRings.first, let exterior = closedRing(from: exteriorRaw) else { return nil }
+        let holes = rawRings.dropFirst().compactMap(closedRing(from:))
+        return Polygon([exterior] + holes)
+    }
+
+    /// VATglasses rings are often unclosed; Mapbox warns and patches them per tile, so close them once here.
+    private static func closedRing(from raw: [[Double]]) -> [CLLocationCoordinate2D]? {
+        var ring = raw.compactMap { coord -> CLLocationCoordinate2D? in
+            guard coord.count >= 2 else { return nil }
+            return CLLocationCoordinate2D(latitude: coord[1], longitude: coord[0])
+        }
+        guard let first = ring.first, let last = ring.last else { return nil }
+        if first.latitude != last.latitude || first.longitude != last.longitude {
+            ring.append(first)
+        }
+        return ring.count >= 4 ? ring : nil
     }
 }
 

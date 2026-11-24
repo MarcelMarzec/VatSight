@@ -1,0 +1,38 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Serve site",
+      "detail": "PHP's built-in server with tools/dev-router.php on http://127.0.0.1:8081. Five Server (Go Live) proxies to it on :5070.",
+      "type": "shell",
+      "command": "php -S 127.0.0.1:8081 -t public tools/dev-router.php",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "php-dev-server",
+        "fileLocation": "autoDetect",
+        "pattern": {
+          "regexp": "^(?!)$",
+          "file": 1,
+          "line": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^(?!)$",
+          "endsPattern": "Development Server \\(http://127\\.0\\.0\\.1:8081\\) started"
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      },
+      "runOptions": {
+        "instanceLimit": 1,
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}

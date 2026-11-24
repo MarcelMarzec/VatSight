@@ -19,3 +19,19 @@ public/phplist*.zip
 CLAUDE.md
 .claude/
 .obsidian/
+
+# Archives, and the __MACOSX/ folder of ._ files that Finder puts in every zip.
+# Deploy with the GitHub Action, not a zip: see the README.
+__MACOSX/
+._*
+*.zip
+
+# Editor backups and OS noise
+*.bak
+*.swp
+Thumbs.db
+
+# Secrets and deploy state
+.env
+.env.*
+.ftp-deploy-sync-state.json

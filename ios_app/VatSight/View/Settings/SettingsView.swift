@@ -19,20 +19,10 @@ struct SettingsView: View {
     @State private var showContactForm = false
     @FocusState private var cidFieldFocused: Bool
     @ScaledMetric private var iconSize: CGFloat = 24
-    private var vatsimDataRefreshRates = ["15s", "30s", "1min"]
 
     private var displayedCID: String {
         let cid = prefsManager.userPrefs.vatsimCID
         return cid > 0 ? String(cid) : "ENTER"
-    }
-    
-    private var vatsimRefreshRate: Binding<String> {
-        Binding(
-            get: { prefsManager.userPrefs.vatsimRefreshRate },
-            set: { newValue in
-                prefsManager.updateRefreshRate(newValue)
-            }
-        )
     }
     
     var body: some View {
@@ -70,17 +60,6 @@ struct SettingsView: View {
                     }
 
                     NavigationLink {
-                        MapLegendView()
-                    } label: {
-                        HStack {
-                            Image(systemName: "map")
-                                .frame(width: iconSize)
-                                .foregroundColor(.primary)
-                            Text("Map Legend")
-                        }
-                    }
-
-                    NavigationLink {
                         AppearanceView()
                     } label: {
                         HStack {
@@ -91,14 +70,15 @@ struct SettingsView: View {
                         }
                     }
 
-                    VStack(alignment: .leading){
-                        Text("Select Vatsim Data Refresh Rate")
-                        Picker("", selection: vatsimRefreshRate) {
-                            ForEach(vatsimDataRefreshRates, id: \.self) {
-                                Text($0)
-                            }
+                    NavigationLink {
+                        MapLegendView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "map")
+                                .frame(width: iconSize)
+                                .foregroundColor(.primary)
+                            Text("Map Legend")
                         }
-                        .pickerStyle(.segmented)
                     }
                 }
                 

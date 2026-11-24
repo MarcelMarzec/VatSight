@@ -76,7 +76,7 @@ You can help by:
 See [CONTRIBUTING.md](./CONTRIBUTING.md)
 
 ### Building it yourself
-The app needs an `ios_app/Secrets.xcconfig` file (gitignored) containing `MAPBOX_ACCESS_TOKEN`. The AdMob IDs (`ADMOB_APP_ID`, `ADMOB_NATIVE_UNIT_ID`, `ADMOB_REWARDED_UNIT_ID`, `ADMOB_APP_OPEN_UNIT_ID`) are optional. Without them, ads are disabled in that build. Debug builds always use Google's test ads.
+The app needs an `ios_app/Secrets.xcconfig` file (gitignored) containing `MAPBOX_ACCESS_TOKEN`. The AdMob IDs (`ADMOB_APP_ID`, `ADMOB_NATIVE_UNIT_ID`, `ADMOB_REWARDED_UNIT_ID`, `ADMOB_APP_OPEN_UNIT_ID`, plus `ADMOB_EVENT_LIST_NATIVE_UNIT_ID`, `ADMOB_EVENT_BANNER_UNIT_ID` and `ADMOB_SEARCH_BANNER_UNIT_ID`) are optional. Without them, ads are disabled in that build. Debug builds always use Google's test ads.
 
 ### Tech Stack
 * Swift / SwiftUI / SwiftData
@@ -110,4 +110,25 @@ The site in `public/` is plain PHP with no build step. To preview it locally (PH
 php -S localhost:8080 -t public tools/dev-router.php
 ```
 
-`tools/dev-router.php` mirrors `public/.htaccess` for the built-in server and isn't deployed. Site content lives in `public/content/`, an Obsidian vault. Guides are Markdown files in its `guides/` folder: copy `_template.md`, fill in the front matter (title, description, author, date, updated, tags), and the guide appears on `/guides`, in the sitemap and in the RSS feed. Drafts and future-dated guides are only visible on localhost. The roadmap on `/roadmap` and the home page is built from `roadmap.md` in the same folder; the comments at the top of that file explain the format.
+`tools/dev-router.php` mirrors `public/.htaccess` for the built-in server and isn't deployed.
+
+#### With live reload (Five Server)
+
+The VS Code extension Five Server (`yandeu.five-server`) can't serve this site by itself: it doesn't read `.htaccess`, so `/guides/<slug>`, `/vatsim-map` and the other clean URLs 404 and the PHP partials come back raw. `.fiveserverrc` in the repository root sets it up to **proxy** to PHP's built-in server instead, so every page behaves as it does on vatsight.com and reloads on save:
+
+1. Open the repository root (not `public/`) as the folder in VS Code. The **Serve site** task in `.vscode/tasks.json` starts `php -S 127.0.0.1:8081 -t public tools/dev-router.php` by itself when the folder opens; VS Code asks once whether to allow automatic tasks. Without that, run the task from Terminal → Run Task.
+2. Click **Go Live** (or *Open with Five Server*). It opens <http://localhost:5070>.
+
+It uses **5070**, so it never shares an origin with marcelmarzec.com (5050) or Lane Studio (5500). Set the port in `.fiveserverrc`, not in VS Code's global `fiveServer.port` setting. Avoid 5060 and 5061: browsers refuse those ports outright.
+
+If the page says `ECONNREFUSED 127.0.0.1:8081`, the PHP server from step 1 isn't running. The dev router defines `DEV_SERVER`, which loosens the Content-Security-Policy on the dev server only, so Five Server's reload script and WebSocket can run and `upgrade-insecure-requests` doesn't push `http://localhost` assets to https. Production headers are unchanged. Site content lives in `public/content/`, an Obsidian vault. Guides are Markdown files in its `guides/` folder: copy `_template.md`, fill in the front matter (title, description, author, date, updated, tags), and the guide appears on `/guides`, in the sitemap and in the RSS feed. Drafts and future-dated guides are only visible on localhost. The roadmap on `/roadmap` and the home page is built from `roadmap.md` in the same folder; the comments at the top of that file explain the format.
+
+#### Deploying
+
+Deploy with the **Deploy website to server** workflow (Actions → Run workflow), which uploads `public/` over FTP. Don't upload a Finder-made zip and extract it on the host: a zip keeps each file's macOS permissions, and any file that is `-rw-------` locally becomes unreadable to the web server. Static files then answer 403 — that is how `robots.txt` (and with it the `Sitemap:` line) and `images/og-image.jpg` went missing on the live site — while PHP files still work, so it isn't obvious. Finder zips also carry a `__MACOSX/` folder of `._` files that ends up in the web root. If you ever do upload by hand, make files `644` and folders `755` first:
+
+```bash
+find public -path public/phplist -prune -o -type f -exec chmod 644 {} + -o -type d -exec chmod 755 {} +
+```
+
+Cloudflare's managed robots.txt puts its AI-crawler rules *above* the site's own file, so `https://vatsight.com/robots.txt` should end with this repository's `Sitemap:` line. If it stops at `# END Cloudflare Managed Content`, the origin file isn't readable.

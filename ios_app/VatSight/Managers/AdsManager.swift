@@ -20,10 +20,16 @@ final class AdsManager: NSObject {
         static let native = "ca-app-pub-3940256099942544/3986624511"
         static let rewarded = "ca-app-pub-3940256099942544/1712485313"
         static let appOpen = "ca-app-pub-3940256099942544/5575463023"
+        static let eventListNative = "ca-app-pub-3940256099942544/3986624511"
+        static let eventBanner = "ca-app-pub-3940256099942544/2435281174"
+        static let searchBanner = "ca-app-pub-3940256099942544/2435281174"
         #else
         static let native = infoValue("VSAdUnitNative")
         static let rewarded = infoValue("VSAdUnitRewarded")
         static let appOpen = infoValue("VSAdUnitAppOpen")
+        static let eventListNative = infoValue("VSAdUnitEventListNative")
+        static let eventBanner = infoValue("VSAdUnitEventBanner")
+        static let searchBanner = infoValue("VSAdUnitSearchBanner")
         #endif
 
         static func infoValue(_ key: String) -> String {
@@ -31,9 +37,24 @@ final class AdsManager: NSObject {
         }
 
         static var allConfigured: Bool {
-            [infoValue("GADApplicationIdentifier"), native, rewarded, appOpen].allSatisfy { $0.hasPrefix("ca-app-pub-") }
+            [infoValue("GADApplicationIdentifier"), native, rewarded, appOpen].allSatisfy(isValid)
+        }
+
+        static func isValid(_ unit: String) -> Bool { unit.hasPrefix("ca-app-pub-") }
+    }
+
+    enum BannerPlacement {
+        case eventDetail, search
+
+        fileprivate var adUnitID: String {
+            switch self {
+            case .eventDetail: return AdUnit.eventBanner
+            case .search: return AdUnit.searchBanner
+            }
         }
     }
+
+    private static let eventListAdCount = 5
 
     /// False when the AdMob IDs are missing from Secrets.xcconfig (e.g. a fork of the public repo).
     static let isConfigured = AdUnit.allConfigured
@@ -59,10 +80,15 @@ final class AdsManager: NSObject {
     private(set) var isEnabling = false
     private(set) var privacyOptionsRequired = false
     private(set) var nativeAd: NativeAd?
+    /// Shown between cards in the Events list, cycling through them.
+    private(set) var eventListAds: [NativeAd] = []
     private(set) var rewardedSession: RewardedSession?
 
     @ObservationIgnored private var adLoader: AdLoader?
     @ObservationIgnored private var nativeAdLoadedAt: Date?
+    @ObservationIgnored private var eventListAdLoader: AdLoader?
+    @ObservationIgnored private var eventListAdsLoadedAt: Date?
+    @ObservationIgnored private var pendingEventListAds: [NativeAd] = []
     @ObservationIgnored private var nextRewardedAd: RewardedAd?
     @ObservationIgnored private var appOpenAd: AppOpenAd?
     @ObservationIgnored private var appOpenLoadedAt: Date?
@@ -79,6 +105,16 @@ final class AdsManager: NSObject {
     private var settings: UserPreferencesModel { prefs.userPrefs }
 
     var isActive: Bool { Self.isConfigured && settings.adsEnabled && isReady }
+
+    /// Ad unit for a banner placement, or nil when that banner is switched off or not configured.
+    func bannerAdUnitID(for placement: BannerPlacement) -> String? {
+        let enabled = switch placement {
+        case .eventDetail: settings.eventDetailAdsEnabled
+        case .search: settings.searchAdsEnabled
+        }
+        guard isActive, enabled, AdUnit.isValid(placement.adUnitID) else { return nil }
+        return placement.adUnitID
+    }
 
     // MARK: - Lifecycle
 
@@ -102,6 +138,8 @@ final class AdsManager: NSObject {
         prefs.updateAdsEnabled(false)
         nativeAd = nil
         nativeAdLoadedAt = nil
+        eventListAds = []
+        eventListAdsLoadedAt = nil
         appOpenAd = nil
         nextRewardedAd = nil
         rewardedSession = nil
@@ -114,6 +152,12 @@ final class AdsManager: NSObject {
         } else {
             nativeAd = nil
             nativeAdLoadedAt = nil
+        }
+        if settings.eventListAdsEnabled {
+            loadEventListAdsIfNeeded()
+        } else {
+            eventListAds = []
+            eventListAdsLoadedAt = nil
         }
         if settings.appOpenAdsEnabled {
             loadAppOpenAd()
@@ -162,6 +206,27 @@ final class AdsManager: NSObject {
         let loader = AdLoader(adUnitID: AdUnit.native, rootViewController: nil, adTypes: [.native], options: [mediaOptions])
         loader.delegate = self
         adLoader = loader
+        loader.load(Request())
+    }
+
+    func loadEventListAdsIfNeeded() {
+        guard isActive, settings.eventListAdsEnabled, eventListAdLoader == nil,
+              AdUnit.isValid(AdUnit.eventListNative) else { return }
+        if let loadedAt = eventListAdsLoadedAt, Date().timeIntervalSince(loadedAt) < Self.adExpiry { return }
+
+        let mediaOptions = NativeAdMediaAdLoaderOptions()
+        mediaOptions.mediaAspectRatio = .square
+        let multipleOptions = MultipleAdsAdLoaderOptions()
+        multipleOptions.numberOfAds = Self.eventListAdCount
+        let loader = AdLoader(
+            adUnitID: AdUnit.eventListNative,
+            rootViewController: nil,
+            adTypes: [.native],
+            options: [mediaOptions, multipleOptions]
+        )
+        loader.delegate = self
+        pendingEventListAds = []
+        eventListAdLoader = loader
         loader.load(Request())
     }
 
@@ -270,8 +335,12 @@ final class AdsManager: NSObject {
 
     // MARK: - Helpers
 
+    func recordBannerImpression() {
+        prefs.incrementAdsViewed()
+    }
+
     /// Full-screen ads must be presented from the top-most controller or they fail while a sheet is open.
-    private static func topViewController() -> UIViewController? {
+    static func topViewController() -> UIViewController? {
         let scene = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first { $0.activationState == .foregroundActive } ?? UIApplication.shared.connectedScenes.first as? UIWindowScene
@@ -288,6 +357,10 @@ final class AdsManager: NSObject {
 extension AdsManager: NativeAdLoaderDelegate, NativeAdDelegate {
     func adLoader(_ adLoader: AdLoader, didReceive nativeAd: NativeAd) {
         nativeAd.delegate = self
+        if adLoader === eventListAdLoader {
+            pendingEventListAds.append(nativeAd)
+            return
+        }
         self.nativeAd = nativeAd
         nativeAdLoadedAt = Date()
         self.adLoader = nil
@@ -295,7 +368,24 @@ extension AdsManager: NativeAdLoaderDelegate, NativeAdDelegate {
 
     func adLoader(_ adLoader: AdLoader, didFailToReceiveAdWithError error: any Error) {
         print("[Ads] Native load failed: \(error.localizedDescription)")
-        self.adLoader = nil
+        if adLoader === eventListAdLoader {
+            finishEventListLoad()
+        } else {
+            self.adLoader = nil
+        }
+    }
+
+    func adLoaderDidFinishLoading(_ adLoader: AdLoader) {
+        if adLoader === eventListAdLoader { finishEventListLoad() }
+    }
+
+    private func finishEventListLoad() {
+        if !pendingEventListAds.isEmpty {
+            eventListAds = pendingEventListAds
+            eventListAdsLoadedAt = Date()
+        }
+        pendingEventListAds = []
+        eventListAdLoader = nil
     }
 
     func nativeAdDidRecordImpression(_ nativeAd: NativeAd) {

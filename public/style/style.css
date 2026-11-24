@@ -82,8 +82,12 @@ summary:focus-visible,
     outline-offset: 2px;
 }
 
+/* One background for the whole page, as on marcelmarzec.com and Lane
+   Studio: sections are told apart by the space between them, not by a
+   lighter band or a rule. 72px above and below makes 144px between two
+   sections. */
 section {
-    padding: 96px 24px;
+    padding: 72px 24px;
 }
 
 .section-inner {
@@ -482,12 +486,6 @@ section {
 
 /* ---------- Features ---------- */
 
-.features {
-    background: var(--bg-soft);
-    border-top: 1px solid var(--card-border);
-    border-bottom: 1px solid var(--card-border);
-}
-
 .feature-grid {
     max-width: var(--max);
     margin: 0 auto;
@@ -572,12 +570,6 @@ section {
 }
 
 /* ---------- Open source ---------- */
-
-.opensource {
-    background: var(--bg-soft);
-    border-top: 1px solid var(--card-border);
-    border-bottom: 1px solid var(--card-border);
-}
 
 .opensource-card {
     display: grid;
@@ -1133,7 +1125,6 @@ section {
 footer {
     border-top: 1px solid var(--card-border);
     padding: 56px 24px 40px;
-    background: var(--bg-soft);
 }
 
 .footer-inner {
@@ -1195,6 +1186,21 @@ footer {
     font-size: 12.5px;
     color: var(--text-faint);
     line-height: 1.6;
+}
+
+/* The host's affiliate line, then the copyright. */
+.footer-copy + .footer-copy {
+    margin-top: 6px;
+}
+
+.footer-copy a {
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.2);
+    text-underline-offset: 3px;
+}
+
+.footer-copy a:hover {
+    color: var(--text);
 }
 
 .footer-disclaimer {
@@ -1743,10 +1749,6 @@ footer {
 
 /* ---------- Split sections: copy beside a phone ---------- */
 
-.split-section {
-    border-top: 1px solid var(--card-border);
-}
-
 .split {
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
@@ -2045,10 +2047,6 @@ footer {
 
 /* ---------- Related pages ---------- */
 
-.related {
-    border-top: 1px solid var(--card-border);
-}
-
 .link-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -2123,18 +2121,11 @@ footer {
     max-width: 560px;
 }
 
-.home-guides {
-    border-top: 1px solid var(--card-border);
-}
-
+/* Two guides to a row everywhere they are listed, as on marcelmarzec.com. */
 .guide-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 20px;
-}
-
-.guides-list .guide-grid {
-    grid-template-columns: repeat(2, 1fr);
 }
 
 .guide-card a {
@@ -2212,8 +2203,7 @@ footer {
 }
 
 @media (max-width: 900px) {
-    .guide-grid,
-    .guides-list .guide-grid { grid-template-columns: 1fr; }
+    .guide-grid { grid-template-columns: 1fr; }
 }
 
 .chip-row {
@@ -2304,7 +2294,6 @@ footer {
 
 .guide-body {
     padding-top: 32px;
-    border-top: 1px solid var(--card-border);
 }
 
 .guide-layout {
@@ -2448,10 +2437,6 @@ footer {
 .guide-feedback {
     font-size: 14px;
     color: var(--text-faint);
-}
-
-.related-guides {
-    border-top: 1px solid var(--card-border);
 }
 
 @media (max-width: 960px) {

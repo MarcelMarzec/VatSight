@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct VatsimUserDataView: View {
     @EnvironmentObject var viewModel: RadarViewModel
+    @Environment(PreferencesManager.self) private var prefsManager
     @ScaledMetric private var iconSize: CGFloat = 24
 
     var body: some View {
@@ -62,6 +64,18 @@ struct VatsimUserDataView: View {
             }
 
             Section {
+                Picker("Refresh Rate", selection: Binding(
+                    get: { prefsManager.userPrefs.vatsimRefreshRate },
+                    set: { prefsManager.updateRefreshRate($0) }
+                )) {
+                    ForEach(["15s", "30s", "1min"], id: \.self) { Text($0) }
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("Refresh Rate")
+            }
+
+            Section {
                 LabeledContent("Data Endpoint", value: "data.vatsim.net")
                 LabeledContent("API Version", value: "v3")
                 Link(destination: URL(string: "https://vatsim.dev/api/data-api/")!) {
@@ -75,7 +89,7 @@ struct VatsimUserDataView: View {
             } header: {
                 Text("API Information")
             } footer: {
-                Text("VatSight fetches live VATSIM network data from the public VATSIM Data API (v3) under the VATSIM Code of Conduct and Terms of Service. Data is provided by VATSIM and refreshed at the interval set in Settings.")
+                Text("VatSight fetches live VATSIM network data from the public VATSIM Data API (v3) under the VATSIM Code of Conduct and Terms of Service. Data is provided by VATSIM and refreshed at the interval set above.")
             }
         }
         .navigationTitle("VATSIM User Data")
@@ -84,8 +98,12 @@ struct VatsimUserDataView: View {
 }
 
 #Preview {
-    NavigationStack {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: UserPreferencesModel.self, configurations: config)
+
+    return NavigationStack {
         VatsimUserDataView()
             .environmentObject(RadarViewModel())
+            .environment(PreferencesManager(context: ModelContext(container)))
     }
 }

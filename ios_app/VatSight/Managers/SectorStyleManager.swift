@@ -27,6 +27,9 @@ final class SectorStyleManager {
     private static let dotSelfImageId      = "sector-label-dot-self"
 
     private var isDarkTheme: Bool = true
+    /// 0 = normal, 1 = labels faded while an airport is focused. Animated by the map coordinator.
+    private var dimProgress: Double = 0
+    static let dimmedLabelOpacity: Double = 0.15
 
     enum SectorStyleError: Error {
         case layerAlreadyExists
@@ -339,12 +342,36 @@ final class SectorStyleManager {
 
         layer.iconAllowOverlap = .constant(true)
         layer.iconIgnorePlacement = .constant(true)
-        layer.iconOpacity = .constant(1.0)
+        layer.iconOpacity = .constant(dimmedLabelOpacity())
 
         layer.symbolPlacement = .constant(.point)
         layer.symbolZOrder = .constant(.auto)
 
         try mapView.mapboxMap.addLayer(layer)
+    }
+
+    // MARK: - Fading
+
+    private func dimmedLabelOpacity() -> Double {
+        1.0 + (Self.dimmedLabelOpacity - 1.0) * dimProgress
+    }
+
+    /// Hidden below zoom 5, where the dot layer stands in.
+    private func labelOpacityExpression() -> Exp {
+        Exp(.step) { Exp(.zoom); 0.0; 5; dimmedLabelOpacity() }
+    }
+
+    /// Called every animation frame while the airport-focus fade runs.
+    func applyDimProgress(_ progress: Double, on mapView: MapView) {
+        dimProgress = progress
+        let labelOpacity = labelOpacityExpression()
+        try? mapView.mapboxMap.updateLayer(withId: Self.sectorLabelLayerId, type: SymbolLayer.self) { layer in
+            layer.textOpacity = .expression(labelOpacity)
+            layer.iconOpacity = .expression(labelOpacity)
+        }
+        try? mapView.mapboxMap.updateLayer(withId: Self.sectorDotLayerId, type: SymbolLayer.self) { [self] layer in
+            layer.iconOpacity = .constant(dimmedLabelOpacity())
+        }
     }
 
     // MARK: - Label Layer
@@ -429,13 +456,7 @@ final class SectorStyleManager {
         layer.iconOptional = .constant(false)
         layer.textOptional = .constant(false)
 
-        // Hidden below zoom 5; dot layer covers that range.
-        let labelFade = Exp(.step) {
-            Exp(.zoom)
-            0.0
-            5
-            1.0
-        }
+        let labelFade = labelOpacityExpression()
         layer.textOpacity = .expression(labelFade)
         layer.iconOpacity = .expression(labelFade)
 

@@ -153,6 +153,9 @@ final class UserPreferencesModel {
     var nativeAdsEnabled: Bool = true
     var rewardedAdsEnabled: Bool = true
     var appOpenAdsEnabled: Bool = true
+    var eventListAdsEnabled: Bool = true
+    var eventDetailAdsEnabled: Bool = true
+    var searchAdsEnabled: Bool = true
     var adsViewedCount: Int = 0
     // Engagement, used to time the App Store review and Support VatSight prompts
     var launchCount: Int = 0
@@ -169,6 +172,7 @@ final class UserPreferencesModel {
     var showEventAirportHighlights: Bool = true
     var showBookingAirportHighlights: Bool = true
     var showBookedSectors: Bool = true
+    var fadeUnrelatedTraffic: Bool = true
     var eventTimeDisplayRaw: String = "utc"
     var eventsViewModeRaw: String = "list"
     // Persisted Events filters (empty = no filter)

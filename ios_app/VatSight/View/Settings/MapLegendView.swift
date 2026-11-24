@@ -123,7 +123,7 @@ struct MapLegendView: View {
                         .background(Circle().fill(Color.blue.opacity(0.1)))
                         .frame(width: 18, height: 18)
                 }
-                MapLegendRow(title: "Booked Sector", detail: "Dashed cyan: airspace a booked controller will cover. ≈ means estimated") {
+                MapLegendRow(title: "Booked Sector", detail: "Dashed cyan: airspace a booked controller will cover.") {
                     SectorSample(color: MapLegendColors.booking, dashed: true, fillOpacity: 0.06)
                 }
                 MapLegendRow(title: "Selected Sector", detail: "The sector whose details are open") {

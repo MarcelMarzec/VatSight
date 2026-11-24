@@ -1,0 +1,24 @@
+{
+  "//": "Five Server (yandeu.five-server). It proxies to PHP's built-in server running",
+  "//1": "tools/dev-router.php, which reproduces public/.htaccess: clean URLs, /guides/<slug>,",
+  "//2": "tag pages, the sitemap and feed, the 404 page and POSTed forms all behave as they",
+  "//3": "do on vatsight.com. Five Server cannot do that on its own: it does not read",
+  "//4": ".htaccess, so /guides/<slug> and every other extensionless address would 404.",
+  "//5": "The PHP server starts by itself when the folder opens in VS Code (the Serve site",
+  "//6": "task in .vscode/tasks.json), or run: php -S 127.0.0.1:8081 -t public tools/dev-router.php",
+  "proxy": { "/": "http://127.0.0.1:8081" },
+
+  "//7": "Its own port, so it never shares an origin (and a cache, or a service worker) with",
+  "//8": "marcelmarzec.com on 5050 or Lane Studio on 5500. Set it here, not in VS Code's",
+  "//9": "global fiveServer.port setting, which would move the other sites too. Not 5060:",
+  "//9a": "browsers refuse that port outright (it is SIP's), so the page never loads.",
+  "port": 5070,
+
+  "//10": "Always open the site root, not the path of whichever file is focused.",
+  "open": "/",
+  "navigate": false,
+
+  "injectCss": true,
+  "watch": ["public/**", "tools/dev-router.php"],
+  "ignore": [".git/**", "public/phplist/**", "public/content/.obsidian/**", "ios_app/**", "branding/**"]
+}

@@ -70,11 +70,28 @@ final class BookedSectorStyleManager {
         label.iconAllowOverlap = .constant(false)
         label.textOptional = .constant(false)
         label.iconOptional = .constant(false)
-        let fade = Exp(.step) { Exp(.zoom); 0.0; 5; 1.0 }
-        label.textOpacity = .expression(fade)
-        label.iconOpacity = .expression(fade)
+        label.textOpacity = .expression(labelOpacity())
+        label.iconOpacity = .expression(labelOpacity())
         label.symbolPlacement = .constant(.point)
         try mapView.mapboxMap.addLayer(label)
+    }
+
+    // MARK: - Fading
+
+    /// 0 = normal, 1 = faded while an airport is focused. Animated by the map coordinator.
+    private var dimProgress: Double = 0
+
+    private func labelOpacity() -> Exp {
+        Exp(.step) { Exp(.zoom); 0.0; 5; 1.0 + (SectorStyleManager.dimmedLabelOpacity - 1.0) * dimProgress }
+    }
+
+    func applyDimProgress(_ progress: Double, on mapView: MapView) {
+        dimProgress = progress
+        let opacity = labelOpacity()
+        try? mapView.mapboxMap.updateLayer(withId: Self.labelLayerId, type: SymbolLayer.self) { layer in
+            layer.textOpacity = .expression(opacity)
+            layer.iconOpacity = .expression(opacity)
+        }
     }
 
     func applyTheme(on mapView: MapView, isDark: Bool) {
@@ -102,7 +119,6 @@ final class BookedSectorStyleManager {
     func update(
         on mapView: MapView,
         bookedSectors: [BookedSector],
-        approximateBookingIDs: Set<Int> = [],
         airports: [VatglassesAirport],
         timeDisplay: EventTimeDisplay
     ) {
@@ -134,8 +150,7 @@ final class BookedSectorStyleManager {
             let range = EventTimeFormatting.range(start: entry.booking.start, end: entry.booking.end, display: timeDisplay)
             var label = Feature(geometry: .point(Point(coordinate)))
             label.properties = [
-                // "≈": airspace estimated because the callsign didn't identify a single position.
-                "label": .string("\(approximateBookingIDs.contains(entry.booking.id) ? "≈ " : "")\(entry.booking.callsign)\n\(range.primary)"),
+                "label": .string("\(entry.booking.callsign)\n\(range.primary)"),
                 "bookingId": .number(Double(entry.booking.id))
             ]
             labels.append(label)

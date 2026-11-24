@@ -219,9 +219,15 @@
 	</array>
 	<key>VSAdUnitAppOpen</key>
 	<string>$(ADMOB_APP_OPEN_UNIT_ID)</string>
+	<key>VSAdUnitEventBanner</key>
+	<string>$(ADMOB_EVENT_BANNER_UNIT_ID)</string>
+	<key>VSAdUnitEventListNative</key>
+	<string>$(ADMOB_EVENT_LIST_NATIVE_UNIT_ID)</string>
 	<key>VSAdUnitNative</key>
 	<string>$(ADMOB_NATIVE_UNIT_ID)</string>
 	<key>VSAdUnitRewarded</key>
 	<string>$(ADMOB_REWARDED_UNIT_ID)</string>
+	<key>VSAdUnitSearchBanner</key>
+	<string>$(ADMOB_SEARCH_BANNER_UNIT_ID)</string>
 </dict>
 </plist>

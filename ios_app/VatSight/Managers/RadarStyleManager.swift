@@ -21,7 +21,7 @@ final class RadarStyleManager {
     private var isDarkTheme: Bool = true
     /// 0 = nothing faded, 1 = features marked `isDimmed` fully faded. Animated by the map coordinator.
     private var dimProgress: Double = 0
-    private static let dimmedOpacity: Double = 0.2
+    private static let dimmedOpacity: Double = 0.08
     private static let iconLayerIds = [pilotIconLayerId, pilotGroundIconLayerId]
 
     enum RadarStyleError: Error {

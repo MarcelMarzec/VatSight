@@ -89,33 +89,20 @@ struct SupportView: View {
 
     private var adTypesSection: some View {
         Section {
-            adTypeToggle(
-                "Settings Banner",
-                detail: "A small ad at the top of Settings.",
-                icon: "rectangle.on.rectangle",
-                isOn: prefs.nativeAdsEnabled,
-                update: prefsManager.updateNativeAdsEnabled
-            )
-            adTypeToggle(
-                "Watch Ads On Demand",
-                detail: "Only when you tap a button below.",
-                icon: "play.rectangle.fill",
-                isOn: prefs.rewardedAdsEnabled,
-                update: prefsManager.updateRewardedAdsEnabled
-            )
-            adTypeToggle(
-                "Ad on App Launch",
-                detail: "On launch, and at most every 4 hours when returning to the app.",
-                icon: "app.badge",
-                isOn: prefs.appOpenAdsEnabled,
-                update: prefsManager.updateAppOpenAdsEnabled
-            )
+            adTypeToggle("Settings", icon: "gearshape.fill", isOn: prefs.nativeAdsEnabled, update: prefsManager.updateNativeAdsEnabled)
+            adTypeToggle("Events List", icon: "list.bullet.rectangle", isOn: prefs.eventListAdsEnabled, update: prefsManager.updateEventListAdsEnabled)
+            adTypeToggle("Event Details", icon: "star.fill", isOn: prefs.eventDetailAdsEnabled, update: prefsManager.updateEventDetailAdsEnabled)
+            adTypeToggle("Search", icon: "magnifyingglass", isOn: prefs.searchAdsEnabled, update: prefsManager.updateSearchAdsEnabled)
+            adTypeToggle("App Launch", icon: "app.badge", isOn: prefs.appOpenAdsEnabled, update: prefsManager.updateAppOpenAdsEnabled)
+            adTypeToggle("Watch On Demand", icon: "play.rectangle.fill", isOn: prefs.rewardedAdsEnabled, update: prefsManager.updateRewardedAdsEnabled)
         } header: {
-            Text("Ad Types")
+            Text("Show Ads In")
+        } footer: {
+            Text("App launch ads show at most every 4 hours.")
         }
     }
 
-    private func adTypeToggle(_ title: String, detail: String, icon: String, isOn: Bool, update: @escaping (Bool) -> Void) -> some View {
+    private func adTypeToggle(_ title: String, icon: String, isOn: Bool, update: @escaping (Bool) -> Void) -> some View {
         Toggle(isOn: Binding(
             get: { isOn },
             set: { newValue in
@@ -127,12 +114,7 @@ struct SupportView: View {
             HStack {
                 Image(systemName: icon)
                     .frame(width: iconSize)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(title)
             }
         }
     }

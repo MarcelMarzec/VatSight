@@ -206,6 +206,21 @@ final class PreferencesManager {
         try? context.save()
     }
 
+    func updateEventListAdsEnabled(_ value: Bool) {
+        userPrefs.eventListAdsEnabled = value
+        try? context.save()
+    }
+
+    func updateEventDetailAdsEnabled(_ value: Bool) {
+        userPrefs.eventDetailAdsEnabled = value
+        try? context.save()
+    }
+
+    func updateSearchAdsEnabled(_ value: Bool) {
+        userPrefs.searchAdsEnabled = value
+        try? context.save()
+    }
+
     func incrementAdsViewed() {
         userPrefs.adsViewedCount += 1
         try? context.save()
@@ -265,6 +280,11 @@ final class PreferencesManager {
 
     func updateShowBookedSectors(_ value: Bool) {
         userPrefs.showBookedSectors = value
+        try? context.save()
+    }
+
+    func updateFadeUnrelatedTraffic(_ value: Bool) {
+        userPrefs.fadeUnrelatedTraffic = value
         try? context.save()
     }
 

@@ -231,7 +231,7 @@ function tag_url(string $tag): string
 
 // Guides to read next: the ones named in `related:` first, then those sharing
 // the most tags, then the newest.
-function guides_related(array $guide, int $limit = 3): array
+function guides_related(array $guide, int $limit = 2): array
 {
     $others = array_values(array_filter(guides_all(), fn(array $g): bool => $g['slug'] !== $guide['slug']));
     $picked = [];

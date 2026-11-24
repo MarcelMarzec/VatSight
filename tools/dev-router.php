@@ -7,6 +7,11 @@
 // Drafts and future-dated guides are visible on localhost (marked "Preview").
 // Pages are required at the bottom, in the global scope, as under Apache.
 
+// Tells csp_header() (partials/config.php) it is on the dev server, so the
+// policy lets Five Server's live-reload script run. Never set in production,
+// because this file is never deployed.
+define('DEV_SERVER', true);
+
 $root  = realpath(__DIR__ . '/../public');
 $uri   = $_SERVER['REQUEST_URI'];
 $path  = rawurldecode(parse_url($uri, PHP_URL_PATH) ?? '/');

@@ -51,8 +51,9 @@ struct RadarViewRepresentable: UIViewRepresentable {
             styleURI: StyleURI(rawValue: resolvedURLStr)!
         )
 
+        // Mapbox logs "Invalid size" for a zero frame; SwiftUI resizes it on first layout.
         let mapView = MapView(
-            frame: .zero,
+            frame: CGRect(x: 0, y: 0, width: 100, height: 100),
             mapInitOptions: initOptions
         )
         
@@ -67,6 +68,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
             coordinator?.installRouteStyleIfNeeded()
             coordinator?.installPilotStyleIfNeeded()
             coordinator?.ensureLabelsOnTop()
+            coordinator?.applyStyleTransition()
         }
         .store(in: &context.coordinator.cancelables)
 
@@ -112,6 +114,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
                 coordinator?.installRouteStyleIfNeeded()
                 coordinator?.installPilotStyleIfNeeded()
                 coordinator?.ensureLabelsOnTop()
+                coordinator?.applyStyleTransition()
             }
         } else if context.coordinator.lastAppThemeRaw != newThemeRaw {
             context.coordinator.lastAppThemeRaw = newThemeRaw
@@ -167,7 +170,6 @@ struct RadarViewRepresentable: UIViewRepresentable {
 
         context.coordinator.updateBookedSectors(
             viewModel.bookedSectorsToDisplay,
-            approximateBookingIDs: viewModel.approximateBookingIDs,
             airports: viewModel.airportsToDisplay,
             timeDisplay: prefsManager.userPrefs.eventTimeDisplay
         )
@@ -180,7 +182,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
         )
 
         // Fade airports and aircraft not connected to the selected airport (animated).
-        context.coordinator.updateFadeTarget(viewModel.selectedAirportICAO)
+        let fadeTarget = prefsManager.userPrefs.fadeUnrelatedTraffic ? viewModel.selectedAirportICAO : nil
+        context.coordinator.updateFadeTarget(fadeTarget)
 
         if let coordinate = viewModel.pendingCameraFlyTo {
             context.coordinator.flyTo(coordinate: coordinate)
@@ -285,6 +288,7 @@ struct RadarViewRepresentable: UIViewRepresentable {
             do {
                 try sectorStyleManager.configureSectors(on: mapView, isDark: isDark)
                 didInstallSectorStyle = true
+                sectorStyleManager.applyDimProgress(fadeProgress, on: mapView)
                 installBookedSectorStyle(on: mapView, isDark: isDark)
                 sectorStyleManager.updateSectors(
                     on: mapView,
@@ -303,11 +307,11 @@ struct RadarViewRepresentable: UIViewRepresentable {
             do {
                 try bookedSectorStyleManager.configure(on: mapView, isDark: isDark)
                 didInstallBookedSectorStyle = true
+                bookedSectorStyleManager.applyDimProgress(fadeProgress, on: mapView)
                 lastBookedSectorSignature = []
                 lastBookedTimeDisplay = nil
                 updateBookedSectors(
                     viewModel.bookedSectorsToDisplay,
-                    approximateBookingIDs: viewModel.approximateBookingIDs,
                     airports: viewModel.airportsToDisplay,
                     timeDisplay: prefsManager.userPrefs.eventTimeDisplay
                 )
@@ -318,21 +322,17 @@ struct RadarViewRepresentable: UIViewRepresentable {
 
         func updateBookedSectors(
             _ bookedSectors: [BookedSector],
-            approximateBookingIDs: Set<Int>,
             airports: [VatglassesAirport],
             timeDisplay: EventTimeDisplay
         ) {
             guard let mapView, didInstallBookedSectorStyle else { return }
-            let signature = bookedSectors.map {
-                "\($0.sector.id)#\($0.booking.id)\(approximateBookingIDs.contains($0.booking.id) ? "~" : "")"
-            }
+            let signature = bookedSectors.map { "\($0.sector.id)#\($0.booking.id)" }
             guard signature != lastBookedSectorSignature || timeDisplay != lastBookedTimeDisplay else { return }
             lastBookedSectorSignature = signature
             lastBookedTimeDisplay = timeDisplay
             bookedSectorStyleManager.update(
                 on: mapView,
                 bookedSectors: bookedSectors,
-                approximateBookingIDs: approximateBookingIDs,
                 airports: airports,
                 timeDisplay: timeDisplay
             )
@@ -439,6 +439,14 @@ struct RadarViewRepresentable: UIViewRepresentable {
             }
         }
 
+        /// Near-instant transitions so labels pop in or out as soon as they have room instead of
+        /// cross-fading while the camera moves. A zero duration, or disabling placement transitions,
+        /// stops aircraft icons from drawing at all. Overridden transitions reset on every style load,
+        /// so this runs after each one.
+        func applyStyleTransition() {
+            mapView?.mapboxMap.styleTransition = TransitionOptions(duration: 0.05, delay: 0, enablePlacementTransitions: true)
+        }
+
         // MARK: - Camera
 
         func flyTo(coordinate: CLLocationCoordinate2D) {
@@ -540,6 +548,8 @@ struct RadarViewRepresentable: UIViewRepresentable {
             guard let mapView else { return }
             if didInstallAirportStyle { airportStyleManager.applyDimProgress(progress, on: mapView) }
             if didInstallPilotStyle { pilotStyleManager.applyDimProgress(progress, on: mapView) }
+            if didInstallSectorStyle { sectorStyleManager.applyDimProgress(progress, on: mapView) }
+            if didInstallBookedSectorStyle { bookedSectorStyleManager.applyDimProgress(progress, on: mapView) }
         }
 
         /// Rebuilds the airport and aircraft sources with the current faded/unfaded split.

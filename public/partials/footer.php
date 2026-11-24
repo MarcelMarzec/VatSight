@@ -26,6 +26,7 @@ defined('SITE') or exit;
 <?php endforeach; ?>
         </div>
         <p class="footer-disclaimer">VatSight is an independent project and is not affiliated with or endorsed by VATSIM or VATGlasses. Flight data is sourced from the VATSIM network; airspace data from VATGlasses under CC BY-NC-SA 4.0.</p>
+        <p class="footer-copy">Hosted with <a href="<?= e(HOST_URL) ?>" target="_blank" rel="sponsored noopener">FyFeWeb</a>. That is an affiliate link: if you sign up through it, I may earn a commission.</p>
         <p class="footer-copy">© <?= date('Y') ?> Marcel Marzec</p>
     </footer>
 

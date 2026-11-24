@@ -38,6 +38,7 @@ struct EventDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
+                BannerAdCard(placement: .eventDetail)
                 header
                 MetricStrip.eventTimes(start: event.startTime, end: event.endTime, display: timeDisplay)
                 statusLine

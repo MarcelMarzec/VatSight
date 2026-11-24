@@ -72,7 +72,7 @@ final class RadarViewModel: ObservableObject {
     var bookedPositionIndex: [String: AtcBooking] = [:]
     var bookingIndexCache = BookingPositionIndexCache()
     var bookedSectorsSignature: [String] = []
-    /// Bookings whose airspace was placed by the approximate fallback ("≈" on the map).
+    /// Bookings whose airspace was placed by the approximate fallback.
     var approximateBookingIDs: Set<Int> = []
     var mergedBookedSectorsCache: (signature: [String], sectors: [BookedSector])?
     /// Callsign → positions learned from live controllers; improves booking matches.

@@ -273,6 +273,11 @@ struct SearchView: View {
             }
         }
 
+        BannerAdCard(placement: .search, cornerRadius: 12)
+            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+
         // Results
         switch category {
         case .pilot:
@@ -300,6 +305,7 @@ struct SearchView: View {
                 listContent
             }
             .listStyle(.plain)
+            .environment(\.defaultMinListRowHeight, 0) // lets the banner row collapse until an ad loads
             .navigationTitle("Search")
             .searchable(text: $query, placement: .toolbar, prompt: placeholder)
             .searchToolbarBehavior(.minimize)

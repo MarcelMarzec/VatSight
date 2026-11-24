@@ -98,10 +98,10 @@ final class AirportStyleManager {
             layer.circleRadius = .expression(Self.radiusExpression(multiplier: multiplier))
         }
         try? mapView.mapboxMap.updateLayer(withId: Self.airportHaloLayerId, type: CircleLayer.self) { layer in
-            layer.circleRadius = .constant(Self.haloRadius * multiplier)
+            layer.circleRadius = .expression(Self.zoomScaled(Self.haloRadius * multiplier))
         }
         try? mapView.mapboxMap.updateLayer(withId: Self.airportEventRingLayerId, type: CircleLayer.self) { layer in
-            layer.circleRadius = .constant(Self.ringRadius * multiplier)
+            layer.circleRadius = .expression(Self.zoomScaled(Self.ringRadius * multiplier))
         }
     }
 
@@ -131,7 +131,7 @@ final class AirportStyleManager {
                 0.0
             }
             5
-            dimmedOpacity(1.0, dimmed: 0.3)
+            dimmedOpacity(1.0, dimmed: 0.15)
         }
     }
 
@@ -139,14 +139,14 @@ final class AirportStyleManager {
     func applyDimProgress(_ progress: Double, on mapView: MapView) {
         dimProgress = progress
         try? mapView.mapboxMap.updateLayer(withId: Self.airportLayerId, type: CircleLayer.self) { layer in
-            layer.circleOpacity = .expression(dimmedOpacity(1.0, dimmed: 0.25))
-            layer.circleStrokeOpacity = .expression(dimmedOpacity(1.0, dimmed: 0.25))
+            layer.circleOpacity = .expression(dimmedOpacity(1.0, dimmed: 0.12))
+            layer.circleStrokeOpacity = .expression(dimmedOpacity(1.0, dimmed: 0.12))
         }
         try? mapView.mapboxMap.updateLayer(withId: Self.airportHaloLayerId, type: CircleLayer.self) { layer in
-            layer.circleOpacity = .expression(dimmedOpacity(0.45, dimmed: 0.08))
+            layer.circleOpacity = .expression(dimmedOpacity(0.45, dimmed: 0.04))
         }
         try? mapView.mapboxMap.updateLayer(withId: Self.airportEventRingLayerId, type: CircleLayer.self) { layer in
-            layer.circleStrokeOpacity = .expression(dimmedOpacity(0.9, dimmed: 0.2))
+            layer.circleStrokeOpacity = .expression(dimmedOpacity(0.9, dimmed: 0.1))
         }
         let labelOpacity = labelOpacityExpression()
         try? mapView.mapboxMap.updateLayer(withId: Self.airportLabelLayerId, type: SymbolLayer.self) { layer in
@@ -159,9 +159,25 @@ final class AirportStyleManager {
         Exp(.eq) { Exp(.get) { "highlight" }; Double(AirportHighlight.activeEvent.rawValue) }
     }
 
+    /// Shrinks airport markers when zoomed out so they don't clutter the world view.
+    private static func zoomScaled(_ value: Exp) -> Exp {
+        Exp(.interpolate) {
+            Exp(.linear)
+            Exp(.zoom)
+            1; Exp(.product) { 0.4; value }
+            3; Exp(.product) { 0.55; value }
+            5; Exp(.product) { 0.8; value }
+            7; value
+        }
+    }
+
+    private static func zoomScaled(_ value: Double) -> Exp {
+        zoomScaled(Exp(.literal) { value })
+    }
+
     /// Highlighted airports keep at least the "filled" size so their ring is legible.
     private static func radiusExpression(multiplier: Double) -> Exp {
-        Exp(.switchCase) {
+        zoomScaled(Exp(.switchCase) {
             isActiveEvent
             4.5 * multiplier
             Exp(.eq) { Exp(.get) { "isSelected" }; true }
@@ -173,7 +189,7 @@ final class AirportStyleManager {
             Exp(.gt) { Exp(.get) { "highlight" }; 0.0 }
             3.0 * multiplier
             2.0 * multiplier
-        }
+        })
     }
 
     // MARK: - Update Source
@@ -234,16 +250,16 @@ final class AirportStyleManager {
         layer.circleColor = .expression(airportFillColorExpression())
         layer.circleStrokeColor = .expression(airportStrokeColorExpression())
         layer.circleStrokeWidth = .expression(
-            Exp(.switchCase) {
+            Self.zoomScaled(Exp(.switchCase) {
                 Exp(.eq) { Exp(.get) { "isSelected" }; true }
                 1.5
                 Exp(.gt) { Exp(.get) { "highlight" }; 0.0 }
                 2.0
                 1.5
-            }
+            })
         )
-        layer.circleOpacity = .expression(dimmedOpacity(1.0, dimmed: 0.25))
-        layer.circleStrokeOpacity = .expression(dimmedOpacity(1.0, dimmed: 0.25))
+        layer.circleOpacity = .expression(dimmedOpacity(1.0, dimmed: 0.12))
+        layer.circleStrokeOpacity = .expression(dimmedOpacity(1.0, dimmed: 0.12))
         try mapView.mapboxMap.addLayer(layer)
     }
 
@@ -252,9 +268,9 @@ final class AirportStyleManager {
     private func addAirportHaloLayer(to mapView: MapView, airportIconMultiplier: Double) throws {
         var layer = CircleLayer(id: Self.airportHaloLayerId, source: Self.airportSourceId)
         layer.filter = Self.isActiveEvent
-        layer.circleRadius = .constant(Self.haloRadius * airportIconMultiplier)
+        layer.circleRadius = .expression(Self.zoomScaled(Self.haloRadius * airportIconMultiplier))
         layer.circleColor = .expression(Self.rgba(isDarkTheme ? Self.eventRGB.dark : Self.eventRGB.light))
-        layer.circleOpacity = .expression(dimmedOpacity(0.45, dimmed: 0.08))
+        layer.circleOpacity = .expression(dimmedOpacity(0.45, dimmed: 0.04))
         layer.circleBlur = .constant(0.55)
         layer.circleStrokeWidth = .constant(0)
         try mapView.mapboxMap.addLayer(layer)
@@ -263,11 +279,11 @@ final class AirportStyleManager {
     private func addAirportEventRingLayer(to mapView: MapView, airportIconMultiplier: Double) throws {
         var layer = CircleLayer(id: Self.airportEventRingLayerId, source: Self.airportSourceId)
         layer.filter = Self.isActiveEvent
-        layer.circleRadius = .constant(Self.ringRadius * airportIconMultiplier)
+        layer.circleRadius = .expression(Self.zoomScaled(Self.ringRadius * airportIconMultiplier))
         layer.circleColor = .constant(StyleColor(.clear))
         layer.circleStrokeColor = .expression(Self.rgba(isDarkTheme ? Self.eventRGB.dark : Self.eventRGB.light))
-        layer.circleStrokeWidth = .constant(1.5)
-        layer.circleStrokeOpacity = .expression(dimmedOpacity(0.9, dimmed: 0.2))
+        layer.circleStrokeWidth = .expression(Self.zoomScaled(1.5))
+        layer.circleStrokeOpacity = .expression(dimmedOpacity(0.9, dimmed: 0.1))
         try mapView.mapboxMap.addLayer(layer)
     }
 

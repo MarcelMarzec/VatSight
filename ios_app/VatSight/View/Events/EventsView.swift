@@ -3,8 +3,9 @@
 //  VatSight
 //
 //  The Events tab: current and upcoming VATSIM events as a list of cards or a one-day
-//  timeline. The view mode and every filter are saved in preferences. Time display and the
-//  calendar subscription live in Settings → Events & Bookings.
+//  timeline, in one page-wide scroll view. The navigation subtitle shows the list section scrolled
+//  past or the timeline's day, which a toolbar menu can also change. The view mode and every filter are
+//  saved in preferences. Time display and the calendar subscription live in Settings → Events & Bookings.
 //
 
 import SwiftUI
@@ -12,12 +13,18 @@ import SwiftUI
 struct EventsView: View {
     @Environment(EventsManager.self) private var eventsManager
     @Environment(PreferencesManager.self) private var prefsManager
+    @Environment(AdsManager.self) private var adsManager
 
     var context = EventMapContext()
 
     @State private var path: [VatsimEvent] = []
-    @State private var searchText = ""
-    @Namespace private var modeNamespace
+    @State private var scrollPosition = ScrollPosition(edge: .top)
+    /// Timeline day; nil follows today.
+    @State private var selectedDay: Date?
+    /// The list section whose header has scrolled under the bar.
+    @State private var currentListSection: String?
+
+    static let pageCoordinateSpace = "eventsPage"
 
     private var viewMode: EventsViewMode { prefsManager.userPrefs.eventsViewMode }
     private var timeDisplay: EventTimeDisplay { prefsManager.userPrefs.eventTimeDisplay }
@@ -40,78 +47,64 @@ struct EventsView: View {
 
     private var filteredEvents: [VatsimEvent] {
         let filter = self.filter
-        let orgs = eventsManager.orgs
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return eventsManager.events.filter { event in
-            guard filter.matches(event) else { return false }
-            guard !query.isEmpty else { return true }
-            return event.matches(search: query)
-                || event.organisers.contains { orgs.summary(for: $0).localizedCaseInsensitiveContains(query) }
-        }
+        return eventsManager.events.filter { filter.matches($0) }
     }
 
     var body: some View {
         NavigationStack(path: $path) {
-            VStack(spacing: 0) {
-                header
-                content
+            ScrollView {
+                VStack(spacing: 0) {
+                    filterChips
+                        .padding(.top, 6)
+                        .padding(.bottom, 8)
+                    content
+                }
+                .coordinateSpace(.named(Self.pageCoordinateSpace))
             }
+            .scrollPosition($scrollPosition)
+            .refreshable { await eventsManager.refreshAll() }
             .background(Color(.systemBackground))
             .navigationTitle("Events")
+            .navigationSubtitle(subtitle)
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Events, airports, divisions")
+            .onAppear { adsManager.loadEventListAdsIfNeeded() }
+            .toolbar {
+                if viewMode == .timeline, !filteredEvents.isEmpty {
+                    ToolbarItem(placement: .topBarLeading) {
+                        EventDayMenu(events: filteredEvents, timeDisplay: timeDisplay, selectedDay: $selectedDay)
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    modeToggle
+                }
+            }
             .navigationDestination(for: VatsimEvent.self) { event in
                 EventDetailView(event: event, context: context)
             }
         }
     }
 
-    // MARK: - Header
-
-    private var header: some View {
-        VStack(spacing: 10) {
-            modeToggle
-            filterChips
+    private var subtitle: String {
+        switch viewMode {
+        case .list: return currentListSection ?? ""
+        case .timeline:
+            return filteredEvents.isEmpty ? "" : EventDayMenu.subtitle(events: filteredEvents, selectedDay: selectedDay, display: timeDisplay)
         }
-        .padding(.top, 6)
-        .padding(.bottom, 8)
     }
 
-    /// List / Timeline switch in the style of the map's glass controls.
+    // MARK: - Header
+
+    /// Switches between List and Timeline; the icon shows the mode it switches to.
     private var modeToggle: some View {
-        GlassEffectContainer {
-            HStack(spacing: 0) {
-                ForEach(EventsViewMode.allCases, id: \.self) { mode in
-                    let isSelected = mode == viewMode
-                    Button {
-                        guard !isSelected else { return }
-                        HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
-                        withAnimation(.snappy) {
-                            prefsManager.updateEventsViewMode(mode)
-                        }
-                    } label: {
-                        Label(mode.displayName, systemImage: mode.systemImage)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 9)
-                            .background {
-                                if isSelected {
-                                    Capsule()
-                                        .fill(Color.primary.opacity(0.16))
-                                        .matchedGeometryEffect(id: "mode", in: modeNamespace)
-                                }
-                            }
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
-                }
+        let next: EventsViewMode = viewMode == .list ? .timeline : .list
+        return Button {
+            HapticManager.impact(prefsEnabled: prefsManager.userPrefs.hapticFeedbackEnabled)
+            withAnimation(.snappy) {
+                prefsManager.updateEventsViewMode(next)
             }
-            .padding(4)
-            .glassEffect(.regular, in: .capsule)
+        } label: {
+            Label("Show \(next.displayName)", systemImage: next.systemImage)
         }
-        .padding(.horizontal)
     }
 
     private var filterChips: some View {
@@ -227,7 +220,8 @@ struct EventsView: View {
         if eventsManager.events.isEmpty {
             if eventsManager.isLoadingEvents || (eventsManager.lastEventsFetch == nil && eventsManager.eventsError == nil) {
                 ProgressView("Loading events…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 64)
             } else {
                 ContentUnavailableView {
                     Label("No Events", systemImage: "calendar.badge.exclamationmark")
@@ -239,27 +233,39 @@ struct EventsView: View {
                     }
                     .buttonStyle(.glass)
                 }
-                .frame(maxHeight: .infinity)
+                .padding(.vertical, 32)
             }
         } else if events.isEmpty {
             ContentUnavailableView {
                 Label("No Matching Events", systemImage: "line.3.horizontal.decrease.circle")
             } description: {
-                Text(searchText.isEmpty ? "No events match the selected filters." : "No events match “\(searchText)”.")
+                Text("No events match the selected filters.")
             } actions: {
                 if filter.isActive {
                     Button("Clear Filters") { updateFilter { $0 = EventFilter() } }
                         .buttonStyle(.glass)
                 }
             }
-            .frame(maxHeight: .infinity)
+            .padding(.vertical, 32)
         } else {
             switch viewMode {
             case .list:
-                EventListView(events: events, timeDisplay: timeDisplay, orgs: eventsManager.orgs, onSelect: open)
-                    .refreshable { await eventsManager.refreshAll() }
+                EventListView(
+                    events: events,
+                    timeDisplay: timeDisplay,
+                    orgs: eventsManager.orgs,
+                    ads: adsManager.eventListAds,
+                    onCurrentSectionChange: { currentListSection = $0 },
+                    onSelect: open
+                )
             case .timeline:
-                EventTimelineView(events: events, timeDisplay: timeDisplay, onSelect: open)
+                EventTimelineView(
+                    events: events,
+                    timeDisplay: timeDisplay,
+                    selectedDay: $selectedDay,
+                    onScrollTo: { scrollPosition.scrollTo(y: $0) },
+                    onSelect: open
+                )
             }
         }
     }
